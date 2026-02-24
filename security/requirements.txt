@@ -1,0 +1,35 @@
+# Zero-Trust Secrets Manager Dependencies
+
+# Core dependencies
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# External providers
+boto3>=1.26.0  # AWS SDK
+azure-identity>=1.12.0  # Azure SDK
+azure-keyvault-secrets>=4.1.0  # Azure Key Vault SDK
+hvac>=1.0.2  # HashiCorp Vault SDK
+aiohttp>=3.8.0  # HTTP client for custom provider
+
+# Cryptography
+cryptography>=3.4.8  # For encryption
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+
+# Type checking
+mypy>=1.0.0
+
+# Security and compliance
+passlib>=1.7.0  # For password generation
+python-dateutil>=2.8.0  # For date handling
+
+# Monitoring and logging
+psutil>=5.8.0  # For system monitoring
+structlog>=21.1.0  # For structured logging
+
+# Documentation
+mkdocs>=1.4.0
+mkdocs-material>=8.5.0

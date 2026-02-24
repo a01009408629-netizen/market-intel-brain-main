@@ -1,0 +1,31 @@
+# Data Lineage and Provenance Tracker Dependencies
+
+# Core dependencies
+uuid>=1.30.0
+datetime>=4.3.0
+json>=2.0.0
+hashlib>=20081119
+
+# Data handling
+pydantic>=2.0.0
+typing-extensions>=4.0.0
+
+# Storage backends (optional)
+redis>=4.5.0  # For Redis-based storage
+pymongo>=4.0.0  # For MongoDB-based storage
+psycopg2-binary>=2.9.0  # For PostgreSQL-based storage
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+
+# Type checking
+mypy>=1.0.0
+
+# Performance monitoring
+psutil>=5.8.0
+
+# Documentation
+mkdocs>=1.4.0
+mkdocs-material>=8.5.0

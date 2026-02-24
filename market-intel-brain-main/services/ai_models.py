@@ -1,0 +1,616 @@
+"""
+MAIFA v3 AI Models Service - Cognitive Layer
+LLM logic, risk models, embeddings, scenario engines
+"""
+
+import asyncio
+import logging
+from typing import Dict, List, Any, Optional, Tuple
+from datetime import datetime
+import json
+import numpy as np
+from dataclasses import dataclass
+
+from models.datatypes import FeatureVector, ModelPrediction, ModelConfidence
+
+class AIModelsService:
+    """
+    MAIFA v3 AI Models Service - Advanced AI and ML capabilities
+    
+    Provides:
+    - Risk assessment models
+    - Price prediction models  
+    - Embedding generation
+    - Scenario analysis engines
+    - Model ensemble management
+    """
+    
+    def __init__(self):
+        self.logger = logging.getLogger("AIModelsService")
+        self._models = {}
+        self._embeddings_cache = {}
+        self._risk_models = self._initialize_risk_models()
+        self._prediction_models = self._initialize_prediction_models()
+        
+    def _initialize_risk_models(self) -> Dict[str, Dict[str, Any]]:
+        """Initialize risk assessment models"""
+        return {
+            "volatility_risk": {
+                "type": "statistical",
+                "parameters": {
+                    "lookback_period": 20,
+                    "confidence_level": 0.95
+                }
+            },
+            "liquidity_risk": {
+                "type": "rule_based",
+                "parameters": {
+                    "volume_threshold": 1000000,
+                    "spread_threshold": 0.01
+                }
+            },
+            "concentration_risk": {
+                "type": "portfolio",
+                "parameters": {
+                    "max_allocation": 0.3,
+                    "sector_limit": 0.4
+                }
+            }
+        }
+    
+    def _initialize_prediction_models(self) -> Dict[str, Dict[str, Any]]:
+        """Initialize price prediction models"""
+        return {
+            "trend_following": {
+                "type": "technical",
+                "parameters": {
+                    "short_ma": 10,
+                    "long_ma": 50,
+                    "signal_threshold": 0.02
+                }
+            },
+            "mean_reversion": {
+                "type": "statistical",
+                "parameters": {
+                    "lookback_period": 30,
+                    "zscore_threshold": 2.0
+                }
+            },
+            "momentum": {
+                "type": "technical",
+                "parameters": {
+                    "period": 14,
+                    "overbought": 70,
+                    "oversold": 30
+                }
+            }
+        }
+    
+    async def assess_risk(self, 
+                         symbol: str,
+                         market_data: Dict[str, Any],
+                         portfolio_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Comprehensive risk assessment
+        
+        Args:
+            symbol: Financial symbol
+            market_data: Market data for analysis
+            portfolio_data: Optional portfolio context
+            
+        Returns:
+            Risk assessment results
+        """
+        try:
+            self.logger.debug(f"Assessing risk for {symbol}")
+            
+            risk_scores = {}
+            
+            # Volatility risk
+            volatility_score = await self._calculate_volatility_risk(symbol, market_data)
+            risk_scores["volatility"] = volatility_score
+            
+            # Liquidity risk
+            liquidity_score = await self._calculate_liquidity_risk(symbol, market_data)
+            risk_scores["liquidity"] = liquidity_score
+            
+            # Concentration risk (if portfolio data available)
+            if portfolio_data:
+                concentration_score = await self._calculate_concentration_risk(symbol, portfolio_data)
+                risk_scores["concentration"] = concentration_score
+            
+            # Overall risk score
+            overall_risk = await self._calculate_overall_risk(risk_scores)
+            
+            risk_assessment = {
+                "symbol": symbol,
+                "timestamp": datetime.now().isoformat(),
+                "risk_scores": risk_scores,
+                "overall_risk": overall_risk,
+                "risk_level": self._categorize_risk_level(overall_risk),
+                "recommendations": await self._generate_risk_recommendations(risk_scores)
+            }
+            
+            self.logger.debug(f"Risk assessment completed for {symbol}: {overall_risk:.2f}")
+            return risk_assessment
+            
+        except Exception as e:
+            self.logger.error(f"Risk assessment failed for {symbol}: {e}")
+            return {
+                "symbol": symbol,
+                "error": str(e),
+                "overall_risk": 0.5,
+                "risk_level": "unknown"
+            }
+    
+    async def _calculate_volatility_risk(self, symbol: str, market_data: Dict[str, Any]) -> float:
+        """Calculate volatility-based risk score"""
+        try:
+            # Extract price history (simplified)
+            prices = market_data.get("price_history", [])
+            if len(prices) < 20:
+                return 0.5  # Default risk if insufficient data
+            
+            # Calculate daily returns
+            returns = []
+            for i in range(1, len(prices)):
+                if prices[i-1] > 0:
+                    ret = (prices[i] - prices[i-1]) / prices[i-1]
+                    returns.append(ret)
+            
+            if not returns:
+                return 0.5
+            
+            # Calculate volatility (standard deviation of returns)
+            volatility = np.std(returns) * np.sqrt(252)  # Annualized volatility
+            
+            # Normalize to 0-1 scale (typical range 0-1 for volatility)
+            risk_score = min(volatility / 0.5, 1.0)  # 50% annual vol = max risk
+            
+            return risk_score
+            
+        except Exception as e:
+            self.logger.error(f"Volatility risk calculation failed: {e}")
+            return 0.5
+    
+    async def _calculate_liquidity_risk(self, symbol: str, market_data: Dict[str, Any]) -> float:
+        """Calculate liquidity-based risk score"""
+        try:
+            volume = market_data.get("volume", 0)
+            price = market_data.get("price", 1.0)
+            spread = market_data.get("bid_ask_spread", 0.01)
+            
+            # Calculate daily dollar volume
+            daily_dollar_volume = volume * price
+            
+            # Risk based on volume and spread
+            volume_risk = max(0, 1 - (daily_dollar_volume / 10000000))  # $10M daily volume = low risk
+            spread_risk = min(spread / 0.05, 1.0)  # 5% spread = max risk
+            
+            # Combine volume and spread risk
+            liquidity_risk = (volume_risk + spread_risk) / 2
+            
+            return liquidity_risk
+            
+        except Exception as e:
+            self.logger.error(f"Liquidity risk calculation failed: {e}")
+            return 0.5
+    
+    async def _calculate_concentration_risk(self, symbol: str, portfolio_data: Dict[str, Any]) -> float:
+        """Calculate concentration risk for portfolio context"""
+        try:
+            holdings = portfolio_data.get("holdings", {})
+            total_value = portfolio_data.get("total_value", 0)
+            
+            if total_value == 0 or symbol not in holdings:
+                return 0.0
+            
+            symbol_value = holdings[symbol]
+            concentration = symbol_value / total_value
+            
+            # Risk increases with concentration
+            concentration_risk = min(concentration / 0.5, 1.0)  # 50% allocation = max risk
+            
+            return concentration_risk
+            
+        except Exception as e:
+            self.logger.error(f"Concentration risk calculation failed: {e}")
+            return 0.0
+    
+    async def _calculate_overall_risk(self, risk_scores: Dict[str, float]) -> float:
+        """Calculate overall risk score from individual risk components"""
+        if not risk_scores:
+            return 0.5
+        
+        # Weighted average of risk scores
+        weights = {
+            "volatility": 0.4,
+            "liquidity": 0.4,
+            "concentration": 0.2
+        }
+        
+        weighted_sum = 0.0
+        total_weight = 0.0
+        
+        for risk_type, score in risk_scores.items():
+            weight = weights.get(risk_type, 0.33)
+            weighted_sum += score * weight
+            total_weight += weight
+        
+        if total_weight > 0:
+            return weighted_sum / total_weight
+        else:
+            return 0.5
+    
+    def _categorize_risk_level(self, risk_score: float) -> str:
+        """Categorize risk level based on score"""
+        if risk_score < 0.2:
+            return "very_low"
+        elif risk_score < 0.4:
+            return "low"
+        elif risk_score < 0.6:
+            return "medium"
+        elif risk_score < 0.8:
+            return "high"
+        else:
+            return "very_high"
+    
+    async def _generate_risk_recommendations(self, risk_scores: Dict[str, float]) -> List[str]:
+        """Generate risk-based recommendations"""
+        recommendations = []
+        
+        if risk_scores.get("volatility", 0) > 0.7:
+            recommendations.append("Consider position sizing due to high volatility")
+            recommendations.append("Use stop-loss orders to limit downside")
+        
+        if risk_scores.get("liquidity", 0) > 0.6:
+            recommendations.append("Be cautious with position size due to liquidity concerns")
+            recommendations.append("Consider using limit orders")
+        
+        if risk_scores.get("concentration", 0) > 0.5:
+            recommendations.append("Consider diversifying to reduce concentration risk")
+            recommendations.append("Monitor portfolio allocation closely")
+        
+        if not recommendations:
+            recommendations.append("Risk levels appear manageable")
+        
+        return recommendations
+    
+    async def predict_price(self, 
+                          symbol: str,
+                          market_data: Dict[str, Any],
+                          horizon_days: int = 5) -> Dict[str, Any]:
+        """
+        Predict future price movements
+        
+        Args:
+            symbol: Financial symbol
+            market_data: Historical and current market data
+            horizon_days: Prediction horizon in days
+            
+        Returns:
+            Price prediction results
+        """
+        try:
+            self.logger.debug(f"Predicting price for {symbol} ({horizon_days} days)")
+            
+            predictions = {}
+            
+            # Trend following prediction
+            trend_prediction = await self._trend_following_prediction(market_data)
+            predictions["trend_following"] = trend_prediction
+            
+            # Mean reversion prediction
+            mean_reversion_prediction = await self._mean_reversion_prediction(market_data)
+            predictions["mean_reversion"] = mean_reversion_prediction
+            
+            # Momentum prediction
+            momentum_prediction = await self._momentum_prediction(market_data)
+            predictions["momentum"] = momentum_prediction
+            
+            # Ensemble prediction
+            ensemble_prediction = await self._ensemble_predictions(predictions)
+            
+            current_price = market_data.get("price", 0)
+            predicted_change = ensemble_prediction["predicted_return"]
+            predicted_price = current_price * (1 + predicted_change)
+            
+            prediction_result = {
+                "symbol": symbol,
+                "current_price": current_price,
+                "predicted_price": predicted_price,
+                "predicted_change_percent": predicted_change * 100,
+                "horizon_days": horizon_days,
+                "confidence": ensemble_prediction["confidence"],
+                "individual_predictions": predictions,
+                "signal": "BUY" if predicted_change > 0.02 else "SELL" if predicted_change < -0.02 else "HOLD"
+            }
+            
+            self.logger.debug(f"Price prediction completed for {symbol}: {predicted_change:.2%}")
+            return prediction_result
+            
+        except Exception as e:
+            self.logger.error(f"Price prediction failed for {symbol}: {e}")
+            return {
+                "symbol": symbol,
+                "error": str(e),
+                "signal": "HOLD"
+            }
+    
+    async def _trend_following_prediction(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Trend following prediction model"""
+        try:
+            prices = market_data.get("price_history", [])
+            if len(prices) < 50:
+                return {"predicted_return": 0.0, "confidence": 0.0}
+            
+            # Calculate moving averages
+            short_ma = np.mean(prices[-10:])
+            long_ma = np.mean(prices[-50:])
+            
+            current_price = prices[-1]
+            
+            # Generate signal based on MA crossover
+            if short_ma > long_ma and current_price > short_ma:
+                predicted_return = 0.03  # 3% expected return
+                confidence = 0.7
+            elif short_ma < long_ma and current_price < short_ma:
+                predicted_return = -0.03  # -3% expected return
+                confidence = 0.7
+            else:
+                predicted_return = 0.0
+                confidence = 0.3
+            
+            return {
+                "predicted_return": predicted_return,
+                "confidence": confidence,
+                "short_ma": short_ma,
+                "long_ma": long_ma
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Trend following prediction failed: {e}")
+            return {"predicted_return": 0.0, "confidence": 0.0}
+    
+    async def _mean_reversion_prediction(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Mean reversion prediction model"""
+        try:
+            prices = market_data.get("price_history", [])
+            if len(prices) < 30:
+                return {"predicted_return": 0.0, "confidence": 0.0}
+            
+            current_price = prices[-1]
+            mean_price = np.mean(prices[-30:])
+            std_price = np.std(prices[-30:])
+            
+            # Calculate z-score
+            z_score = (current_price - mean_price) / std_price if std_price > 0 else 0
+            
+            # Predict mean reversion
+            if abs(z_score) > 2.0:  # Significantly over/under valued
+                predicted_return = -z_score * 0.02  # Expect 2% reversion per z-score unit
+                confidence = min(abs(z_score) / 3.0, 1.0)
+            else:
+                predicted_return = 0.0
+                confidence = 0.3
+            
+            return {
+                "predicted_return": predicted_return,
+                "confidence": confidence,
+                "z_score": z_score,
+                "mean_price": mean_price
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Mean reversion prediction failed: {e}")
+            return {"predicted_return": 0.0, "confidence": 0.0}
+    
+    async def _momentum_prediction(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Momentum prediction model"""
+        try:
+            prices = market_data.get("price_history", [])
+            if len(prices) < 14:
+                return {"predicted_return": 0.0, "confidence": 0.0}
+            
+            # Calculate momentum (rate of change)
+            current_price = prices[-1]
+            price_14_days_ago = prices[-14] if len(prices) >= 14 else prices[0]
+            
+            momentum = (current_price - price_14_days_ago) / price_14_days_ago
+            
+            # Predict based on momentum persistence
+            if momentum > 0.05:  # Strong positive momentum
+                predicted_return = momentum * 0.5  # Expect half the momentum to continue
+                confidence = 0.6
+            elif momentum < -0.05:  # Strong negative momentum
+                predicted_return = momentum * 0.5
+                confidence = 0.6
+            else:
+                predicted_return = 0.0
+                confidence = 0.3
+            
+            return {
+                "predicted_return": predicted_return,
+                "confidence": confidence,
+                "momentum": momentum
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Momentum prediction failed: {e}")
+            return {"predicted_return": 0.0, "confidence": 0.0}
+    
+    async def _ensemble_predictions(self, predictions: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        """Ensemble multiple prediction models"""
+        if not predictions:
+            return {"predicted_return": 0.0, "confidence": 0.0}
+        
+        # Weighted average based on confidence
+        total_weight = 0.0
+        weighted_return = 0.0
+        
+        for model_name, prediction in predictions.items():
+            confidence = prediction.get("confidence", 0.0)
+            predicted_return = prediction.get("predicted_return", 0.0)
+            
+            weighted_return += predicted_return * confidence
+            total_weight += confidence
+        
+        if total_weight > 0:
+            ensemble_return = weighted_return / total_weight
+            ensemble_confidence = min(total_weight / len(predictions), 1.0)
+        else:
+            ensemble_return = 0.0
+            ensemble_confidence = 0.0
+        
+        return {
+            "predicted_return": ensemble_return,
+            "confidence": ensemble_confidence,
+            "models_used": list(predictions.keys())
+        }
+    
+    async def generate_embeddings(self, texts: List[str]) -> List[FeatureVector]:
+        """
+        Generate text embeddings for semantic analysis
+        
+        Args:
+            texts: List of texts to embed
+            
+        Returns:
+            List of embedding vectors
+        """
+        try:
+            embeddings = []
+            
+            for text in texts:
+                # Check cache first
+                if text in self._embeddings_cache:
+                    embeddings.append(self._embeddings_cache[text])
+                    continue
+                
+                # Simple embedding generation (in production, use proper embedding models)
+                # This is a simplified TF-IDF style embedding
+                words = text.lower().split()
+                word_freq = {}
+                for word in words:
+                    word_freq[word] = word_freq.get(word, 0) + 1
+                
+                # Create fixed-size vector (simplified)
+                vector = []
+                for i in range(100):  # 100-dimensional vector
+                    if i < len(words):
+                        # Simple hash-based embedding
+                        word_hash = hash(words[i]) % 1000
+                        vector.append(word_hash / 1000.0)
+                    else:
+                        vector.append(0.0)
+                
+                # Normalize vector
+                norm = np.linalg.norm(vector)
+                if norm > 0:
+                    vector = [v / norm for v in vector]
+                
+                embeddings.append(vector)
+                
+                # Cache the embedding
+                self._embeddings_cache[text] = vector
+            
+            self.logger.debug(f"Generated embeddings for {len(texts)} texts")
+            return embeddings
+            
+        except Exception as e:
+            self.logger.error(f"Embedding generation failed: {e}")
+            return [[0.0] * 100 for _ in texts]  # Return zero vectors on error
+    
+    async def analyze_scenarios(self, 
+                              base_scenario: Dict[str, Any],
+                              scenario_variations: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Analyze multiple scenarios for risk assessment
+        
+        Args:
+            base_scenario: Base case scenario
+            scenario_variations: List of scenario variations
+            
+        Returns:
+            Scenario analysis results
+        """
+        try:
+            self.logger.debug(f"Analyzing {len(scenario_variations)} scenarios")
+            
+            results = []
+            
+            for variation in scenario_variations:
+                # Apply variation to base scenario
+                modified_scenario = {**base_scenario, **variation}
+                
+                # Assess risk for modified scenario
+                symbol = variation.get("symbol", "UNKNOWN")
+                risk_assessment = await self.assess_risk(symbol, modified_scenario)
+                
+                # Predict price for modified scenario
+                price_prediction = await self.predict_price(symbol, modified_scenario)
+                
+                result = {
+                    "scenario_name": variation.get("name", f"Scenario_{len(results)}"),
+                    "variations": variation,
+                    "risk_assessment": risk_assessment,
+                    "price_prediction": price_prediction
+                }
+                
+                results.append(result)
+            
+            # Summarize scenario analysis
+            scenario_summary = await self._summarize_scenarios(results)
+            
+            return {
+                "base_scenario": base_scenario,
+                "scenario_results": results,
+                "summary": scenario_summary,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Scenario analysis failed: {e}")
+            return {"error": str(e)}
+    
+    async def _summarize_scenarios(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Summarize scenario analysis results"""
+        if not results:
+            return {}
+        
+        # Aggregate risk levels
+        risk_levels = [result["risk_assessment"].get("overall_risk", 0.5) for result in results]
+        avg_risk = np.mean(risk_levels)
+        
+        # Aggregate predictions
+        predictions = [result["price_prediction"].get("predicted_change_percent", 0) for result in results]
+        avg_prediction = np.mean(predictions)
+        
+        # Find best and worst scenarios
+        best_scenario = min(results, key=lambda x: x["risk_assessment"].get("overall_risk", 1.0))
+        worst_scenario = max(results, key=lambda x: x["risk_assessment"].get("overall_risk", 0.0))
+        
+        return {
+            "average_risk": avg_risk,
+            "average_prediction": avg_prediction,
+            "best_scenario": best_scenario["scenario_name"],
+            "worst_scenario": worst_scenario["scenario_name"],
+            "risk_range": [min(risk_levels), max(risk_levels)],
+            "prediction_range": [min(predictions), max(predictions)]
+        }
+    
+    async def get_model_stats(self) -> Dict[str, Any]:
+        """Get AI models service statistics"""
+        return {
+            "risk_models_count": len(self._risk_models),
+            "prediction_models_count": len(self._prediction_models),
+            "embeddings_cache_size": len(self._embeddings_cache),
+            "available_models": {
+                "risk": list(self._risk_models.keys()),
+                "prediction": list(self._prediction_models.keys())
+            }
+        }
+
+
+# Global AI models service instance
+ai_models_service = AIModelsService()

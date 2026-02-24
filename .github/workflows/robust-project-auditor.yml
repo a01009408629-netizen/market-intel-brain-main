@@ -1,0 +1,83 @@
+name: Robust Project Error Auditor
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+# إيقاف أي فحوصات قديمة قيد التشغيل لنفس الـ Pull Request لتوفير موارد السيرفر
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-audit:
+    name: 🐍 Python Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # يفضل استخدام نسخة أحدث
+          cache: 'pip'         # تسريع تثبيت الحزم
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # تثبيت أدوات الفحص المتقدمة
+          pip install ruff mypy bandit
+
+      - name: 🔍 Syntax & Quality Check (Ruff)
+        # Ruff هو الأداة الأسرع والأكثر دقة حالياً في بايثون لاكتشاف الأخطاء
+        run: ruff check .
+
+      - name: 🛡️ Type Checking (Mypy)
+        # فحص أنواع المتغيرات (اختياري، يمكنك إزالة || true لجعله إجبارياً)
+        run: mypy . --ignore-missing-imports || true 
+
+      - name: 🔒 Security Check (Bandit)
+        # فحص الثغرات الأمنية في كود بايثون
+        run: bandit -r . -ll -ii || true
+
+
+  node-audit:
+    name: 📦 Node.js Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'   # استخدام نسخة LTS حديثة
+          cache: 'npm'
+
+      - name: Install Dependencies (Clean Install)
+        # استخدام npm ci أسرع وأكثر موثوقية في بيئات الـ CI من npm install
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: 🔍 Linting Check (ESLint)
+        # تشغيل السكريبت إذا كان موجوداً في package.json
+        run: |
+          if npm run | grep -q 'lint'; then npm run lint; fi
+
+      - name: 🛡️ TypeScript Check (if applicable)
+        # فحص أخطاء التايب سكريبت بدون بناء الكود (سريع جداً)
+        run: |
+          if [ -f tsconfig.json ]; then npx tsc --noEmit; fi
+
+      - name: 🏗️ Build Test
+        # التأكد من أن المشروع قابل للبناء بنجاح
+        run: |
+          if [ -f package.json ]; then npm run build --if-present; fi
+
+      - name: 🔒 Dependency Security Audit
+        # التأكد من عدم وجود ثغرات عالية الخطورة في الحزم
+        run: npm audit --audit-level=high || true

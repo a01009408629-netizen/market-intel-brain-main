@@ -1,0 +1,147 @@
+# Semgrep ignore patterns for enterprise-grade scanning
+# Exclude files and directories that should not be scanned
+
+# ===== BUILD & DIST =====
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# ===== TESTING =====
+tests/
+test_*
+*_test.py
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.venv/
+venv/
+env/
+
+# ===== DOCUMENTATION =====
+docs/
+*.md
+*.rst
+*.txt
+CHANGELOG*
+LICENSE*
+
+# ===== CONFIGURATION & SECRETS =====
+.env
+.env.*
+*.key
+*.pem
+*.crt
+*.p12
+secrets/
+*.enc
+*.gpg
+
+# ===== THIRD-PARTY & VENDORED =====
+node_modules/
+vendor/
+third_party/
+external/
+lib/
+
+# ===== IDE & EDITOR =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===== DATABASE =====
+*.db
+*.sqlite
+*.sqlite3
+migrations/
+
+# ===== LOGS & TEMP =====
+logs/
+*.log
+tmp/
+temp/
+cache/
+
+# ===== SPECIFIC PATTERNS =====
+# Generated files
+*_pb2.py
+*_pb2_grpc.py
+openapi.json
+swagger.json
+
+# Migration files
+*/migrations/*
+alembic/
+
+# Jupyter notebooks (optional - uncomment if needed)
+# *.ipynb
+
+# Large files
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# Performance and profiling
+*.prof
+*.profile
+*.trace
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.tmp
+
+# CI/CD specific
+.github/workflows/  # Optional: uncomment to exclude workflow files
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Package manager files
+package-lock.json
+yarn.lock
+Pipfile.lock
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Kubernetes
+*.yaml
+*.yml
+k8s/
+kubernetes/
+
+# Infrastructure as Code
+terraform/
+*.tf
+*.tfstate
+*.tfvars
+
+# Monitoring & Observability
+prometheus.yml
+grafana/
+dashboards/
+
+# API specifications
+openapi.yaml
+swagger.yaml
+api-spec.yaml

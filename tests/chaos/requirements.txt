@@ -1,0 +1,25 @@
+# Chaos Engineering Suite Dependencies
+
+# Core testing framework
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+
+# Mocking and testing utilities
+unittest.mock>=1.0.0
+
+# Async support
+asyncio>=3.7.0
+
+# Optional: For enhanced chaos capabilities
+# redis>=4.5.0  # For Redis-based chaos experiments
+
+# Type checking
+mypy>=1.0.0
+
+# Performance monitoring
+# psutil>=5.8.0  # For system resource monitoring
+
+# Documentation
+mkdocs>=1.4.0
+mkdocs-material>=8.5.0

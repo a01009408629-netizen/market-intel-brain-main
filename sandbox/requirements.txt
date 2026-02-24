@@ -1,0 +1,24 @@
+# Stateful Mock Sandbox Dependencies
+
+# Core FastAPI
+fastapi>=0.68.0
+uvicorn[standard]>=0.17.0
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+
+# Type checking
+mypy>=1.0.0
+
+# Optional: For enhanced features
+# redis>=4.5.0  # For distributed state management
+# aiofiles>=0.8.0  # For file operations
+
+# Documentation
+mkdocs>=1.4.0
+mkdocs-material>=8.5.0
+
+# Performance monitoring
+# psutil>=5.8.0  # For system resource monitoring

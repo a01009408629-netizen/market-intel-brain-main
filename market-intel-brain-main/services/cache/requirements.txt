@@ -1,0 +1,19 @@
+# Tiered Cache Manager Dependencies
+
+# Core caching libraries
+cachetools>=5.0.0
+redis[asyncio]>=4.5.0
+
+# Optional serialization (for performance)
+msgpack>=1.0.0
+
+# Development and testing dependencies
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+
+# Type checking
+mypy>=1.0.0
+
+# Logging and monitoring
+structlog>=22.0.0

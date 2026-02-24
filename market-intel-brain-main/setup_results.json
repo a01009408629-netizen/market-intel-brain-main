@@ -1,0 +1,193 @@
+{
+  "Environment Setup": {
+    "total_memory_gb": 7.499401092529297,
+    "available_memory_gb": 1.8236465454101562,
+    "disk_free_gb": 30.811107635498047,
+    "cpu_cores": 2
+  },
+  "Dependency Installation": false,
+  "Secrets Configuration": false,
+  "Infrastructure Initialization": true,
+  "Connectivity Testing": {
+    "binance": {
+      "status": "connected",
+      "response_time": 1334.0566158294678,
+      "status_code": 200,
+      "endpoint": "/api/v3/ping"
+    },
+    "okx": {
+      "status": "connected",
+      "response_time": 2325.3705501556396,
+      "status_code": 404,
+      "endpoint": "/api/v3/ping"
+    },
+    "coinbase": {
+      "status": "connected",
+      "response_time": 2195.0316429138184,
+      "status_code": 200,
+      "endpoint": "/health"
+    },
+    "kraken": {
+      "status": "connected",
+      "response_time": 1267.2908306121826,
+      "status_code": 404,
+      "endpoint": "/api/v3/ping"
+    },
+    "huobi": {
+      "status": "connected",
+      "response_time": 1374.9241828918457,
+      "status_code": 404,
+      "endpoint": "/api/v3/ping"
+    },
+    "bloomberg": {
+      "status": "connected",
+      "response_time": 1418.713092803955,
+      "status_code": 403,
+      "endpoint": "/api/v3/ping"
+    },
+    "reuters": {
+      "status": "failed",
+      "response_time": null,
+      "error": "No endpoint responded"
+    },
+    "coindesk": {
+      "status": "failed",
+      "response_time": null,
+      "error": "No endpoint responded"
+    },
+    "cryptocompare": {
+      "status": "connected",
+      "response_time": 1204.1034698486328,
+      "status_code": 200,
+      "endpoint": "/api/v3/ping"
+    },
+    "messari": {
+      "status": "connected",
+      "response_time": 1718.1496620178223,
+      "status_code": 404,
+      "endpoint": "/api/v3/ping"
+    },
+    "glassnode": {
+      "status": "connected",
+      "response_time": 1203.2103538513184,
+      "status_code": 401,
+      "endpoint": "/api/v3/ping"
+    },
+    "coinmetrics": {
+      "status": "connected",
+      "response_time": 1458.3044052124023,
+      "status_code": 404,
+      "endpoint": "/api/v3/ping"
+    },
+    "defillama": {
+      "status": "connected",
+      "response_time": 1340.341567993164,
+      "status_code": 404,
+      "endpoint": "/api/v3/ping"
+    }
+  },
+  "Data Validation Testing": {
+    "tick_data": {
+      "serialization": true,
+      "deserialization": true,
+      "json_size": 463,
+      "dict_size": 23
+    },
+    "news_data": {
+      "serialization": true,
+      "deserialization": true,
+      "json_size": 480,
+      "dict_size": 23
+    }
+  },
+  "Performance Benchmarking": {
+    "memory_initial_mb": 118.53125,
+    "memory_final_mb": 120.41796875,
+    "memory_increase_mb": 1.88671875,
+    "cpu_initial_percent": 100.0,
+    "io_write_ms": 15.768289566040039,
+    "io_read_ms": 135.63799858093262,
+    "network_ms": 928.5950660705566,
+    "performance_score": 64.514825630188
+  },
+  "Load Testing": {
+    "duration_seconds": 30,
+    "total_requests": 2900,
+    "avg_rps": 96.66666666666667,
+    "success_rate": 0.9666666666666667,
+    "target_rps": 50
+  },
+  "Integration Testing": {
+    "items_generated": 1000,
+    "items_processed": 1000,
+    "processing_time_ms": 6.6204071044921875,
+    "items_per_second": 151048.1129357534,
+    "io_stats": {
+      "ring_buffer": {
+        "capacity": 10000,
+        "size": 0,
+        "utilization": 0.0,
+        "total_items": 1000,
+        "dropped_items": 0,
+        "drop_rate": 0.0,
+        "last_drop_time": 0,
+        "backpressure_active": false
+      },
+      "aof_writer": {
+        "total_writes": 100,
+        "total_bytes": 48499,
+        "compressed_bytes": 3362,
+        "compression_ratio": 0.06932101692818408,
+        "sync_count": 1,
+        "buffer_size_mb": 0.41743946075439453,
+        "buffer_items": 900,
+        "current_file_size_mb": 0.0032072067260742188,
+        "compression_type": "lz4"
+      },
+      "overall": {
+        "items_processed": 1000,
+        "items_written": 1000,
+        "items_dropped": 0,
+        "processing_time_ms": 2.0017623901367188,
+        "drop_rate": 0.0,
+        "write_rate": 1.0,
+        "avg_processing_time_ms": 0.0020017623901367188
+      }
+    }
+  },
+  "Final Validation": {
+    "setup_completion_rate": 0.19148936170212766,
+    "total_elapsed_time": 628.5044455528259,
+    "total_errors": 1,
+    "total_warnings": 1,
+    "performance_data": {
+      "Environment Setup": 16.285181045532227,
+      "Dependency Installation": 564914.6814346313,
+      "Secrets Configuration": 25358.12211036682,
+      "Infrastructure Initialization": 114.39752578735352,
+      "Connectivity Testing": 3622.9918003082275,
+      "Data Validation Testing": 3.590822219848633,
+      "Performance Benchmarking": 1299.8847961425781,
+      "Load Testing": 30019.992113113403,
+      "Integration Testing": 2007.9832077026367,
+      "Final Validation": 157.04941749572754
+    },
+    "connection_times": {
+      "kraken": 1267.2908306121826,
+      "binance": 1334.0566158294678,
+      "cryptocompare": 1204.1034698486328,
+      "glassnode": 1203.2103538513184,
+      "defillama": 1340.341567993164,
+      "huobi": 1374.9241828918457,
+      "bloomberg": 1418.713092803955,
+      "coinmetrics": 1458.3044052124023,
+      "messari": 1718.1496620178223,
+      "coinbase": 2195.0316429138184,
+      "okx": 2325.3705501556396
+    },
+    "system_resources": {
+      "memory_usage_mb": 120.26171875,
+      "cpu_usage_percent": 100.0
+    }
+  }
+}

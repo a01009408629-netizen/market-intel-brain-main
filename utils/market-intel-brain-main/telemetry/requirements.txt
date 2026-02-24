@@ -1,0 +1,33 @@
+# Advanced Telemetry Dependencies
+
+# Core OpenTelemetry
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+opentelemetry-exporter-jaeger>=1.20.0
+opentelemetry-propagator>=1.20.0
+opentelemetry-semconv>=1.20.0
+
+# Prometheus metrics
+prometheus-client>=0.16.0
+
+# HTTP server for exporter
+aiohttp>=3.8.0
+
+# Development and testing dependencies
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+
+# Type checking
+mypy>=1.0.0
+
+# Optional: For advanced features
+# redis-py>=4.5.0  # If using Redis for distributed tracing
+# psutil>=5.8.0      # For system metrics collection
+
+# Documentation
+mkdocs>=1.4.0
+mkdocs-material>=8.5.0
+
+# Grafana integration (optional)
+# grafana-api>=1.0.3  # For automated dashboard creation

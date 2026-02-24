@@ -1,0 +1,176 @@
+[bandit]
+# Enterprise-grade Bandit configuration
+# Comprehensive security scanning rules and exclusions
+
+# Exclude directories from scanning
+exclude_dirs = [
+    "tests",
+    "test_*",
+    "docs",
+    "build",
+    "dist",
+    ".git",
+    ".tox",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "migrations",
+    "node_modules"
+]
+
+# Test files and directories
+tests = [
+    "test_*.py",
+    "*_test.py",
+    "tests/",
+    "integration/",
+    "unit/"
+]
+
+# Skip specific tests (can be overridden with command line)
+skips = [
+    "B101",  # assert_used
+    "B601",  # shell_injection_process
+    "B602",  # subprocess_popen_with_shell_equals_true
+    "B603",  # subprocess_without_shell_equals_true
+    "B604",  # any_other_function_with_shell_equals_true
+    "B605",  # start_process_with_a_shell
+    "B606",  # start_process_with_no_shell
+    "B607",  # start_process_with_partial_path
+]
+
+# Only show issues of a given severity level or higher
+severity_level = "low"
+
+# Only show issues of a given confidence level or higher
+confidence_level = "low"
+
+# Output format
+output_format = "json"
+
+# Output file
+output_file = "bandit-report.json"
+
+# Include line numbers in output
+include_line_numbers = true
+
+# Show code context
+show_context = true
+
+# Number of context lines to show
+context_lines = 3
+
+# Baseline file for ignoring known issues
+baseline_file = ".bandit-baseline"
+
+# Custom tests directory
+tests_dir = "bandit-tests"
+
+# Aggressive mode (more false positives, but more thorough)
+aggressive = false
+
+# Ignore specific vulnerabilities
+ignore_nosec = false
+
+# File extensions to scan
+file_extensions = [
+    ".py"
+]
+
+# Regex pattern for files to include
+include_paths = [
+    "services/",
+    "adapters/",
+    "core/",
+    "pipelines/",
+    "utils/",
+    "models/",
+    "main.py",
+    "api_server.py",
+    "simple_api_server.py"
+]
+
+# Regex pattern for files to exclude
+exclude_paths = [
+    ".*test.*",
+    ".*migrations.*",
+    ".*__pycache__.*",
+    ".*venv.*",
+    ".*env.*"
+]
+
+# Custom test configuration
+[bandit.tests]
+# Test-specific configurations can be added here
+
+# Example: Hardcoded password detection
+[bandit.tests.B105]
+check_typed_request = true
+
+# Example: Hardcoded temp file detection
+[bandit.tests.B108]
+check_typed_request = true
+
+# Example: Try/except detection
+[bandit.tests.B110]
+check_typed_exception = true
+
+# Example: Try/except/finally detection
+[bandit.tests.B112]
+check_typed_exception = true
+
+# Example: Flask debug mode
+[bandit.tests.B201]
+check_typed_request = true
+
+# Example: Jinja2 autoescape
+[bandit.tests.B701]
+check_typed_request = true
+
+# Example: Django XSS protection
+[bandit.tests.B703]
+check_typed_request = true
+
+# Example: Mako templates
+[bandit.tests.B712]
+check_typed_request = true
+
+# Example: Django raw SQL
+[bandit.tests.B910]
+check_typed_request = true
+
+# Example: Django SQL injection
+[bandit.tests.B911]
+check_typed_request = true
+
+# Example: Django directory traversal
+[bandit.tests.B912]
+check_typed_request = true
+
+# Example: Django open redirect
+[bandit.tests.B913]
+check_typed_request = true
+
+# Example: Django insecure configuration
+[bandit.tests.B914]
+check_typed_request = true
+
+# Example: Django CSRF protection
+[bandit.tests.B915]
+check_typed_request = true
+
+# Example: Django SSL configuration
+[bandit.tests.B916]
+check_typed_request = true
+
+# Example: Django secret key
+[bandit.tests.B917]
+check_typed_request = true
+
+# Example: Django debug mode
+[bandit.tests.B918]
+check_typed_request = true
+
+# Example: Django middleware
+[bandit.tests.B919]
+check_typed_request = true

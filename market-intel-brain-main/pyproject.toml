@@ -1,0 +1,380 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "market-intel-brain"
+version = "1.0.0"
+description = "Enterprise-grade Financial Intelligence Platform"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Market Intel Brain Team", email = "team@marketintel.com"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.5.0",
+    "aiohttp>=3.9.0",
+    "aiofiles>=23.2.0",
+    "cryptography>=41.0.0",
+    "redis>=5.0.0",
+    "python-multipart>=0.0.6",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "structlog>=23.2.0",
+    "prometheus-client>=0.19.0",
+    "psutil>=5.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "pytest-benchmark>=4.0.0",
+    "black>=24.4.0",
+    "ruff>=0.15.0",
+    "mypy>=1.19.0",
+    "bandit>=1.9.0",
+    "safety>=3.2.0",
+    "semgrep>=1.68.0",
+    "pip-audit>=2.7.0",
+    "pre-commit>=3.7.0",
+    "vulture>=2.11.0",
+    "radon>=6.0.0",
+    "memory-profiler>=0.61.0",
+    "line-profiler>=4.1.0",
+]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.28.0",
+    "faker>=24.0.0",
+]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.25.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/marketintel/brain"
+Documentation = "https://docs.marketintel.com"
+Repository = "https://github.com/marketintel/brain.git"
+"Bug Tracker" = "https://github.com/marketintel/brain/issues"
+
+[project.scripts]
+market-intel = "main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["services*", "adapters*", "core*", "pipelines*", "utils*", "models*"]
+exclude = ["tests*", "docs*", "__pycache__*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "__pycache__",
+]
+
+# Same as Black.
+line-length = 88
+indent-width = 4
+
+# Assume Python 3.11
+target-version = "py311"
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
+# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
+# McCabe complexity (`C901`) by default.
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # pep8-naming
+    "N",
+    # flake8-comprehensions
+    "C4",
+    # flake8-return
+    "RET",
+    # flake8-quotes
+    "Q",
+    # flake8-tidy-imports
+    "TID",
+    # flake8-unused-arguments
+    "ARG",
+    # flake8-no-pep420
+    "INP",
+    # flake8-datetimez
+    "DTZ",
+    # flake8-logging
+    "LOG",
+    # flake8-future-annotations
+    "FA",
+    # flake8-boolean-trap
+    "FBT",
+    # flake8-pie
+    "PIE",
+    # flake8-raise
+    "RSE",
+    # flake8-self
+    "SLF",
+    # flake8-slots
+    "SLOT",
+    # flake8-todos
+    "TD",
+    # flake8-import-conventions
+    "ICN",
+    # flake8-implicit-str-concat
+    "ISC",
+    # flake8-errmsg
+    "EM",
+    # flake8-comprehensions
+    "C4",
+    # flake8-bugbear
+    "B",
+    # flake8-assert
+    "S",
+    # flake8-exec
+    "S102",
+    # flake8-except
+    "BLE",
+    # flake8-import-order
+    "I",
+    # flake8-datetimez
+    "DTZ",
+    # flake8-annotations
+    "ANN",
+    # flake8-bandit
+    "S",
+]
+ignore = [
+    # Star imports are used in some files
+    "F405",
+    "F403",
+    # Line too long (handled by formatter)
+    "E501",
+    # Too many arguments to function call
+    "PLR0913",
+    # Too many branches
+    "PLR0912",
+    # Too many statements
+    "PLR0915",
+    # Magic number
+    "PLR2004",
+    # Complex if
+    "SIM108",
+    # Consider using enumerate
+    "PLW2901",
+    # Missing docstring
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D107",
+    # Type checking
+    "ANN001",
+    "ANN002",
+    "ANN003",
+    "ANN201",
+    "ANN202",
+    "ANN204",
+    "ANN205",
+    "ANN206",
+    "ANN401",
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["services", "adapters", "core", "pipelines", "utils", "models"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"test_*.py" = ["S", "ANN", "D"]
+"tests/*" = ["S", "ANN", "D"]
+"*_test.py" = ["S", "ANN", "D"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "services.*",
+    "adapters.*",
+    "core.*",
+    "pipelines.*",
+    "utils.*",
+    "models.*",
+]
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=services",
+    "--cov=adapters",
+    "--cov=core",
+    "--cov=pipelines",
+    "--cov=utils",
+    "--cov=models",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "security: marks tests as security tests",
+    "performance: marks tests as performance tests",
+]
+
+[tool.coverage.run]
+source = ["services", "adapters", "core", "pipelines", "utils", "models"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/migrations/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+show_missing = true
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.bandit]
+exclude_dirs = ["tests", "test_*"]
+skips = ["B101", "B601"]
+
+[tool.vulture]
+min_confidence = 80
+paths = ["services", "adapters", "core", "pipelines", "utils", "models"]
+exclude = ["tests", "test_*", "__pycache__"]
+
+[tool.semantic_release]
+version_toml = "pyproject.toml"
+version_variable = "services/__init__.py:__version__"
+branch = "main"
+upload_to_pypi = false
+upload_to_release = true
+build_command = "python -m build"
