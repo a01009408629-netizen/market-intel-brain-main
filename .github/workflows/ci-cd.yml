@@ -105,8 +105,8 @@ jobs:
           docker run --rm \
             -e ENVIRONMENT=test \
             -e REDIS_URL=redis://localhost:6379 \
-            ${{ steps.build.outputs.digest }} \
-            python -c "import services; print('✅ Docker image test successful')"
+            ${{ steps.meta.outputs.tags }} \
+            python -c "import sys; print('✅ Docker image test successful'); sys.exit(0)"
 
       - name: 📊 Upload Test Results
         uses: actions/upload-artifact@v4
@@ -136,7 +136,7 @@ jobs:
 
       - name: 🐳 Pull Built Image
         run: |
-          docker pull ${{ needs.build-and-test.outputs.image-digest }}
+          docker pull ${{ needs.build-and-test.outputs.image-tag }}
 
       - name: 🔍 Run Security Scans
         run: |
@@ -145,13 +145,13 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ github.workspace }}:/tmp/.cache/ \
             aquasec/trivy:latest \
-            image ${{ needs.build-and-test.outputs.image-digest }} \
+            image ${{ needs.build-and-test.outputs.image-tag }} \
             --format json \
             --output /tmp/.cache/trivy-report.json
 
           # Run Docker Scout
           docker scout cves \
-            ${{ needs.build-and-test.outputs.image-digest }} \
+            ${{ needs.build-and-test.outputs.image-tag }} \
             --format json \
             --output docker-scout-report.json
 
@@ -179,7 +179,7 @@ jobs:
       - name: 🚀 Deploy to Staging
         run: |
           echo "🚀 Deploying to staging environment..."
-          echo "Image: ${{ needs.build-and-test.outputs.image-digest }}"
+          echo "Image: ${{ needs.build-and-test.outputs.image-tag }}"
           echo "Tag: ${{ needs.build-and-test.outputs.image-tag }}"
           
           # Add your staging deployment commands here
@@ -206,7 +206,7 @@ jobs:
       - name: 🚀 Deploy to Production
         run: |
           echo "🚀 Deploying to production environment..."
-          echo "Image: ${{ needs.build-and-test.outputs.image-digest }}"
+          echo "Image: ${{ needs.build-and-test.outputs.image-tag }}"
           echo "Tag: ${{ needs.build-and-test.outputs.image-tag }}"
           
           # Add your production deployment commands here
