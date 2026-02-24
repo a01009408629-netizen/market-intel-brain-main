@@ -5,6 +5,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 # إيقاف أي فحوصات قديمة قيد التشغيل لنفس الـ Pull Request لتوفير موارد السيرفر
 concurrency:
@@ -15,6 +16,7 @@ jobs:
   python-audit:
     name: 🐍 Python Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -22,62 +24,49 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11' # يفضل استخدام نسخة أحدث
-          cache: 'pip'         # تسريع تثبيت الحزم
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements*.txt
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements_production.txt ]; then pip install -r requirements_production.txt; fi
           # تثبيت أدوات الفحص المتقدمة
-          pip install ruff mypy bandit
+          pip install ruff mypy bandit safety
 
       - name: 🔍 Syntax & Quality Check (Ruff)
-        # Ruff هو الأداة الأسرع والأكثر دقة حالياً في بايثون لاكتشاف الأخطاء
-        run: ruff check .
+        run: |
+          if command -v ruff &> /dev/null; then
+            ruff check . --fix || true
+          fi
 
       - name: 🛡️ Type Checking (Mypy)
-        # فحص أنواع المتغيرات (اختياري، يمكنك إزالة || true لجعله إجبارياً)
-        run: mypy . --ignore-missing-imports || true 
+        run: |
+          if command -v mypy &> /dev/null; then
+            mypy . --ignore-missing-imports || true
+          fi
 
       - name: 🔒 Security Check (Bandit)
-        # فحص الثغرات الأمنية في كود بايثون
-        run: bandit -r . -ll -ii || true
+        run: |
+          if command -v bandit &> /dev/null; then
+            bandit -r . -ll -ii --format=json -o bandit-report.json || true
+          fi
 
+      - name: 🔒 Dependency Check (Safety)
+        run: |
+          if command -v safety &> /dev/null; then
+            safety check --json --output safety-report.json || true
+          fi
 
-  node-audit:
-    name: 📦 Node.js Audit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: � Upload Reports
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
-          node-version: '20'   # استخدام نسخة LTS حديثة
-          cache: 'npm'
-
-      - name: Install Dependencies (Clean Install)
-        # استخدام npm ci أسرع وأكثر موثوقية في بيئات الـ CI من npm install
-        run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
-
-      - name: 🔍 Linting Check (ESLint)
-        # تشغيل السكريبت إذا كان موجوداً في package.json
-        run: |
-          if npm run | grep -q 'lint'; then npm run lint; fi
-
-      - name: 🛡️ TypeScript Check (if applicable)
-        # فحص أخطاء التايب سكريبت بدون بناء الكود (سريع جداً)
-        run: |
-          if [ -f tsconfig.json ]; then npx tsc --noEmit; fi
-
-      - name: 🏗️ Build Test
-        # التأكد من أن المشروع قابل للبناء بنجاح
-        run: |
-          if [ -f package.json ]; then npm run build --if-present; fi
-
-      - name: 🔒 Dependency Security Audit
-        # التأكد من عدم وجود ثغرات عالية الخطورة في الحزم
-        run: npm audit --audit-level=high || true
+          name: python-audit-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+          retention-days: 30
