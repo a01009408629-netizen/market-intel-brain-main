@@ -32,7 +32,6 @@ jobs:
     name: 🏗️ Build & Test
     runs-on: ubuntu-latest
     outputs:
-      image-digest: ${{ steps.build.outputs.digest }}
       image-tag: ${{ steps.meta.outputs.tags }}
     
     steps:
@@ -134,9 +133,26 @@ jobs:
       - name: 🔑 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 🐳 Pull Built Image
-        run: |
-          docker pull ${{ needs.build-and-test.outputs.image-tag }}
+      - name: 🏷️ Extract Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🐳 Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
 
       - name: 🔍 Run Security Scans
         run: |
@@ -145,23 +161,16 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ github.workspace }}:/tmp/.cache/ \
             aquasec/trivy:latest \
-            image ${{ needs.build-and-test.outputs.image-tag }} \
+            image ${{ steps.meta.outputs.tags }} \
             --format json \
             --output /tmp/.cache/trivy-report.json
-
-          # Run Docker Scout
-          docker scout cves \
-            ${{ needs.build-and-test.outputs.image-tag }} \
-            --format json \
-            --output docker-scout-report.json
 
       - name: 📤 Upload Security Reports
         uses: actions/upload-artifact@v4
         with:
           name: security-reports
           path: |
-            trivy-report.json
-            docker-scout-report.json
+            /tmp/.cache/trivy-report.json
           retention-days: 90
 
   # ===== DEPLOYMENT JOBS =====
