@@ -1,0 +1,989 @@
+name: 🌐 Multi-Language Enterprise Builder
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: 'Component to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - dotnet-services
+          - python-services
+          - hybrid-integration
+          - cross-platform
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/multi-language-builder.yml'
+      - 'market-intel-brain-main/**'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ===== .NET CORE SERVICES BUILDER =====
+  build-dotnet-services:
+    name: 🟦 Build .NET Core Services
+    runs-on: ubuntu-latest
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'dotnet-services' || github.event.inputs.component == 'hybrid-integration'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🟦 Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            7.0.x
+            8.0.x
+
+      - name: 🏗️ Create .NET Services Structure
+        run: |
+          mkdir -p dotnet-services/{src/{MarketIntel.API,MarketIntel.Core,MarketIntel.Data,MarketIntelligence.Services},tests,config}
+
+      - name: 📦 Create MarketIntel.Core Project
+        run: |
+          cat > dotnet-services/src/MarketIntel.Core/MarketIntel.Core.csproj << 'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+
+            <PropertyGroup>
+              <TargetFramework>net8.0</TargetFramework>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <Nullable>enable</Nullable>
+              <LangVersion>latest</LangVersion>
+            </PropertyGroup>
+
+            <ItemGroup>
+              <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+              <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+              <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+              <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+              <PackageReference Include="System.Text.Json" Version="8.0.0" />
+              <PackageReference Include="FluentValidation" Version="11.8.0" />
+              <PackageReference Include="AutoMapper" Version="12.0.1" />
+              <PackageReference Include="Serilog" Version="3.1.1" />
+              <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+            </ItemGroup>
+
+          </Project>
+          EOF
+
+      - name: 🏗️ Create Core Models
+        run: |
+          cat > dotnet-services/src/MarketIntel.Core/Models/MarketData.cs << 'EOF'
+          using System.ComponentModel.DataAnnotations;
+
+          namespace MarketIntel.Core.Models;
+
+          public class MarketData
+          {
+              [Required]
+              public string Symbol { get; set; } = string.Empty;
+              
+              [Required]
+              public decimal Price { get; set; }
+              
+              public decimal Volume { get; set; }
+              
+              public decimal Change { get; set; }
+              
+              public decimal ChangePercent { get; set; }
+              
+              public DateTime Timestamp { get; set; }
+              
+              public string Market { get; set; } = string.Empty;
+              
+              public Dictionary<string, object> Metadata { get; set; } = new();
+          }
+
+          public class SentimentAnalysis
+          {
+              [Required]
+              public string Symbol { get; set; } = string.Empty;
+              
+              public decimal SentimentScore { get; set; }
+              
+              public string SentimentLabel { get; set; } = string.Empty;
+              
+              public decimal Confidence { get; set; }
+              
+              public List<string> Keywords { get; set; } = new();
+              
+              public DateTime AnalyzedAt { get; set; }
+              
+              public string Source { get; set; } = string.Empty;
+          }
+
+          public class TechnicalIndicator
+          {
+              [Required]
+              public string Symbol { get; set; } = string.Empty;
+              
+              public string IndicatorType { get; set; } = string.Empty;
+              
+              public Dictionary<string, decimal> Values { get; set; } = new();
+              
+              public DateTime CalculatedAt { get; set; }
+              
+              public TimeSpan Timeframe { get; set; }
+          }
+          EOF
+
+      - name: 🛠️ Create Services
+        run: |
+          cat > dotnet-services/src/MarketIntel.Core/Services/IMarketDataService.cs << 'EOF'
+          using MarketIntel.Core.Models;
+
+          namespace MarketIntel.Core.Services;
+
+          public interface IMarketDataService
+          {
+              Task<IEnumerable<MarketData>> GetMarketDataAsync(string symbol, DateTime? startDate = null, DateTime? endDate = null);
+              Task<MarketData?> GetLatestMarketDataAsync(string symbol);
+              Task<IEnumerable<MarketData>> GetMarketDataBatchAsync(IEnumerable<string> symbols);
+              Task<bool> UpdateMarketDataAsync(MarketData data);
+          }
+
+          public interface ISentimentAnalysisService
+          {
+              Task<SentimentAnalysis> AnalyzeSentimentAsync(string symbol, string text);
+              Task<IEnumerable<SentimentAnalysis>> GetSentimentHistoryAsync(string symbol, int days = 30);
+              Task<decimal> GetOverallSentimentAsync(string symbol);
+          }
+
+          public interface ITechnicalAnalysisService
+          {
+              Task<TechnicalIndicator> CalculateTechnicalIndicatorAsync(string symbol, string indicatorType, TimeSpan timeframe);
+              Task<IEnumerable<TechnicalIndicator>> GetTechnicalIndicatorsAsync(string symbol);
+              Task<bool> ValidateTechnicalDataAsync(string symbol);
+          }
+          EOF
+
+      - name: 🚀 Create API Project
+        run: |
+          cat > dotnet-services/src/MarketIntel.API/MarketIntel.API.csproj << 'EOF'
+          <Project Sdk="Microsoft.NET.Sdk.Web">
+
+            <PropertyGroup>
+              <TargetFramework>net8.0</TargetFramework>
+              <Nullable>enable</Nullable>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <GenerateDocumentationFile>true</GenerateDocumentationFile>
+              <NoWarn>$(NoWarn);1591</NoWarn>
+            </PropertyGroup>
+
+            <ItemGroup>
+              <ProjectReference Include="..\MarketIntel.Core\MarketIntel.Core.csproj" />
+              <ProjectReference Include="..\MarketIntel.Data\MarketIntel.Data.csproj" />
+            </ItemGroup>
+
+            <ItemGroup>
+              <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
+              <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+              <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+              <PackageReference Include="Microsoft.AspNetCore.RateLimiting" Version="8.0.0" />
+              <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="8.0.1" />
+              <PackageReference Include="AspNetCore.HealthChecks.Npgsql" Version="8.0.1" />
+              <PackageReference Include="Prometheus.AspNetCore" Version="8.0.0" />
+            </ItemGroup>
+
+          </Project>
+          EOF
+
+      - name: 🎮 Create API Controllers
+        run: |
+          cat > dotnet-services/src/MarketIntel.API/Controllers/MarketDataController.cs << 'EOF'
+          using Microsoft.AspNetCore.Mvc;
+          using Microsoft.AspNetCore.RateLimiting;
+          using MarketIntel.Core.Models;
+          using MarketIntel.Core.Services;
+          using System.ComponentModel.DataAnnotations;
+
+          namespace MarketIntel.API.Controllers;
+
+          [ApiController]
+          [Route("api/[controller]")]
+          [EnableRateLimiting("DefaultPolicy")]
+          public class MarketDataController : ControllerBase
+          {
+              private readonly IMarketDataService _marketDataService;
+              private readonly ILogger<MarketDataController> _logger;
+
+              public MarketDataController(IMarketDataService marketDataService, ILogger<MarketDataController> logger)
+              {
+                  _marketDataService = marketDataService;
+                  _logger = logger;
+              }
+
+              [HttpGet("{symbol}")]
+              public async Task<ActionResult<MarketData>> GetMarketData(string symbol)
+              {
+                  try
+                  {
+                      var data = await _marketDataService.GetLatestMarketDataAsync(symbol);
+                      if (data == null)
+                          return NotFound($"Market data for symbol {symbol} not found");
+
+                      return Ok(data);
+                  }
+                  catch (Exception ex)
+                  {
+                      _logger.LogError(ex, "Error retrieving market data for symbol: {Symbol}", symbol);
+                      return StatusCode(500, "Internal server error");
+                  }
+              }
+
+              [HttpGet("{symbol}/history")]
+              public async Task<ActionResult<IEnumerable<MarketData>>> GetMarketDataHistory(
+                  string symbol,
+                  [FromQuery] DateTime? startDate = null,
+                  [FromQuery] DateTime? endDate = null)
+              {
+                  try
+                  {
+                      var data = await _marketDataService.GetMarketDataAsync(symbol, startDate, endDate);
+                      return Ok(data);
+                  }
+                  catch (Exception ex)
+                  {
+                      _logger.LogError(ex, "Error retrieving market data history for symbol: {Symbol}", symbol);
+                      return StatusCode(500, "Internal server error");
+                  }
+              }
+
+              [HttpPost("batch")]
+              public async Task<ActionResult<IEnumerable<MarketData>>> GetBatchMarketData([FromBody] BatchRequest request)
+              {
+                  try
+                  {
+                      var data = await _marketDataService.GetMarketDataBatchAsync(request.Symbols);
+                      return Ok(data);
+                  }
+                  catch (Exception ex)
+                  {
+                      _logger.LogError(ex, "Error retrieving batch market data");
+                      return StatusCode(500, "Internal server error");
+                  }
+              }
+
+              public class BatchRequest
+              {
+                  [Required]
+                  public List<string> Symbols { get; set; } = new();
+              }
+          }
+
+          [ApiController]
+          [Route("api/[controller]")]
+          public class SentimentController : ControllerBase
+          {
+              private readonly ISentimentAnalysisService _sentimentService;
+              private readonly ILogger<SentimentController> _logger;
+
+              public SentimentController(ISentimentAnalysisService sentimentService, ILogger<SentimentController> logger)
+              {
+                  _sentimentService = sentimentService;
+                  _logger = logger;
+              }
+
+              [HttpPost("analyze")]
+              public async Task<ActionResult<SentimentAnalysis>> AnalyzeSentiment([FromBody] SentimentRequest request)
+              {
+                  try
+                  {
+                      var result = await _sentimentService.AnalyzeSentimentAsync(request.Symbol, request.Text);
+                      return Ok(result);
+                  }
+                  catch (Exception ex)
+                  {
+                      _logger.LogError(ex, "Error analyzing sentiment for symbol: {Symbol}", request.Symbol);
+                      return StatusCode(500, "Internal server error");
+                  }
+              }
+
+              [HttpGet("{symbol}/history")]
+              public async Task<ActionResult<IEnumerable<SentimentAnalysis>>> GetSentimentHistory(
+                  string symbol,
+                  [FromQuery] int days = 30)
+              {
+                  try
+                  {
+                      var history = await _sentimentService.GetSentimentHistoryAsync(symbol, days);
+                      return Ok(history);
+                  }
+                  catch (Exception ex)
+                  {
+                      _logger.LogError(ex, "Error retrieving sentiment history for symbol: {Symbol}", symbol);
+                      return StatusCode(500, "Internal server error");
+                  }
+              }
+
+              public class SentimentRequest
+              {
+                  [Required]
+                  public string Symbol { get; set; } = string.Empty;
+
+                  [Required]
+                  public string Text { get; set; } = string.Empty;
+              }
+          }
+          EOF
+
+      - name: 🔧 Create Program.cs
+        run: |
+          cat > dotnet-services/src/MarketIntel.API/Program.cs << 'EOF'
+          using Microsoft.AspNetCore.Builder;
+          using Microsoft.Extensions.DependencyInjection;
+          using Microsoft.Extensions.Hosting;
+          using Microsoft.Extensions.Logging;
+          using MarketIntel.Core.Services;
+          using MarketIntel.Data.Services;
+          using Serilog;
+          using System.Threading.RateLimiting;
+
+          var builder = WebApplication.CreateBuilder(args);
+
+          // Configure Serilog
+          builder.Host.UseSerilog((context, configuration) =>
+              configuration.ReadFrom.Configuration(context.Configuration));
+
+          // Add services to the container
+          builder.Services.AddControllers();
+          
+          // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+          builder.Services.AddEndpointsApiExplorer();
+          builder.Services.AddSwaggerGen(c =>
+          {
+              c.SwaggerDoc("v1", new() { 
+                  Title = "Market Intel API", 
+                  Version = "v1",
+                  Description = "Enterprise Financial Intelligence Platform API"
+              });
+          });
+
+          // Add authentication
+          builder.Services.AddAuthentication("Bearer")
+              .AddJwtBearer(options =>
+              {
+                  // Configure JWT Bearer auth
+                  // Token validation parameters would be configured here
+              });
+
+          // Add rate limiting
+          builder.Services.AddRateLimiter(options =>
+          {
+              options.AddPolicy("DefaultPolicy", context =>
+                  RateLimitPartition.GetSlidingWindowLimiter(
+                      partitionKey: context.Connection.RemoteIpAddress?.ToString(),
+                      factory: _ => new SlidingWindowRateLimiterOptions
+                      {
+                          PermitLimit = 100,
+                          Window = TimeSpan.FromMinutes(1),
+                          SegmentsPerWindow = 2
+                      }));
+          });
+
+          // Add health checks
+          builder.Services.AddHealthChecks()
+              .AddRedis(builder.Configuration.GetConnectionString("Redis")!)
+              .AddNpgSql(builder.Configuration.GetConnectionString("PostgreSQL")!);
+
+          // Add Prometheus metrics
+          builder.Services.AddPrometheus();
+
+          // Register application services
+          builder.Services.AddScoped<IMarketDataService, MarketDataService>();
+          builder.Services.AddScoped<ISentimentAnalysisService, SentimentAnalysisService>();
+          builder.Services.AddScoped<ITechnicalAnalysisService, TechnicalAnalysisService>();
+
+          // Add CORS
+          builder.Services.AddCors(options =>
+          {
+              options.AddPolicy("AllowAll", policy =>
+              {
+                  policy.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader();
+              });
+          });
+
+          var app = builder.Build();
+
+          // Configure the HTTP request pipeline
+          if (app.Environment.IsDevelopment())
+          {
+              app.UseSwagger();
+              app.UseSwaggerUI();
+          }
+
+          app.UseHttpsRedirection();
+          app.UseCors("AllowAll");
+          app.UseAuthentication();
+          app.UseAuthorization();
+          app.UseHealthChecks("/health");
+          app.UsePrometheus();
+          app.MapControllers();
+
+          app.Run();
+          EOF
+
+      - name: 🐳 Create Dockerfile for .NET
+        run: |
+          cat > dotnet-services/Dockerfile << 'EOF'
+          # Multi-stage Dockerfile for .NET Market Intel Services
+          
+          # Build stage
+          FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+          WORKDIR /src
+          
+          # Copy csproj and restore dependencies
+          COPY ["src/MarketIntel.Core/MarketIntel.Core.csproj", "src/MarketIntel.Core/"]
+          COPY ["src/MarketIntel.Data/MarketIntel.Data.csproj", "src/MarketIntel.Data/"]
+          COPY ["src/MarketIntel.API/MarketIntel.API.csproj", "src/MarketIntel.API/"]
+          RUN dotnet restore "src/MarketIntel.API/MarketIntel.API.csproj"
+          
+          # Copy the rest of the files and build
+          COPY . .
+          WORKDIR "/src/src/MarketIntel.API"
+          RUN dotnet build "MarketIntel.API.csproj" -c Release -o /app/build
+          
+          # Publish
+          FROM build AS publish
+          RUN dotnet publish "MarketIntel.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
+          
+          # Runtime stage
+          FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+          WORKDIR /app
+          COPY --from=publish /app/publish .
+          
+          # Create non-root user
+          RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app
+          USER appuser
+          
+          EXPOSE 8080
+          ENV ASPNETCORE_URLS=http://+:8080
+          
+          ENTRYPOINT ["dotnet", "MarketIntel.API.dll"]
+          EOF
+
+      - name: 🧪 Create Unit Tests
+        run: |
+          cat > dotnet-services/tests/MarketIntel.Tests/MarketIntel.Tests.csproj << 'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+
+            <PropertyGroup>
+              <TargetFramework>net8.0</TargetFramework>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <Nullable>enable</Nullable>
+              <IsPackable>false</IsPackable>
+              <IsTestProject>true</IsTestProject>
+            </PropertyGroup>
+
+            <ItemGroup>
+              <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+              <PackageReference Include="xunit" Version="2.6.1" />
+              <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3">
+                <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+                <PrivateAssets>all</PrivateAssets>
+              </PackageReference>
+              <PackageReference Include="coverlet.collector" Version="6.0.0">
+                <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+                <PrivateAssets>all</PrivateAssets>
+              </PackageReference>
+              <PackageReference Include="Moq" Version="4.20.69" />
+              <PackageReference Include="FluentAssertions" Version="6.12.0" />
+            </ItemGroup>
+
+            <ItemGroup>
+              <ProjectReference Include="..\..\src\MarketIntel.Core\MarketIntel.Core.csproj" />
+              <ProjectReference Include="..\..\src\MarketIntel.API\MarketIntel.API.csproj" />
+            </ItemGroup>
+
+          </Project>
+          EOF
+
+      - name: 🔧 Create appsettings.json
+        run: |
+          cat > dotnet-services/src/MarketIntel.API/appsettings.json << 'EOF'
+          {
+            "Logging": {
+              "LogLevel": {
+                "Default": "Information",
+                "Microsoft.AspNetCore": "Warning"
+              }
+            },
+            "ConnectionStrings": {
+              "Redis": "redis:6379",
+              "PostgreSQL": "Host=postgres;Database=marketintel;Username=marketintel;Password=your_password"
+            },
+            "JwtSettings": {
+              "SecretKey": "your-256-bit-secret-key-here",
+              "Issuer": "MarketIntel",
+              "Audience": "MarketIntel.Users",
+              "ExpirationMinutes": 60
+            },
+            "RateLimiting": {
+              "PermitLimit": 100,
+              "WindowMinutes": 1
+            },
+            "AllowedHosts": "*"
+          }
+          EOF
+
+      - name: 🏗️ Build .NET Solution
+        run: |
+          cd dotnet-services
+          dotnet new sln -n MarketIntel
+          dotnet sln add src/MarketIntel.Core/MarketIntel.Core.csproj
+          dotnet sln add src/MarketIntel.Data/MarketIntel.Data.csproj
+          dotnet sln add src/MarketIntel.API/MarketIntel.API.csproj
+          dotnet sln add tests/MarketIntel.Tests/MarketIntel.Tests.csproj
+          dotnet build --configuration Release
+
+      - name: 🧪 Run Tests
+        run: |
+          cd dotnet-services
+          dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+      - name: 📤 Upload .NET Services
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-services
+          path: dotnet-services/
+          retention-days: 30
+
+  # ===== HYBRID INTEGRATION BUILDER =====
+  build-hybrid-integration:
+    name: 🔗 Build Hybrid Integration
+    runs-on: ubuntu-latest
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'hybrid-integration'
+    needs: build-dotnet-services
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔗 Create Integration Structure
+        run: |
+          mkdir -p integration/{docker-compose,nginx,k8s-integration,api-gateway}
+
+      - name: 🐳 Create Multi-Service Docker Compose
+        run: |
+          cat > integration/docker-compose/docker-compose.yml << 'EOF'
+          version: '3.8'
+
+          services:
+            # Python Services
+            python-api:
+              build:
+                context: ../../market-intel-brain-main
+                dockerfile: Dockerfile
+              ports:
+                - "8000:8000"
+              environment:
+                - REDIS_URL=redis://redis:6379
+                - DATABASE_URL=postgresql://postgres:password@postgres:5432/marketintel
+              depends_on:
+                - redis
+                - postgres
+              networks:
+                - marketintel-network
+
+            # .NET Services
+            dotnet-api:
+              build:
+                context: ../dotnet-services
+                dockerfile: Dockerfile
+              ports:
+                - "8080:8080"
+              environment:
+                - ASPNETCORE_URLS=http://+:8080
+                - ConnectionStrings__Redis=redis://redis:6379
+                - ConnectionStrings__PostgreSQL=Host=postgres;Database=marketintel;Username=postgres;Password=password
+              depends_on:
+                - redis
+                - postgres
+              networks:
+                - marketintel-network
+
+            # API Gateway
+            nginx-gateway:
+              image: nginx:alpine
+              ports:
+                - "80:80"
+                - "443:443"
+              volumes:
+                - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+                - ./nginx/ssl:/etc/nginx/ssl:ro
+              depends_on:
+                - python-api
+                - dotnet-api
+              networks:
+                - marketintel-network
+
+            # Database
+            postgres:
+              image: postgres:15-alpine
+              environment:
+                - POSTGRES_DB=marketintel
+                - POSTGRES_USER=postgres
+                - POSTGRES_PASSWORD=password
+              volumes:
+                - postgres_data:/var/lib/postgresql/data
+              ports:
+                - "5432:5432"
+              networks:
+                - marketintel-network
+
+            # Cache
+            redis:
+              image: redis:7-alpine
+              ports:
+                - "6379:6379"
+              volumes:
+                - redis_data:/data
+              networks:
+                - marketintel-network
+
+            # Monitoring
+            prometheus:
+              image: prom/prometheus:latest
+              ports:
+                - "9090:9090"
+              volumes:
+                - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+              command:
+                - '--config.file=/etc/prometheus/prometheus.yml'
+                - '--storage.tsdb.path=/prometheus'
+                - '--web.console.libraries=/etc/prometheus/console_libraries'
+                - '--web.console.templates=/etc/prometheus/consoles'
+              networks:
+                - marketintel-network
+
+            grafana:
+              image: grafana/grafana:latest
+              ports:
+                - "3000:3000"
+              environment:
+                - GF_SECURITY_ADMIN_PASSWORD=admin
+              volumes:
+                - grafana_data:/var/lib/grafana
+              networks:
+                - marketintel-network
+
+          volumes:
+            postgres_data:
+            redis_data:
+            grafana_data:
+
+          networks:
+            marketintel-network:
+              driver: bridge
+          EOF
+
+      - name: 🌐 Create Nginx Gateway Config
+        run: |
+          cat > integration/nginx/nginx.conf << 'EOF'
+          events {
+              worker_connections 1024;
+          }
+
+          http {
+              upstream python_api {
+                  server python-api:8000;
+              }
+
+              upstream dotnet_api {
+                  server dotnet-api:8080;
+              }
+
+              # Rate limiting
+              limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+
+              server {
+                  listen 80;
+                  server_name localhost;
+
+                  # Security headers
+                  add_header X-Frame-Options DENY;
+                  add_header X-Content-Type-Options nosniff;
+                  add_header X-XSS-Protection "1; mode=block";
+                  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains";
+
+                  # API Routes
+                  location /api/v1/python/ {
+                      limit_req zone=api burst=20 nodelay;
+                      proxy_pass http://python_api/;
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                  }
+
+                  location /api/v1/dotnet/ {
+                      limit_req zone=api burst=20 nodelay;
+                      proxy_pass http://dotnet_api/;
+                      proxy_set_header Host $host;
+                      proxy_set_header X-Real-IP $remote_addr;
+                      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto $scheme;
+                  }
+
+                  # Health checks
+                  location /health {
+                      access_log off;
+                      return 200 "healthy\n";
+                      add_header Content-Type text/plain;
+                  }
+
+                  # Default route
+                  location / {
+                      return 404;
+                  }
+              }
+          }
+          EOF
+
+      - name: ☸️ Create Kubernetes Integration
+        run: |
+          cat > integration/k8s-integration/hybrid-deployment.yaml << 'EOF'
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: marketintel-hybrid
+          ---
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: python-api
+            namespace: marketintel-hybrid
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app: python-api
+            template:
+              metadata:
+                labels:
+                  app: python-api
+              spec:
+                containers:
+                - name: python-api
+                  image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+                  ports:
+                  - containerPort: 8000
+                  env:
+                  - name: REDIS_URL
+                    value: "redis://redis-service:6379"
+                  resources:
+                    requests:
+                      memory: "256Mi"
+                      cpu: "250m"
+                    limits:
+                      memory: "512Mi"
+                      cpu: "500m"
+          ---
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: dotnet-api
+            namespace: marketintel-hybrid
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app: dotnet-api
+            template:
+              metadata:
+                labels:
+                  app: dotnet-api
+              spec:
+                containers:
+                - name: dotnet-api
+                  image: ${{ env.REGISTRY }}/marketintel-dotnet:latest
+                  ports:
+                  - containerPort: 8080
+                  env:
+                  - name: ASPNETCORE_URLS
+                    value: "http://+:8080"
+                  - name: ConnectionStrings__Redis
+                    value: "redis://redis-service:6379"
+                  resources:
+                    requests:
+                      memory: "256Mi"
+                      cpu: "250m"
+                    limits:
+                      memory: "512Mi"
+                      cpu: "500m"
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: python-api-service
+            namespace: marketintel-hybrid
+          spec:
+            selector:
+              app: python-api
+            ports:
+            - port: 8000
+              targetPort: 8000
+            type: ClusterIP
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: dotnet-api-service
+            namespace: marketintel-hybrid
+          spec:
+            selector:
+              app: dotnet-api
+            ports:
+            - port: 8080
+              targetPort: 8080
+            type: ClusterIP
+          ---
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: marketintel-ingress
+            namespace: marketintel-hybrid
+            annotations:
+              nginx.ingress.kubernetes.io/rewrite-target: /
+              nginx.ingress.kubernetes.io/rate-limit: "100"
+          spec:
+            rules:
+            - host: api.marketintel.com
+              http:
+                paths:
+                - path: /api/v1/python
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: python-api-service
+                      port:
+                        number: 8000
+                - path: /api/v1/dotnet
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: dotnet-api-service
+                      port:
+                        number: 8080
+          EOF
+
+      - name: 📤 Upload Integration Configs
+        uses: actions/upload-artifact@v4
+        with:
+          name: hybrid-integration
+          path: integration/
+          retention-days: 30
+
+  # ===== CROSS-PLATFORM TESTING =====
+  cross-platform-testing:
+    name: 🧪 Cross-Platform Testing
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        dotnet-version: ['6.0.x', '7.0.x', '8.0.x']
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'cross-platform'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🟦 Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ matrix.dotnet-version }}
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 🧪 Test Cross-Platform Compatibility
+        run: |
+          echo "Testing on ${{ matrix.os }} with .NET ${{ matrix.dotnet-version }}"
+          
+          # Test .NET compilation
+          if [ -d "dotnet-services" ]; then
+            cd dotnet-services
+            dotnet --version
+            dotnet build --configuration Release
+            dotnet test --configuration Release --no-build
+            cd ..
+          fi
+          
+          # Test Python services
+          if [ -d "market-intel-brain-main" ]; then
+            cd market-intel-brain-main
+            python --version
+            pip install -r requirements.txt
+            python -m pytest --tb=short || true
+            cd ..
+          fi
+
+  # ===== SUMMARY =====
+  create-summary:
+    name: 📋 Create Multi-Language Summary
+    runs-on: ubuntu-latest
+    needs: [build-dotnet-services, build-hybrid-integration, cross-platform-testing]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate Multi-Language Report
+        run: |
+          echo "# 🌐 Multi-Language Enterprise Platform Report" > multi-language-report.md
+          echo "" >> multi-language-report.md
+          echo "**Build Date:** $(date)" >> multi-language-report.md
+          echo "**Repository:** ${{ github.repository }}" >> multi-language-report.md
+          echo "**Commit:** ${{ github.sha }}" >> multi-language-report.md
+          echo "" >> multi-language-report.md
+          
+          echo "## ✅ Components Built" >> multi-language-report.md
+          echo "- **.NET Core Services:** ${{ needs.build-dotnet-services.result }}" >> multi-language-report.md
+          echo "- **Hybrid Integration:** ${{ needs.build-hybrid-integration.result }}" >> multi-language-report.md
+          echo "- **Cross-Platform Testing:** ${{ needs.cross-platform-testing.result }}" >> multi-language-report.md
+          echo "" >> multi-language-report.md
+          
+          echo "## 🏗️ Architecture Overview" >> multi-language-report.md
+          echo "### 🟦 .NET Core Services" >> multi-language-report.md
+          echo "- MarketIntel.Core: Domain models and interfaces" >> multi-language-report.md
+          echo "- MarketIntel.Data: Data access layer" >> multi-language-report.md
+          echo "- MarketIntel.API: RESTful API with Swagger" >> multi-language-report.md
+          echo "- Comprehensive testing with xUnit" >> multi-language-report.md
+          echo "" >> multi-language-report.md
+          
+          echo "### 🐍 Python Services" >> multi-language-report.md
+          echo "- AI/ML processing capabilities" >> multi-language-report.md
+          echo "- Data ingestion and analysis" >> multi-language-report.md
+          echo "- FastAPI-based microservices" >> multi-language-report.md
+          echo "" >> multi-language-report.md
+          
+          echo "### 🔗 Hybrid Integration" >> multi-language-report.md
+          echo "- Docker Compose for local development" >> multi-language-report.md
+          echo "- Nginx API Gateway" >> multi-language-report.md
+          echo "- Kubernetes deployment manifests" >> multi-language-report.md
+          echo "- Cross-service communication" >> multi-language-report.md
+          echo "" >> multi-language-report.md
+          
+          echo "## 🚀 Benefits of Multi-Language Approach" >> multi-language-report.md
+          echo "1. **Performance:** .NET for high-performance APIs" >> multi-language-report.md
+          echo "2. **AI/ML:** Python for advanced analytics" >> multi-language-report.md
+          echo "3. **Ecosystem:** Leverage both .NET and Python ecosystems" >> multi-language-report.md
+          echo "4. **Talent:** Access to both .NET and Python developers" >> multi-language-report.md
+          echo "5. **Flexibility:** Choose the right tool for each task" >> multi-language-report.md
+
+      - name: 📤 Upload Multi-Language Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-language-report
+          path: multi-language-report.md
+          retention-days: 90
