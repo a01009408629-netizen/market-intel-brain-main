@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: market-intel
+  labels:
+    name: market-intel
+    environment: production
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: market-intel-api
+  namespace: market-intel
+  labels:
+    app: market-intel-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: market-intel-api
+  template:
+    metadata:
+      labels:
+        app: market-intel-api
+    spec:
+      containers:
+      - name: api-server
+        image: ghcr.io/a01009408629-netizen/market-intel-brain-main:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: market-intel-secrets
+              key: redis-url
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: market-intel-secrets
+              key: database-url
+        - name: ENVIRONMENT
+          value: "production"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: market-intel-api-service
+  namespace: market-intel
+  labels:
+    app: market-intel-api
+spec:
+  selector:
+    app: market-intel-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: market-intel-ingress
+  namespace: market-intel
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+spec:
+  rules:
+  - host: api.marketintel.com
+    http:
+      paths:
+      - path: /api/v1
+        pathType: Prefix
+        backend:
+          service:
+            name: market-intel-api-service
+            port:
+              number: 80
