@@ -137,16 +137,26 @@ jobs:
         # Unit tests
         if [ -d "tests" ]; then
           pytest tests/ -v --cov=market_intel_brain --cov-report=xml --cov-report=html || echo "Unit tests completed with issues"
+        else
+          echo "No tests directory found, skipping unit tests"
         fi
         
         # Integration tests
         if [ -d "services/data_ingestion" ]; then
-          pytest services/data_ingestion/test_data_ingestion.py -v --cov=services || echo "Integration tests completed with issues"
+          if [ -f "services/data_ingestion/test_data_ingestion.py" ]; then
+            pytest services/data_ingestion/test_data_ingestion.py -v --cov=services || echo "Integration tests completed with issues"
+          else
+            echo "No integration test file found, skipping integration tests"
+          fi
+        else
+          echo "No services directory found, skipping integration tests"
         fi
         
         # API tests
-        if [ -f "tests/test_ingestion.py" ]; then
+        if [ -f "tests/test_ingestion.py" ] && [ -f "tests/test_unified_data_normalizer.py" ]; then
           pytest tests/test_ingestion.py tests/test_unified_data_normalizer.py -v --cov=tests || echo "API tests completed with issues"
+        else
+          echo "API test files not found, skipping API tests"
         fi
 
     - name: 📊 Upload Coverage
@@ -192,15 +202,29 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         platforms: linux/amd64,linux/arm64
+        load: ${{ github.event_name == 'pull_request' }}
 
     - name: 🧪 Test Docker Image
       run: |
         echo "Testing Docker image..."
-        docker run --rm -d -p 8000:8000 --name test-container ${{ steps.meta.outputs.tags }} || echo "Container start failed"
+        
+        # Test basic container functionality
+        if [ "${{ github.event_name }}" != "pull_request" ]; then
+          echo "Testing remote image..."
+          docker run --rm -d -p 8000:8000 --name test-container ${{ steps.meta.outputs.tags }} || echo "Container start failed"
+        else
+          echo "Testing local image..."
+          docker run --rm -d -p 8000:8000 --name test-container ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest || echo "Container start failed"
+        fi
+        
         sleep 30
         
-        # Test basic functionality
-        docker exec test-container python -c "import sys; print('✅ Docker container runs successfully'); sys.exit(0)" || echo "Container test failed"
+        # Test basic Python functionality
+        docker exec test-container python -c "import sys; print('✅ Docker container runs Python successfully'); sys.exit(0)" || echo "Container test failed"
+        
+        # Test application startup
+        docker exec test-container python -c "import production_server; print('✅ Production server module loads successfully')" || echo "Production server test failed"
+        
         docker stop test-container || echo "Container stop failed"
 
     - name: 🔍 Container Security Scan
