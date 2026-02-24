@@ -15,11 +15,17 @@ from typing import Dict, Any
 # Import ingestion components
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from ingestion.engine import IngestionEngine, get_ingestion_engine
-from ingestion.config import IngestionConfig, SourceConfig, SourceType
-from ingestion.workers import BinanceWorker, WorkerPool, CircuitBreaker, RetryHandler
+try:
+    from ingestion.engine import IngestionEngine, get_ingestion_engine
+    from ingestion.config import IngestionConfig, SourceConfig, SourceType
+    from ingestion.workers import BinanceWorker, WorkerPool, CircuitBreaker, RetryHandler
+except ImportError:
+    # Fallback to services structure
+    from services.data_ingestion.engine import IngestionEngine, get_ingestion_engine
+    from services.data_ingestion.config import IngestionConfig, SourceConfig, SourceType
+    from services.data_ingestion.workers import BinanceWorker, WorkerPool, CircuitBreaker, RetryHandler
 
 
 class TestIngestionConfig:

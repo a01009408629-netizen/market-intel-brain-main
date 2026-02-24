@@ -54,7 +54,7 @@ services:
     networks:
       - market-intel-network
     healthcheck:
-      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"] || ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=5)"] || exit 1
       interval: 30s
       timeout: 10s
       retries: 3
