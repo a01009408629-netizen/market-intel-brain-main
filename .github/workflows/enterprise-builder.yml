@@ -1,0 +1,1050 @@
+name: 🏗️ Enterprise Infrastructure Builder
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: 'Component to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - documentation
+          - kubernetes
+          - monitoring
+          - terraform
+          - testing
+          - security
+          - helm
+          - performance
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/enterprise-builder.yml'
+      - 'market-intel-brain-main/**'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ===== DOCUMENTATION BUILDER =====
+  build-documentation:
+    name: 📚 Build Documentation
+    runs-on: ubuntu-latest
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'documentation'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📚 Generate Documentation Structure
+        run: |
+          mkdir -p docs/{api,architecture,deployment,security,development}
+          
+          # Create main README
+          cat > docs/README.md << 'EOF'
+          # Market Intel Brain - Enterprise Documentation
+          
+          ## 📖 Documentation Structure
+          
+          ### 🏗️ [Architecture](./architecture/)
+          - System design and components
+          - API specifications
+          - Data flow diagrams
+          
+          ### 🚀 [Deployment](./deployment/)
+          - Kubernetes setup
+          - Helm charts guide
+          - Infrastructure as code
+          
+          ### 🔐 [Security](./security/)
+          - Security policies
+          - Compliance documentation
+          - Vulnerability management
+          
+          ### 👨‍💻 [Development](./development/)
+          - Developer onboarding
+          - Contributing guidelines
+          - Testing procedures
+          
+          ### 📡 [API Documentation](./api/)
+          - REST API reference
+          - Authentication guide
+          - Rate limiting
+          EOF
+
+      - name: 📄 Create API Documentation
+        run: |
+          cat > docs/api/README.md << 'EOF'
+          # API Documentation
+          
+          ## 🚀 Market Intel Brain API
+          
+          ### Base URL
+          ```
+          https://api.marketintel.com/v1
+          ```
+          
+          ### Authentication
+          - Bearer Token required
+          - Rate limited to 1000 requests/hour
+          
+          ### Main Endpoints
+          
+          #### 📊 Market Data
+          - `GET /market/stocks` - Stock market data
+          - `GET /market/forex` - Forex rates
+          - `GET /market/crypto` - Cryptocurrency data
+          
+          #### 🧠 Intelligence Analysis
+          - `POST /analysis/sentiment` - Sentiment analysis
+          - `POST /analysis/technical` - Technical analysis
+          - `POST /analysis/predictive` - Predictive models
+          
+          #### 📰 News & Events
+          - `GET /news/latest` - Latest financial news
+          - `GET /events/economic` - Economic calendar
+          - `GET /events/geopolitical` - Geopolitical events
+          EOF
+
+      - name: 🏗️ Create Architecture Documentation
+        run: |
+          cat > docs/architecture/README.md << 'EOF'
+          # System Architecture
+          
+          ## 🏛️ Enterprise Architecture Overview
+          
+          ### Microservices Components
+          
+          #### 📊 Data Ingestion Layer
+          - Market data adapters
+          - News feed processors
+          - Economic data collectors
+          
+          #### 🧠 Cognitive Processing
+          - Sentiment analysis engines
+          - Technical analysis modules
+          - Predictive modeling services
+          
+          #### 💾 Storage Layer
+          - Time-series databases
+          - Document stores
+          - Cache layers
+          
+          #### 🚀 API Gateway
+          - Authentication & authorization
+          - Rate limiting
+          - Request routing
+          
+          ### Technology Stack
+          - **Backend**: Python 3.11+, FastAPI
+          - **Database**: PostgreSQL, Redis, InfluxDB
+          - **Message Queue**: Apache Kafka
+          - **Container**: Docker, Kubernetes
+          - **Monitoring**: Prometheus, Grafana
+          EOF
+
+      - name: 📤 Upload Documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/
+          retention-days: 30
+
+  # ===== KUBERNETES MANIFESTS BUILDER =====
+  build-kubernetes:
+    name: ☸️ Build Kubernetes Manifests
+    runs-on: ubuntu-latest
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'kubernetes'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ☸️ Create Kubernetes Structure
+        run: |
+          mkdir -p k8s/{namespaces,configmaps,secrets,deployments,services,ingress,hpa}
+
+      - name: 🏷️ Create Namespace
+        run: |
+          cat > k8s/namespaces/market-intel.yaml << 'EOF'
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: market-intel
+            labels:
+              name: market-intel
+              environment: production
+          EOF
+
+      - name: 🚀 Create Deployment
+        run: |
+          cat > k8s/deployments/api-server.yaml << 'EOF'
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: market-intel-api
+            namespace: market-intel
+            labels:
+              app: market-intel-api
+          spec:
+            replicas: 3
+            selector:
+              matchLabels:
+                app: market-intel-api
+            template:
+              metadata:
+                labels:
+                  app: market-intel-api
+              spec:
+                containers:
+                - name: api-server
+                  image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+                  ports:
+                  - containerPort: 8000
+                  env:
+                  - name: REDIS_URL
+                    valueFrom:
+                      secretKeyRef:
+                        name: market-intel-secrets
+                        key: redis-url
+                  - name: DATABASE_URL
+                    valueFrom:
+                      secretKeyRef:
+                        name: market-intel-secrets
+                        key: database-url
+                  resources:
+                    requests:
+                      memory: "512Mi"
+                      cpu: "250m"
+                    limits:
+                      memory: "1Gi"
+                      cpu: "500m"
+                  livenessProbe:
+                    httpGet:
+                      path: /health
+                      port: 8000
+                    initialDelaySeconds: 30
+                    periodSeconds: 10
+                  readinessProbe:
+                    httpGet:
+                      path: /ready
+                      port: 8000
+                    initialDelaySeconds: 5
+                    periodSeconds: 5
+          EOF
+
+      - name: 🌐 Create Service
+        run: |
+          cat > k8s/services/api-service.yaml << 'EOF'
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: market-intel-api-service
+            namespace: market-intel
+            labels:
+              app: market-intel-api
+          spec:
+            selector:
+              app: market-intel-api
+            ports:
+            - protocol: TCP
+              port: 80
+              targetPort: 8000
+            type: ClusterIP
+          EOF
+
+      - name: 📈 Create HPA
+        run: |
+          cat > k8s/hpa/api-hpa.yaml << 'EOF'
+          apiVersion: autoscaling/v2
+          kind: HorizontalPodAutoscaler
+          metadata:
+            name: market-intel-api-hpa
+            namespace: market-intel
+          spec:
+            scaleTargetRef:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: market-intel-api
+            minReplicas: 3
+            maxReplicas: 10
+            metrics:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 70
+            - type: Resource
+              resource:
+                name: memory
+                target:
+                  type: Utilization
+                  averageUtilization: 80
+          EOF
+
+      - name: 📤 Upload Kubernetes Manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubernetes-manifests
+          path: k8s/
+          retention-days: 30
+
+  # ===== MONITORING STACK BUILDER =====
+  build-monitoring:
+    name: 📊 Build Monitoring Stack
+    runs-on: ubuntu-latest
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'monitoring'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 📊 Create Monitoring Structure
+        run: |
+          mkdir -p monitoring/{prometheus,grafana,alertmanager,loki}
+
+      - name: 📈 Create Prometheus Config
+        run: |
+          cat > monitoring/prometheus/prometheus.yml << 'EOF'
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+          
+          rule_files:
+            - "alert_rules.yml"
+          
+          alerting:
+            alertmanagers:
+              - static_configs:
+                  - targets:
+                    - alertmanager:9093
+          
+          scrape_configs:
+            - job_name: 'market-intel-api'
+              static_configs:
+                - targets: ['market-intel-api-service:80']
+              metrics_path: /metrics
+              scrape_interval: 10s
+            
+            - job_name: 'redis'
+              static_configs:
+                - targets: ['redis:6379']
+            
+            - job_name: 'kubernetes-pods'
+              kubernetes_sd_configs:
+                - role: pod
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                  action: keep
+                  regex: true
+          EOF
+
+      - name: 🚨 Create Alert Rules
+        run: |
+          cat > monitoring/prometheus/alert_rules.yml << 'EOF'
+          groups:
+          - name: market-intel-alerts
+            rules:
+            - alert: HighErrorRate
+              expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+              for: 5m
+              labels:
+                severity: critical
+              annotations:
+                summary: "High error rate detected"
+                description: "Error rate is {{ $value }} errors per second"
+            
+            - alert: HighMemoryUsage
+              expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.9
+              for: 5m
+              labels:
+                severity: warning
+              annotations:
+                summary: "High memory usage"
+                description: "Memory usage is above 90%"
+            
+            - alert: APIHighLatency
+              expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+              for: 5m
+              labels:
+                severity: warning
+              annotations:
+                summary: "High API latency"
+                description: "95th percentile latency is {{ $value }} seconds"
+          EOF
+
+      - name: 📊 Create Grafana Dashboard
+        run: |
+          cat > monitoring/grafana/dashboards/market-intel.json << 'EOF'
+          {
+            "dashboard": {
+              "id": null,
+              "title": "Market Intel Brain Dashboard",
+              "tags": ["market-intel"],
+              "timezone": "browser",
+              "panels": [
+                {
+                  "title": "API Request Rate",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "rate(http_requests_total[5m])",
+                      "legendFormat": "{{method}} {{endpoint}}"
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+                },
+                {
+                  "title": "Response Time",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+                      "legendFormat": "95th percentile"
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+                },
+                {
+                  "title": "Error Rate",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+                      "legendFormat": "5xx errors"
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+                },
+                {
+                  "title": "Memory Usage",
+                  "type": "graph",
+                  "targets": [
+                    {
+                      "expr": "container_memory_usage_bytes / 1024 / 1024",
+                      "legendFormat": "{{container}}"
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+                }
+              ],
+              "time": {"from": "now-1h", "to": "now"},
+              "refresh": "5s"
+            }
+          }
+          EOF
+
+      - name: 📤 Upload Monitoring Configs
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-stack
+          path: monitoring/
+          retention-days: 30
+
+  # ===== TERRAFORM INFRASTRUCTURE BUILDER =====
+  build-terraform:
+    name: 🏗️ Build Terraform Infrastructure
+    runs-on: ubuntu-latest
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'terraform'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Create Terraform Structure
+        run: |
+          mkdir -p terraform/{modules,environments/{staging,production},scripts}
+
+      - name: ☁️ Create Main Terraform Config
+        run: |
+          cat > terraform/main.tf << 'EOF'
+          terraform {
+            required_version = ">= 1.0"
+            required_providers {
+              aws = {
+                source  = "hashicorp/aws"
+                version = "~> 5.0"
+              }
+              kubernetes = {
+                source  = "hashicorp/kubernetes"
+                version = "~> 2.20"
+              }
+              helm = {
+                source  = "hashicorp/helm"
+                version = "~> 2.10"
+              }
+            }
+            
+            backend "s3" {
+              bucket = "market-intel-terraform-state"
+              key    = "terraform.tfstate"
+              region = "us-east-1"
+              encrypt = true
+            }
+          }
+          
+          provider "aws" {
+            region = var.aws_region
+          }
+          
+          provider "kubernetes" {
+            host                   = module.eks.cluster_endpoint
+            cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+            token                  = data.aws_eks_cluster_auth.market_intel.token
+          }
+          
+          module "vpc" {
+            source = "./modules/vpc"
+            
+            environment = var.environment
+            vpc_cidr    = var.vpc_cidr
+          }
+          
+          module "eks" {
+            source = "./modules/eks"
+            
+            environment = var.environment
+            vpc_id      = module.vpc.vpc_id
+            subnet_ids  = module.vpc.private_subnets
+          }
+          
+          module "rds" {
+            source = "./modules/rds"
+            
+            environment = var.environment
+            vpc_id      = module.vpc.vpc_id
+            subnet_ids  = module.vpc.private_subnets
+          }
+          
+          module "redis" {
+            source = "./modules/redis"
+            
+            environment = var.environment
+            vpc_id      = module.vpc.vpc_id
+            subnet_ids  = module.vpc.private_subnets
+          }
+          EOF
+
+      - name: 📋 Create Variables
+        run: |
+          cat > terraform/variables.tf << 'EOF'
+          variable "environment" {
+            description = "Environment name"
+            type        = string
+            default     = "staging"
+          }
+          
+          variable "aws_region" {
+            description = "AWS region"
+            type        = string
+            default     = "us-east-1"
+          }
+          
+          variable "vpc_cidr" {
+            description = "CIDR block for VPC"
+            type        = string
+            default     = "10.0.0.0/16"
+          }
+          
+          variable "cluster_name" {
+            description = "EKS cluster name"
+            type        = string
+            default     = "market-intel-cluster"
+          }
+          EOF
+
+      - name: 📦 Create EKS Module
+        run: |
+          mkdir -p terraform/modules/eks
+          cat > terraform/modules/eks/main.tf << 'EOF'
+          variable "environment" {
+            type = string
+          }
+          
+          variable "vpc_id" {
+            type = string
+          }
+          
+          variable "subnet_ids" {
+            type = list(string)
+          }
+          
+          variable "cluster_name" {
+            type    = string
+            default = "market-intel-cluster"
+          }
+          
+          resource "aws_eks_cluster" "market_intel" {
+            name     = "${var.cluster_name}-${var.environment}"
+            role_arn = aws_iam_role.eks_cluster.arn
+            vpc_config {
+              subnet_ids = var.subnet_ids
+            }
+            
+            depends_on = [
+              aws_iam_role_policy_attachment.eks_cluster_policy
+            ]
+          }
+          
+          resource "aws_eks_node_group" "market_intel" {
+            cluster_name    = aws_eks_cluster.market_intel.name
+            node_group_name = "${var.cluster_name}-nodes-${var.environment}"
+            node_role_arn   = aws_iam_role.eks_node.arn
+            subnet_ids      = var.subnet_ids
+            
+            scaling_config {
+              desired_size = 3
+              max_size     = 10
+              min_size     = 1
+            }
+            
+            instance_types = ["m5.large"]
+            
+            depends_on = [
+              aws_iam_role_policy_attachment.eks_worker_node_policy,
+              aws_iam_role_policy_attachment.eks_cni_policy,
+              aws_iam_role_policy_attachment.eks_container_registry_policy
+            ]
+          }
+          
+          resource "aws_iam_role" "eks_cluster" {
+            name = "${var.cluster_name}-cluster-role-${var.environment}"
+            
+            assume_role_policy = jsonencode({
+              Version = "2012-10-17"
+              Statement = [
+                {
+                  Action = "sts:AssumeRole"
+                  Effect = "Allow"
+                  Principal = {
+                    Service = "eks.amazonaws.com"
+                  }
+                }
+              ]
+            })
+          }
+          
+          resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
+            policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+            role       = aws_iam_role.eks_cluster.name
+          }
+          
+          resource "aws_iam_role" "eks_node" {
+            name = "${var.cluster_name}-node-role-${var.environment}"
+            
+            assume_role_policy = jsonencode({
+              Version = "2012-10-17"
+              Statement = [
+                {
+                  Action = "sts:AssumeRole"
+                  Effect = "Allow"
+                  Principal = {
+                    Service = "ec2.amazonaws.com"
+                  }
+                }
+              ]
+            })
+          }
+          
+          resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
+            policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+            role       = aws_iam_role.eks_node.name
+          }
+          
+          resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
+            policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+            role       = aws_iam_role.eks_node.name
+          }
+          
+          resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
+            policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+            role       = aws_iam_role.eks_node.name
+          }
+          
+          data "aws_eks_cluster_auth" "market_intel" {
+            name = aws_eks_cluster.market_intel.name
+          }
+          
+          output "cluster_endpoint" {
+            value = aws_eks_cluster.market_intel.endpoint
+          }
+          
+          output "cluster_certificate_authority_data" {
+            value = aws_eks_cluster.market_intel.certificate_authority[0].data
+          }
+          
+          output "cluster_name" {
+            value = aws_eks_cluster.market_intel.name
+          }
+          EOF
+
+      - name: 📤 Upload Terraform Infrastructure
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-infrastructure
+          path: terraform/
+          retention-days: 30
+
+  # ===== SECURITY AUTOMATION BUILDER =====
+  build-security:
+    name: 🔐 Build Security Automation
+    runs-on: ubuntu-latest
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'security'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Create Security Structure
+        run: |
+          mkdir -p security/{policies,scans,compliance,secrets}
+
+      - name: 🛡️ Create Security Policies
+        run: |
+          cat > security/policies/security-policy.md << 'EOF'
+          # Security Policy
+          
+          ## 🛡️ Security Standards
+          
+          ### Access Control
+          - Multi-factor authentication required
+          - Role-based access control (RBAC)
+          - Regular access reviews
+          
+          ### Data Protection
+          - Encryption at rest and in transit
+          - Data classification and labeling
+          - Regular backup and recovery testing
+          
+          ### Network Security
+          - Zero-trust architecture
+          - Network segmentation
+          - DDoS protection
+          
+          ### Compliance
+          - SOC 2 Type II compliance
+          - ISO 27001 certification
+          - GDPR data protection
+          EOF
+
+      - name: 🔍 Create Security Scanning Config
+        run: |
+          cat > security/scans/security-scan.yml << 'EOF'
+          name: Security Scanning Pipeline
+          
+          on:
+            schedule:
+              - cron: '0 2 * * *'  # Daily at 2 AM
+            workflow_dispatch:
+          
+          jobs:
+            container-security:
+              runs-on: ubuntu-latest
+              steps:
+                - name: Container Image Scan
+                  uses: aquasecurity/trivy-action@master
+                  with:
+                    image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+                    format: 'sarif'
+                    output: 'trivy-results.sarif'
+                
+                - name: Upload Results
+                  uses: github/codeql-action/upload-sarif@v2
+                  with:
+                    sarif_file: 'trivy-results.sarif'
+            
+            dependency-scan:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - name: Run Safety Check
+                  run: |
+                    pip install safety
+                    safety check --json --output safety-report.json
+                
+                - name: Upload Safety Report
+                  uses: actions/upload-artifact@v4
+                  with:
+                    name: safety-report
+                    path: safety-report.json
+          EOF
+
+      - name: 📤 Upload Security Configs
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-automation
+          path: security/
+          retention-days: 30
+
+  # ===== COMPREHENSIVE TESTING FRAMEWORK =====
+  build-testing:
+    name: 🧪 Build Testing Framework
+    runs-on: ubuntu-latest
+    if: github.event.inputs.component == 'all' || github.event.inputs.component == 'testing'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🧪 Create Testing Structure
+        run: |
+          mkdir -p tests/{unit,integration,e2e,performance,chaos}
+
+      - name: 🔬 Create Unit Test Framework
+        run: |
+          cat > tests/unit/test_framework.py << 'EOF'
+          import pytest
+          import asyncio
+          from unittest.mock import Mock, patch
+          
+          class MarketIntelTestFramework:
+              def __init__(self):
+                  self.mock_data = {}
+              
+              def setup_test_data(self, data_type: str, data: dict):
+                  self.mock_data[data_type] = data
+              
+              def get_test_data(self, data_type: str):
+                  return self.mock_data.get(data_type, {})
+              
+              def create_mock_api_response(self, status_code: int = 200, data: dict = None):
+                  mock_response = Mock()
+                  mock_response.status_code = status_code
+                  mock_response.json.return_value = data or {}
+                  return mock_response
+          
+          @pytest.fixture
+          def test_framework():
+              return MarketIntelTestFramework()
+          
+          @pytest.fixture
+          def mock_redis():
+              with patch('redis.Redis') as mock_redis:
+                  mock_client = Mock()
+                  mock_redis.return_value = mock_client
+                  yield mock_client
+          
+          @pytest.fixture
+          def mock_database():
+              with patch('psycopg2.connect') as mock_connect:
+                  mock_conn = Mock()
+                  mock_connect.return_value = mock_conn
+                  yield mock_conn
+          EOF
+
+      - name: 🔗 Create Integration Tests
+        run: |
+          cat > tests/integration/test_api_integration.py << 'EOF'
+          import pytest
+          import asyncio
+          import aiohttp
+          from typing import Dict, Any
+          
+          class APIIntegrationTest:
+              def __init__(self, base_url: str):
+                  self.base_url = base_url
+                  self.session = None
+              
+              async def setup(self):
+                  self.session = aiohttp.ClientSession()
+              
+              async def teardown(self):
+                  if self.session:
+                      await self.session.close()
+              
+              async def test_health_endpoint(self):
+                  async with self.session.get(f"{self.base_url}/health") as response:
+                      assert response.status == 200
+                      data = await response.json()
+                      assert "status" in data
+              
+              async def test_market_data_endpoint(self):
+                  async with self.session.get(f"{self.base_url}/market/stocks") as response:
+                      assert response.status == 200
+                      data = await response.json()
+                      assert isinstance(data, list)
+              
+              async def test_analysis_endpoint(self):
+                      test_data = {
+                          "symbol": "AAPL",
+                          "analysis_type": "sentiment"
+                      }
+                      async with self.session.post(
+                          f"{self.base_url}/analysis/sentiment",
+                          json=test_data
+                      ) as response:
+                          assert response.status == 200
+                          data = await response.json()
+                          assert "sentiment_score" in data
+          
+          @pytest.mark.asyncio
+          async def test_api_integration():
+              test = APIIntegrationTest("http://localhost:8000")
+              await test.setup()
+              
+              try:
+                  await test.test_health_endpoint()
+                  await test.test_market_data_endpoint()
+                  await test.test_analysis_endpoint()
+              finally:
+                  await test.teardown()
+          EOF
+
+      - name: ⚡ Create Performance Tests
+        run: |
+          cat > tests/performance/load_test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          import { Rate } from 'k6/metrics';
+          
+          let errorRate = new Rate('errors');
+          
+          export let options = {
+            stages: [
+              { duration: '2m', target: 100 }, // ramp up to 100 users
+              { duration: '5m', target: 100 }, // stay at 100 users
+              { duration: '2m', target: 200 }, // ramp up to 200 users
+              { duration: '5m', target: 200 }, // stay at 200 users
+              { duration: '2m', target: 0 },   // ramp down
+            ],
+            thresholds: {
+              http_req_duration: ['p(95)<500'], // 95% of requests under 500ms
+              http_req_failed: ['rate<0.1'],   // error rate under 10%
+            },
+          };
+          
+          export default function () {
+            let response = http.get('http://localhost:8000/health');
+            
+            let success = check(response, {
+              'status is 200': (r) => r.status === 200,
+              'response time < 500ms': (r) => r.timings.duration < 500,
+            });
+            
+            errorRate.add(!success);
+            sleep(1);
+          }
+          EOF
+
+      - name: 🌪️ Create Chaos Tests
+        run: |
+          cat > tests/chaos/chaos_test.py << 'EOF'
+          from chaoslib import Action, Experiment
+          from chaosaws.ec2.actions import stop_instance, terminate_instance
+          from chaosaws.eks.actions import delete_pod
+          import time
+          
+          class MarketIntelChaosTest:
+              def __init__(self):
+                  self.experiment = Experiment(
+                      title="Market Intel Chaos Test",
+                      description="Test system resilience under failure conditions"
+                  )
+              
+              def test_api_resilience(self):
+                  """Test API resilience when Redis fails"""
+                  self.experiment.add_action(
+                      Action(
+                          name="stop-redis-pod",
+                          provider={
+                              "type": "python",
+                              "module": "chaosaws.eks.actions",
+                              "func": "delete_pod",
+                              "arguments": {
+                                  "pod_name": "redis-0",
+                                  "namespace": "market-intel"
+                              }
+                          }
+                      )
+                  )
+                  
+                  # Wait for system to recover
+                  time.sleep(60)
+                  
+                  # Verify API still responds
+                  response = self.check_api_health()
+                  assert response.status_code == 200
+              
+              def test_database_failover(self):
+                  """Test database failover scenario"""
+                  self.experiment.add_action(
+                      Action(
+                          name="simulate-db-failure",
+                          provider={
+                              "type": "python",
+                              "module": "chaosaws.rds.actions",
+                              "func": "stop_database",
+                              "arguments": {
+                                  "db_instance_identifier": "market-intel-db"
+                              }
+                          }
+                      )
+                  )
+                  
+                  # Monitor system behavior during failover
+                  self.monitor_system_during_failure()
+              
+              def check_api_health(self):
+                  """Check if API is healthy"""
+                  import requests
+                  return requests.get("http://localhost:8000/health")
+              
+              def monitor_system_during_failure(self):
+                  """Monitor system metrics during failure"""
+                  # Implementation for monitoring during chaos
+                  pass
+          EOF
+
+      - name: 📤 Upload Testing Framework
+        uses: actions/upload-artifact@v4
+        with:
+          name: testing-framework
+          path: tests/
+          retention-days: 30
+
+  # ===== FINAL SUMMARY =====
+  create-summary:
+    name: 📋 Create Enterprise Summary
+    runs-on: ubuntu-latest
+    needs: [build-documentation, build-kubernetes, build-monitoring, build-terraform, build-security, build-testing]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate Enterprise Report
+        run: |
+          echo "# 🏛️ Enterprise Infrastructure Build Report" > enterprise-report.md
+          echo "" >> enterprise-report.md
+          echo "**Build Date:** $(date)" >> enterprise-report.md
+          echo "**Repository:** ${{ github.repository }}" >> enterprise-report.md
+          echo "**Commit:** ${{ github.sha }}" >> enterprise-report.md
+          echo "" >> enterprise-report.md
+          
+          echo "## ✅ Components Built" >> enterprise-report.md
+          echo "- **Documentation:** ${{ needs.build-documentation.result }}" >> enterprise-report.md
+          echo "- **Kubernetes:** ${{ needs.build-kubernetes.result }}" >> enterprise-report.md
+          echo "- **Monitoring:** ${{ needs.build-monitoring.result }}" >> enterprise-report.md
+          echo "- **Terraform:** ${{ needs.build-terraform.result }}" >> enterprise-report.md
+          echo "- **Security:** ${{ needs.build-security.result }}" >> enterprise-report.md
+          echo "- **Testing:** ${{ needs.build-testing.result }}" >> enterprise-report.md
+          echo "" >> enterprise-report.md
+          
+          echo "## 🚀 Next Steps" >> enterprise-report.md
+          echo "1. Review and customize the generated configurations" >> enterprise-report.md
+          echo "2. Set up cloud provider credentials" >> enterprise-report.md
+          echo "3. Deploy infrastructure using Terraform" >> enterprise-report.md
+          echo "4. Deploy applications using Kubernetes manifests" >> enterprise-report.md
+          echo "5. Configure monitoring and alerting" >> enterprise-report.md
+          echo "6. Set up CI/CD pipelines" >> enterprise-report.md
+
+      - name: 📤 Upload Enterprise Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-report
+          path: enterprise-report.md
+          retention-days: 90
