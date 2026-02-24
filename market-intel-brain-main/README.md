@@ -95,180 +95,187 @@ Market Intel Brain is a **sophisticated multi-agent system** designed to process
 │           🌐 08_Interface_Layer                             │
 │  🚀 REST API • 📊 GraphQL • 🔄 WebSocket • 📱 SDK   │
 └─────────────────────────────────────────────────────────────────────┘
-```
-
-### 🧱 Technology Stack
-
-| Layer | Technology | Purpose |
-|--------|-------------|---------|
-| **Backend** | Python 3.11+, FastAPI, asyncio | High-performance APIs |
-| **Database** | PostgreSQL + TimescaleDB, Qdrant, Redis | Time-series, Vector, Cache |
-| **Message Queue** | Redpanda (Kafka-compatible) | Real-time data streaming |
-| **Container** | Docker, Kubernetes | Orchestration |
-| **Monitoring** | Prometheus, Grafana, Loki | Observability |
-
----
 
 ## 🚀 Quick Start
 
-### 📋 Prerequisites
+### Prerequisites
+- Docker & Docker Compose
+- Python 3.11+
+- Kubernetes (for production)
+- Redis (for caching)
 
-- **Docker** 20.10+ and Docker Compose
-- **Python** 3.11+ (for local development)
-- **4GB+ RAM** and **10GB+ disk space**
-
-### ⚡ Local Development Setup
+### Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/a01009408629-netizen/market-intel-brain-main.git
 cd market-intel-brain-main/market-intel-brain-main
 
-# Start with Docker Compose
+# Set up environment
+cp .env.example .env
+# Edit .env with your API keys and configuration
+
+# Run with Docker (recommended)
 docker-compose up -d
 
-# Access services
-# 🌐 API: http://localhost:8000
-# 📊 Grafana: http://localhost:3000 (admin/admin123)
+# Or run directly
+python production_server.py
 ```
 
-### 🔧 Environment Configuration
+### Environment Configuration
+
+See [📚 Documentation](./docs/) for detailed setup:
+- [🏗️ Architecture Overview](./docs/ARCHITECTURE.md)
+- [⚙️ Configuration Guide](./docs/CONFIGURATION.md)
+- [📁 Project Structure](./docs/PROJECT_STRUCTURE.md)
+
+## 🐳 Docker Deployment
 
 ```bash
-# Copy environment template
-cp .env.example .env
+# Build and run
+docker build -t market-intel-brain .
+docker run -p 8000:8000 market-intel-brain
 
-# Configure your settings
-REDIS_URL=redis://localhost:6379
-DATABASE_URL=postgresql://postgres:password@localhost:5432/marketintel
-API_KEY=your_api_key_here
-ENVIRONMENT=development
+# With Docker Compose (includes Redis)
+docker-compose up -d
 ```
 
----
-
-## 📚 Documentation
-
-### 📖 Core Documentation
-
-| Document | Description |
-|----------|-------------|
-| **API Reference** | Complete REST API documentation |
-| **Architecture Guide** | System architecture and design |
-| **Deployment Guide** | Production deployment instructions |
-| **Security Guide** | Security policies and procedures |
-
-### 🔧 API Documentation
-
-#### 🌐 Base URL
-```
-Development: http://localhost:8000/v1
-```
-
-#### 📊 Main Endpoints
-
-| Endpoint | Method | Description |
-|----------|---------|-------------|
-| `/market/stocks` | GET | Real-time stock market data |
-| `/analysis/sentiment` | POST | Sentiment analysis |
-| `/news/latest` | GET | Latest financial news |
-
----
-
-## ☸️ Deployment
-
-### 🏗️ Production Deployment
-
-#### Docker Deployment
-
-```bash
-# Build and deploy
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-#### Kubernetes Deployment
+## ☸️ Kubernetes Deployment
 
 ```bash
 # Deploy to Kubernetes
 kubectl apply -f k8s/
+
+# Check deployment status
+kubectl get pods -l app=market-intel-brain
 ```
 
----
+## 📡 API Documentation
 
-## 📊 Monitoring
-
-### 📈 Grafana Dashboards
-
-Access Grafana at: `http://localhost:3000`
-
-#### 📊 Available Dashboards
-
-1. **🎯 System Overview** - CPU, Memory, Disk usage
-2. **📈 Market Data Performance** - Data ingestion rates
-3. **🤖 Agent Performance** - Agent execution times
-
----
+Once running, access:
+- **API Documentation**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+- **Metrics**: http://localhost:8000/metrics
 
 ## 🔧 Development
 
-### 👨‍💻 Local Development Setup
+### Local Development Setup
 
 ```bash
-# Setup virtual environment
-python -m venv venv
-source venv/bin/activate
-
 # Install dependencies
-pip install -r requirements.txt
+pip install -r requirements_production.txt
+
+# Run development server
+python api_server.py
 
 # Run tests
 pytest tests/
 ```
 
-### 🧪 Running Tests
+### Code Quality
 
 ```bash
-# Run all tests
-pytest
+# Lint code
+ruff check . --fix
 
-# Run with coverage
-pytest --cov=market_intel_brain --cov-report=html
+# Type checking
+mypy .
+
+# Security scan
+bandit -r .
+
+# Format code
+ruff format .
 ```
 
----
+## 📈 Performance
 
-## 🔐 Security
+- **Response Time**: <5 seconds for complex queries
+- **Throughput**: 300+ requests/minute
+- **Availability**: 99.9% uptime with auto-recovery
+- **Memory Usage**: Optimized for 8GB RAM environments
+- **Storage**: Efficient data compression and caching
 
-### 🛡️ Security Features
+## 🛡️ Security
 
-- **🔑 Authentication**: OAuth2, JWT, API Keys
-- **🔒 Authorization**: Role-based access control (RBAC)
-- **🔐 Encryption**: AES-256 encryption at rest and in transit
-- **🛡️ Input Validation**: Comprehensive input sanitization
-- **🚨 Rate Limiting**: DDoS protection and throttling
+- **Authentication**: JWT-based with encrypted secrets
+- **Authorization**: Role-based access control
+- **Data Protection**: End-to-end encryption
+- **Network Security**: Isolated microservices architecture
+- **Compliance**: Enterprise security standards
 
----
+## 📊 Monitoring & Observability
 
-## 📦 Contributing
+### Health Endpoints
+- `/health` - Application health status
+- `/metrics` - Performance metrics
+- `/ready` - Readiness probe
 
-### 🤝 How to Contribute
+### Logging
+- Structured JSON logging
+- Multiple log levels (DEBUG, INFO, WARN, ERROR)
+- Centralized log aggregation
+- Real-time log streaming
 
-1. **🍴 Fork** the repository
-2. **🌿 Create** a feature branch
-3. **💾 Commit** your changes
-4. **📤 Push** to the branch
-5. **🔄 Open** a Pull Request
+## � CI/CD Pipeline
 
----
+### Automated Workflows
+- **🔍 Quality & Security Checks** - Code analysis and security scanning
+- **🧪 Comprehensive Testing** - Unit, integration, and API tests
+- **🐳 Docker Build & Test** - Multi-platform container builds
+- **☸️ Kubernetes Testing** - Deployment validation
+- **� Production Deployment** - Automated deployment with approval gates
+
+### Security Tools
+- **Trivy** - Container vulnerability scanning
+- **Hadolint** - Dockerfile best practices
+- **Kube-score** - Kubernetes security validation
+- **Bandit** - Python security analysis
+- **Safety** - Dependency vulnerability checking
+
+## 📚 Architecture
+
+### Core Components
+1. **Perception Layer** - Data ingestion and preprocessing
+2. **Event Fabric** - Event streaming and processing
+3. **Cognitive Agents** - AI-powered analysis
+4. **Memory Layer** - Data storage and retrieval
+5. **Reasoning Orchestration** - Decision making
+6. **Identity Isolation** - Security and isolation
+7. **Outcome Fusion** - Result aggregation
+
+### Data Providers
+- **Financial Markets** - Real-time stock data
+- **News Sources** - Financial news and analysis
+- **Economic Indicators** - GDP, inflation, employment
+- **Alternative Data** - Social media, satellite, etc.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and security checks
+5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Documentation**: See [docs/](./docs/) folder
+- **Issues**: [GitHub Issues](https://github.com/a01009408629-netizen/market-intel-brain-main/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/a01009408629-netizen/market-intel-brain-main/discussions)
 
 ---
 
-> **💡 Note**: This is an enterprise-grade platform designed for high-frequency trading and financial intelligence.
+<div align="center">
 
----
+**🚀 Built for Enterprise-Grade Financial Intelligence**
 
-**🚀 [Back to Top](#-market-intel-brain---enterprise-financial-intelligence-platform)**
+[![Stars](https://img.shields.io/github/stars/a01009408629-netizen/market-intel-brain-main?style=social)](https://github.com/a01009408629-netizen/market-intel-brain-main)
+[![Forks](https://img.shields.io/github/forks/a01009408629-netizen/market-intel-brain-main?style=social)](https://github.com/a01009408629-netizen/market-intel-brain-main)
+[![License](https://img.shields.io/github/license/a01009408629-netizen/market-intel-brain-main)](https://github.com/a01009408629-netizen/market-intel-brain-main/blob/main/LICENSE)
+
+</div>
