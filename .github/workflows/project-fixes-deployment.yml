@@ -67,6 +67,18 @@ jobs:
       run: |
         mypy . --ignore-missing-imports || true
 
+    - name: 🐳 Dockerfile Lint with Hadolint
+      run: |
+        docker run --rm -i hadolint/hadolint:latest-alpine < ./market-intel-brain-main/Dockerfile > hadolint-report.json 2>&1 || echo "Hadolint found issues, continuing..."
+
+    - name: 🔍 Kubernetes Manifest Validation
+      run: |
+        if [ -d "market-intel-brain-main/k8s" ]; then
+          # Install kube-score for Kubernetes security and best practices
+          curl -L https://github.com/zegl/kube-score/releases/download/v1.16.1/kube-score_1.16.1_linux_amd64.tar.gz | tar xz
+          ./kube-score score market-intel-brain-main/k8s/*.yaml --output-format json > kube-score-report.json 2>&1 || echo "Kube-score found issues, continuing..."
+        fi
+
     - name: 📝 Upload Reports
       uses: actions/upload-artifact@v4
       if: always()
@@ -75,6 +87,8 @@ jobs:
         path: |
           bandit-report.json
           safety-report.json
+          hadolint-report.json
+          kube-score-report.json
 
   # 🧪 Comprehensive Testing
   testing:
@@ -183,6 +197,28 @@ jobs:
         # Test basic Python functionality instead of health endpoint
         docker exec test-container python -c "import sys; print('✅ Docker container runs Python successfully'); sys.exit(0)" || echo "Container test failed"
         docker stop test-container
+
+    - name: 🔍 Container Security Scan with Trivy
+      run: |
+        # Install Trivy
+        sudo apt-get update
+        sudo apt-get install wget apt-transport-https gnupg lsb-release
+        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+        echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+        sudo apt-get update
+        sudo apt-get install trivy
+        
+        # Scan Docker image for vulnerabilities
+        trivy image --format json --output trivy-report.json a01009408629-netizen/market-intel-brain-main:latest || echo "Trivy found vulnerabilities, continuing..."
+        trivy image a01009408629-netizen/market-intel-brain-main:latest
+
+    - name: 📤 Upload Security Scan Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: container-security-reports
+        path: |
+          trivy-report.json
 
   # ☸️ Kubernetes Deployment Testing
   k8s-test:
