@@ -23,8 +23,7 @@ require (
 	go.opentelemetry.io/otel/sdk/resource v1.21.0
 	
 	// Prometheus
-	github.com/prometheus/client_golang v1.17.0
-	github.com/prometheus/client_golang/prometheus/promhttp v0.44.1
+	github.com/prometheus/client_golang v1.18.0
 )
 
 require (

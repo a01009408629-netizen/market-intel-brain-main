@@ -47,7 +47,7 @@ jobs:
     - name: 🦀 Setup Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: stable
+        toolchain: 1.85.0
         components: rustfmt, clippy
 
     - name: 🐹 Setup Go
@@ -123,7 +123,7 @@ jobs:
     - name: 🦀 Setup Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: stable
+        toolchain: 1.85.0
 
     - name: 🐹 Setup Go
       uses: actions/setup-go@v4
