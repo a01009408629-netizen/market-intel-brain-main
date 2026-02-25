@@ -40,6 +40,10 @@ service CoreEngineService {
   rpc GetNewsBuffer(GetNewsBufferRequest) returns (GetNewsBufferResponse);
   rpc GetIngestionStats(google.protobuf.Empty) returns (GetIngestionStatsResponse);
   rpc ConnectDataSource(ConnectDataSourceRequest) returns (ConnectDataSourceResponse);
+  
+  // AI-Powered Market Analysis
+  rpc AnalyzeMarketData(AnalyzeMarketDataRequest) returns (AnalyzeMarketDataResponse);
+  rpc GetPredictiveInsights(GetPredictiveInsightsRequest) returns (GetPredictiveInsightsResponse);
 }
 
 // Data ingestion request/response messages
@@ -390,4 +394,101 @@ message PerformanceStats {
   int64 buffer_utilization = 9;
   int64 active_threads = 10;
   google.protobuf.Timestamp collection_time = 11;
+}
+
+// AI-Powered Market Analysis Messages
+
+// Analyze market data request
+message AnalyzeMarketDataRequest {
+  repeated string symbols = 1;
+  string source_id = 2;
+  bool include_predictive_insights = 3;
+  bool include_historical_patterns = 4;
+  int32 analysis_depth = 5; // 1-10, higher = more detailed
+  string analysis_type = 6; // "technical", "fundamental", "sentiment", "comprehensive"
+}
+
+// Analyze market data response
+message AnalyzeMarketDataResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated common.MarketData market_data = 3;
+  MarketAnalysis analysis = 4;
+  repeated PredictiveInsight insights = 5;
+  repeated HistoricalPattern patterns = 6;
+}
+
+// Market analysis results
+message MarketAnalysis {
+  string symbol = 1;
+  double current_price = 2;
+  double price_change = 3;
+  double price_change_percent = 4;
+  double volume = 5;
+  double volume_change = 6;
+  double volatility = 7;
+  double momentum = 8;
+  double trend_strength = 9;
+  repeated string technical_indicators = 10;
+  repeated string support_levels = 11;
+  repeated string resistance_levels = 12;
+  google.protobuf.Timestamp analysis_time = 13;
+  string analysis_confidence = 14; // "low", "medium", "high"
+}
+
+// Predictive insight
+message PredictiveInsight {
+  string insight_type = 1; // "price_prediction", "trend_reversal", "volatility_spike", "volume_anomaly"
+  string prediction = 2;
+  double confidence_score = 3; // 0.0 to 1.0
+  double time_horizon_hours = 4;
+  repeated string supporting_factors = 5;
+  repeated string risk_factors = 6;
+  map<string, double> probability_distribution = 7;
+  google.protobuf.Timestamp generated_at = 8;
+}
+
+// Historical pattern
+message HistoricalPattern {
+  string pattern_id = 1;
+  string pattern_name = 2;
+  string pattern_type = 3; // "head_and_shoulders", "double_top", "triangle", "flag", etc.
+  double similarity_score = 4; // 0.0 to 1.0
+  google.protobuf.Timestamp pattern_start = 5;
+  google.protobuf.Timestamp pattern_end = 6;
+  double price_move_percent = 7;
+  double average_outcome = 8;
+  int32 occurrences = 9;
+  double success_rate = 10;
+  repeated string key_characteristics = 11;
+}
+
+// Get predictive insights request
+message GetPredictiveInsightsRequest {
+  string symbol = 1;
+  string insight_type = 2; // "all", "price_prediction", "trend_analysis", "risk_assessment"
+  int32 time_horizon_hours = 3;
+  double confidence_threshold = 4; // 0.0 to 1.0
+  int32 max_insights = 5;
+}
+
+// Get predictive insights response
+message GetPredictiveInsightsResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated PredictiveInsight insights = 3;
+  VectorStoreStats vector_store_stats = 4;
+}
+
+// Vector store statistics
+message VectorStoreStats {
+  int64 total_vectors = 1;
+  int64 collection_size_bytes = 2;
+  int64 index_size_bytes = 3;
+  int64 segments_count = 4;
+  string index_status = 5;
+  double avg_search_time_ms = 6;
+  double cache_hit_rate = 7;
+  int64 active_connections = 8;
+  google.protobuf.Timestamp last_updated = 9;
 }

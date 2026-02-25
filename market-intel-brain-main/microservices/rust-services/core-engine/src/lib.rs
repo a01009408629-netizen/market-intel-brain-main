@@ -10,6 +10,7 @@ pub mod proto;
 pub mod otel;
 pub mod metrics;
 pub mod analytics;
+pub mod vector_store;
 
 // Re-export commonly used items
 pub use config::*;
@@ -18,6 +19,7 @@ pub use data_ingestion::*;
 pub use otel::*;
 pub use metrics::*;
 pub use analytics::*;
+pub use vector_store::*;
 
 /// Core Engine version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -64,6 +64,11 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 
+# Vector database dependencies
+qdrant-client = "1.7"
+lru = "0.12"
+uuid = { workspace = true, features = ["v4"] }
+
 # Metrics
 prometheus = "0.13"
 

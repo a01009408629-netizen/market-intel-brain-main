@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::env;
 
 use crate::analytics::{AnalyticsConfig, PublisherConfig};
+use crate::vector_store::VectorStoreConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoreEngineConfig {
@@ -15,6 +16,8 @@ pub struct CoreEngineConfig {
     pub instance_id: String,
     pub analytics_enabled: bool,
     pub analytics_config: AnalyticsConfig,
+    pub vector_store_enabled: bool,
+    pub vector_store_config: VectorStoreConfig,
 }
 
 impl CoreEngineConfig {
@@ -60,6 +63,37 @@ impl CoreEngineConfig {
                         .unwrap_or_else(|_| "core-engine".to_string()),
                     ..Default::default()
                 },
+                ..Default::default()
+            },
+            vector_store_enabled: env::var("VECTOR_STORE_ENABLED")
+                .unwrap_or_else(|_| "true".to_string())
+                .parse()
+                .unwrap_or(true),
+            vector_store_config: VectorStoreConfig {
+                qdrant_url: env::var("QDRANT_URL")
+                    .unwrap_or_else(|_| "http://localhost:6333".to_string()),
+                collection_name: env::var("VECTOR_COLLECTION_NAME")
+                    .unwrap_or_else(|_| "market_data_vectors".to_string()),
+                vector_size: env::var("VECTOR_SIZE")
+                    .unwrap_or_else(|_| "1536".to_string())
+                    .parse()
+                    .unwrap_or(1536),
+                pool_size: env::var("VECTOR_POOL_SIZE")
+                    .unwrap_or_else(|_| "10".to_string())
+                    .parse()
+                    .unwrap_or(10),
+                batch_size: env::var("VECTOR_BATCH_SIZE")
+                    .unwrap_or_else(|_| "100".to_string())
+                    .parse()
+                    .unwrap_or(100),
+                search_limit: env::var("VECTOR_SEARCH_LIMIT")
+                    .unwrap_or_else(|_| "10".to_string())
+                    .parse()
+                    .unwrap_or(10),
+                similarity_threshold: env::var("VECTOR_SIMILARITY_THRESHOLD")
+                    .unwrap_or_else(|_| "0.7".to_string())
+                    .parse()
+                    .unwrap_or(0.7),
                 ..Default::default()
             },
         })

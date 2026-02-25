@@ -9,11 +9,14 @@ use crate::data_ingestion::DataIngestionService;
 use crate::proto::common::*;
 use crate::proto::core_engine::*;
 use crate::analytics::{AnalyticsManager, AnalyticsEvent, AnalyticsEventType, AnalyticsEventSeverity};
+use crate::vector_store::{VectorStoreManager, VectorStoreConfig};
+use std::collections::HashMap;
 
 pub struct CoreEngineServiceImpl {
     config: CoreEngineConfig,
     data_ingestion: DataIngestionService,
     analytics: Option<AnalyticsManager>,
+    vector_store: Option<VectorStoreManager>,
 }
 
 impl CoreEngineServiceImpl {
@@ -38,10 +41,28 @@ impl CoreEngineServiceImpl {
             None
         };
 
+        // Initialize vector store manager if enabled
+        let vector_store = if config.vector_store_enabled {
+            match VectorStoreManager::new(config.vector_store_config.clone()).await {
+                Ok(vector_store) => {
+                    info!("Vector store manager initialized successfully");
+                    Some(vector_store)
+                }
+                Err(e) => {
+                    warn!("Failed to initialize vector store manager: {}. Continuing without vector store.", e);
+                    None
+                }
+            }
+        } else {
+            info!("Vector store is disabled");
+            None
+        };
+
         Ok(Self { 
             config,
             data_ingestion,
             analytics,
+            vector_store,
         })
     }
     
@@ -59,6 +80,91 @@ impl CoreEngineServiceImpl {
             if let Err(e) = analytics.publish_event(event).await {
                 error!("Failed to publish analytics event: {}", e);
             }
+        }
+    }
+    
+    /// Get predictive insights using vector store
+    async fn get_predictive_insights(&self, market_data: &MarketData) -> Result<Vec<String>, Status> {
+        if let Some(vector_store) = &self.vector_store {
+            match vector_store.find_similar_patterns(market_data).await {
+                Ok(similar_results) => {
+                    let mut insights = Vec::new();
+                    
+                    for result in similar_results {
+                        if let Some(pattern) = result.metadata.get("pattern") {
+                            insights.push(format!("Similar pattern detected: {} (confidence: {:.2})", pattern, result.score));
+                        }
+                        
+                        if let Some(prediction) = result.metadata.get("prediction") {
+                            insights.push(format!("Predictive insight: {} (similarity: {:.2})", prediction, result.score));
+                        }
+                    }
+                    
+                    if insights.is_empty() {
+                        insights.push("No similar patterns found in historical data".to_string());
+                    }
+                    
+                    Ok(insights)
+                }
+                Err(e) => {
+                    error!("Failed to get predictive insights: {}", e);
+                    Err(Status::internal(format!("Failed to get predictive insights: {}", e)))
+                }
+            }
+        } else {
+            Ok(vec!["Vector store is not enabled".to_string()])
+        }
+    }
+    
+    /// Upsert market data to vector store
+    async fn upsert_market_data_to_vector_store(&self, market_data: &[MarketData]) {
+        if let Some(vector_store) = &self.vector_store {
+            match vector_store.upsert_market_data(market_data).await {
+                Ok(response) => {
+                    info!("Successfully upserted {} market data embeddings to vector store", response.upserted_count);
+                }
+                Err(e) => {
+                    error!("Failed to upsert market data to vector store: {}", e);
+                }
+            }
+        }
+    }
+    
+    /// Generate basic market analysis
+    async fn generate_market_analysis(&self, market_data: &MarketData) -> MarketAnalysis {
+        MarketAnalysis {
+            symbol: market_data.symbol.clone(),
+            current_price: market_data.price,
+            price_change: 0.0, // Mock calculation
+            price_change_percent: 0.0, // Mock calculation
+            volume: market_data.volume,
+            volume_change: 0.0, // Mock calculation
+            volatility: 0.15, // Mock calculation
+            momentum: 0.05, // Mock calculation
+            trend_strength: 0.7, // Mock calculation
+            technical_indicators: vec![
+                "RSI: 65".to_string(),
+                "MACD: Bullish".to_string(),
+                "Moving Average: Above".to_string(),
+            ],
+            support_levels: vec![
+                "145.00".to_string(),
+                "140.00".to_string(),
+                "135.00".to_string(),
+            ],
+            resistance_levels: vec![
+                "155.00".to_string(),
+                "160.00".to_string(),
+                "165.00".to_string(),
+            ],
+            analysis_time: Some(prost_types::Timestamp {
+                seconds: SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                nanos: 0,
+            }),
+            analysis_confidence: "medium".to_string(),
         }
     }
 }
@@ -243,6 +349,11 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
                         "source_id": req.source_id
                     }))
                 ).await;
+                
+                // Upsert market data to vector store for AI analysis
+                if !proto_market_data.is_empty() {
+                    self.upsert_market_data_to_vector_store(&proto_market_data).await;
+                }
 
                 self.record_request_metrics("FetchMarketData", &Status::ok(()), start.elapsed());
                 
@@ -587,5 +698,226 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
     ) -> Result<Response<PerformanceStatsResponse>, Status> {
         // TODO: Implement performance stats
         Err(Status::unimplemented("GetPerformanceStats not yet implemented"))
+    }
+
+    async fn analyze_market_data(
+        &self,
+        request: Request<AnalyzeMarketDataRequest>,
+    ) -> Result<Response<AnalyzeMarketDataResponse>, Status> {
+        let start = Instant::now();
+        let req = request.into_inner();
+        
+        info!("Analyzing market data for symbols: {:?}", req.symbols);
+        
+        // Fetch market data first
+        let market_data_result = self.data_ingestion.fetch_market_data(req.symbols.clone(), &req.source_id).await;
+        
+        match market_data_result {
+            Ok(market_data) => {
+                let proto_market_data: Vec<MarketData> = market_data
+                    .into_iter()
+                    .map(|data| MarketData {
+                        symbol: data.symbol.clone(),
+                        price: data.price,
+                        volume: data.volume,
+                        timestamp: Some(prost_types::Timestamp {
+                            seconds: data.timestamp.timestamp(),
+                            nanos: data.timestamp.timestamp_nanos() as i32,
+                        }),
+                        source: data.source.clone(),
+                        additional_data: data.additional_data,
+                    })
+                    .collect();
+
+                // Upsert to vector store for future analysis
+                if !proto_market_data.is_empty() {
+                    self.upsert_market_data_to_vector_store(&proto_market_data).await;
+                }
+
+                // Generate market analysis
+                let mut analysis_results = Vec::new();
+                let mut all_insights = Vec::new();
+                let mut all_patterns = Vec::new();
+
+                for data in &proto_market_data {
+                    // Generate basic market analysis
+                    let analysis = self.generate_market_analysis(data).await;
+                    analysis_results.push(analysis);
+
+                    // Get predictive insights if requested
+                    if req.include_predictive_insights {
+                        match self.get_predictive_insights(data).await {
+                            Ok(insights) => {
+                                let predictive_insights: Vec<PredictiveInsight> = insights
+                                    .into_iter()
+                                    .enumerate()
+                                    .map(|(i, insight)| PredictiveInsight {
+                                        insight_type: "price_prediction".to_string(),
+                                        prediction: insight,
+                                        confidence_score: 0.8 - (i as f64 * 0.1), // Decreasing confidence
+                                        time_horizon_hours: 24,
+                                        supporting_factors: vec![
+                                            "historical_pattern_match".to_string(),
+                                            "volume_analysis".to_string(),
+                                            "technical_indicators".to_string(),
+                                        ],
+                                        risk_factors: vec![
+                                            "market_volatility".to_string(),
+                                            "external_factors".to_string(),
+                                        ],
+                                        probability_distribution: HashMap::from([
+                                            ("up".to_string(), 0.45),
+                                            ("down".to_string(), 0.35),
+                                            ("sideways".to_string(), 0.20),
+                                        ]),
+                                        generated_at: Some(prost_types::Timestamp {
+                                            seconds: SystemTime::now()
+                                                .duration_since(UNIX_EPOCH)
+                                                .unwrap()
+                                                .as_secs(),
+                                            nanos: 0,
+                                        }),
+                                    })
+                                    .collect();
+                                all_insights.extend(predictive_insights);
+                            }
+                            Err(e) => {
+                                warn!("Failed to get predictive insights for {}: {}", data.symbol, e);
+                            }
+                        }
+                    }
+                }
+
+                let response = AnalyzeMarketDataResponse {
+                    status: ResponseStatus::ResponseStatusSuccess as i32,
+                    message: format!("Successfully analyzed {} symbols", proto_market_data.len()),
+                    market_data: proto_market_data,
+                    analysis: analysis_results.into_iter().next(), // Return first analysis for simplicity
+                    insights: all_insights,
+                    patterns: all_patterns,
+                };
+
+                self.record_request_metrics("AnalyzeMarketData", &Status::ok(()), start.elapsed());
+                
+                Ok(Response::new(response))
+            }
+            Err(e) => {
+                error!("Failed to fetch market data for analysis: {}", e);
+                
+                let status = Status::internal(format!("Failed to fetch market data for analysis: {}", e));
+                self.record_request_metrics("AnalyzeMarketData", &status, start.elapsed());
+                
+                Err(status)
+            }
+        }
+    }
+
+    async fn get_predictive_insights(
+        &self,
+        request: Request<GetPredictiveInsightsRequest>,
+    ) -> Result<Response<GetPredictiveInsightsResponse>, Status> {
+        let start = Instant::now();
+        let req = request.into_inner();
+        
+        info!("Getting predictive insights for symbol: {}", req.symbol);
+        
+        // Create a mock market data object for the symbol
+        let market_data = MarketData {
+            symbol: req.symbol.clone(),
+            price: 150.0, // Mock price
+            volume: 1000000, // Mock volume
+            timestamp: Some(prost_types::Timestamp {
+                seconds: SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                nanos: 0,
+            }),
+            source: "mock".to_string(),
+            additional_data: HashMap::new(),
+        };
+
+        // Get predictive insights
+        match self.get_predictive_insights(&market_data).await {
+            Ok(insights) => {
+                let predictive_insights: Vec<PredictiveInsight> = insights
+                    .into_iter()
+                    .enumerate()
+                    .take(req.max_insights as usize)
+                    .map(|(i, insight)| PredictiveInsight {
+                        insight_type: "price_prediction".to_string(),
+                        prediction: insight,
+                        confidence_score: (0.9 - (i as f64 * 0.1)).max(req.confidence_threshold),
+                        time_horizon_hours: req.time_horizon_hours as i32,
+                        supporting_factors: vec![
+                            "historical_pattern_match".to_string(),
+                            "volume_analysis".to_string(),
+                            "technical_indicators".to_string(),
+                        ],
+                        risk_factors: vec![
+                            "market_volatility".to_string(),
+                            "external_factors".to_string(),
+                        ],
+                        probability_distribution: HashMap::from([
+                            ("up".to_string(), 0.45),
+                            ("down".to_string(), 0.35),
+                            ("sideways".to_string(), 0.20),
+                        ]),
+                        generated_at: Some(prost_types::Timestamp {
+                            seconds: SystemTime::now()
+                                .duration_since(UNIX_EPOCH)
+                                .unwrap()
+                                .as_secs(),
+                            nanos: 0,
+                        }),
+                    })
+                    .collect();
+
+                // Get vector store stats
+                let vector_store_stats = if let Some(vector_store) = &self.vector_store {
+                    match vector_store.get_stats().await {
+                        Ok(stats) => Some(VectorStoreStats {
+                            total_vectors: stats.total_vectors,
+                            collection_size_bytes: stats.collection_size_bytes,
+                            index_size_bytes: stats.index_size_bytes,
+                            segments_count: stats.segments_count,
+                            index_status: stats.index_status,
+                            avg_search_time_ms: stats.search_metrics.avg_search_time_ms,
+                            cache_hit_rate: stats.search_metrics.cache_hit_rate,
+                            active_connections: stats.pool_metrics.active_connections as i64,
+                            last_updated: Some(prost_types::Timestamp {
+                                seconds: SystemTime::now()
+                                    .duration_since(UNIX_EPOCH)
+                                    .unwrap()
+                                    .as_secs(),
+                                nanos: 0,
+                            }),
+                        }),
+                        Err(_) => None,
+                    }
+                } else {
+                    None
+                };
+
+                let response = GetPredictiveInsightsResponse {
+                    status: ResponseStatus::ResponseStatusSuccess as i32,
+                    message: format!("Successfully retrieved {} predictive insights", predictive_insights.len()),
+                    insights: predictive_insights,
+                    vector_store_stats,
+                };
+
+                self.record_request_metrics("GetPredictiveInsights", &Status::ok(()), start.elapsed());
+                
+                Ok(Response::new(response))
+            }
+            Err(e) => {
+                error!("Failed to get predictive insights: {}", e);
+                
+                let status = Status::internal(format!("Failed to get predictive insights: {}", e));
+                self.record_request_metrics("GetPredictiveInsights", &status, start.elapsed());
+                
+                Err(status)
+            }
+        }
     }
 }

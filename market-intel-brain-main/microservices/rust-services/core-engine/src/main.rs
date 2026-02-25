@@ -21,12 +21,14 @@ mod otel;
 mod metrics;
 mod tls;
 mod analytics;
+mod vector_store;
 
 use core_engine_service::CoreEngineServiceImpl;
 use config::CoreEngineConfig;
 use crate::otel;
 use crate::tls::TlsConfig;
 use crate::analytics;
+use crate::vector_store;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -35,6 +37,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Initialize Analytics
     analytics::init();
+    
+    // Initialize Vector Store
+    vector_store::init();
     
     // Set up graceful shutdown
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
@@ -103,6 +108,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Cleanup Analytics
     analytics::cleanup();
+    
+    // Cleanup Vector Store
+    vector_store::cleanup();
     
     info!("Core Engine service shutdown complete");
     Ok(())
