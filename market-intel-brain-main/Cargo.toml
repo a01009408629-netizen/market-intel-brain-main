@@ -2,6 +2,7 @@
 members = [
     "core",
     "api",
+    "messaging",
     "data-ingestion", 
     "trading-engine",
     "risk-management",
@@ -93,6 +94,7 @@ lapin = "2.3"
 # Internal Crates
 market-intel-core = { path = "core" }
 market-intel-api = { path = "api" }
+market-intel-messaging = { path = "messaging" }
 market-intel-data-ingestion = { path = "data-ingestion" }
 market-intel-trading-engine = { path = "trading-engine" }
 market-intel-risk-management = { path = "risk-management" }
