@@ -11,6 +11,20 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/joho/godotenv v1.4.0
 	golang.org/x/time v0.3.0
+	
+	// OpenTelemetry
+	go.opentelemetry.io/otel v1.21.0
+	go.opentelemetry.io/otel/trace v1.21.0
+	go.opentelemetry.io/otel/metric v1.21.0
+	go.opentelemetry.io/otel/exporters/jaeger v1.17.0
+	go.opentelemetry.io/otel/exporters/prometheus v0.44.0
+	go.opentelemetry.io/otel/sdk/metric v0.44.0
+	go.opentelemetry.io/otel/sdk/trace v1.21.0
+	go.opentelemetry.io/otel/sdk/resource v1.21.0
+	
+	// Prometheus
+	github.com/prometheus/client_golang v1.17.0
+	github.com/prometheus/client_golang/prometheus/promhttp
 )
 
 require (

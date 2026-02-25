@@ -29,6 +29,7 @@ market-intel-core = { path = "../../../core" }
 async-trait = { workspace = true }
 tokio-util = { workspace = true }
 futures = "0.3"
+tokio-stream = "0.1"
 
 # Concurrency and lock-free data structures
 crossbeam = "0.8"
@@ -40,7 +41,7 @@ cache-padded = "1.3"
 
 # Configuration
 toml = "0.8"
-config = "0.14"
+config = "0.13"
 
 # Utilities
 num_cpus = "1.16"
@@ -50,7 +51,6 @@ reqwest = { version = "0.11", features = ["json"] }
 
 # Error handling
 anyhow = "1.0"
-thiserror = "1.0"
 
 # Database
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
@@ -58,6 +58,17 @@ redis = { version = "0.24", features = ["tokio-comp"] }
 
 # Message queue (Redpanda/Kafka)
 rdkafka = { version = "0.36", features = ["cmake-build", "ssl", "sasl", "zstd"] }
+
+# Metrics
+prometheus = "0.13"
+
+# OpenTelemetry
+tracing-opentelemetry = "0.21"
+opentelemetry = "0.21"
+opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
+opentelemetry-jaeger = "0.20"
+opentelemetry-prometheus = "0.14"
+opentelemetry-semantic-conventions = "0.13"
 
 [build-dependencies]
 tonic-build = "0.10"

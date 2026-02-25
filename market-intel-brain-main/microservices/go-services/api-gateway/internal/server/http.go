@@ -8,18 +8,25 @@ import (
 	"github.com/market-intel/api-gateway/internal/handlers"
 	"github.com/market-intel/api-gateway/internal/services"
 	"github.com/market-intel/api-gateway/pkg/logger"
+	"github.com/market-intel/api-gateway/pkg/otel"
+	"github.com/market-intel/api-gateway/proto"
+	pb "github.com/market-intel/api-gateway/proto"
 )
 
 type HTTPServer struct {
 	config           *config.Config
 	coreEngineClient *services.CoreEngineClient
 	server           *http.Server
+	otelMiddleware    *otel.OtelMiddleware
+	metricsMiddleware *otel.MetricsMiddleware
 }
 
 func NewHTTPServer(config *config.Config, coreEngineClient *services.CoreEngineClient) *HTTPServer {
 	return &HTTPServer{
 		config:           config,
 		coreEngineClient: coreEngineClient,
+		otelMiddleware:    otel.NewOtelMiddleware("api-gateway"),
+		metricsMiddleware: otel.NewMetricsMiddleware(),
 	}
 }
 
@@ -31,7 +38,13 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 
 	router := gin.New()
 
-	// Add middleware
+	// Add OpenTelemetry middleware first (to trace all requests)
+	router.Use(s.otelMiddleware.Middleware())
+
+	// Add metrics middleware
+	router.Use(s.metricsMiddleware.Middleware())
+
+	// Add logging middleware
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
@@ -52,7 +65,7 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 	// Create handlers
 	healthHandler := handlers.NewHealthHandler(s.config, s.coreEngineClient)
 	dataIngestionHandler := handlers.NewDataIngestionHandler(s.config, s.coreEngineClient)
-
+	
 	// Setup routes
 	v1 := router.Group("/api/v1")
 	{
@@ -71,6 +84,9 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 
 		// WebSocket endpoints
 		v1.GET("/ws/market-data", dataIngestionHandler.WebSocketMarketData)
+
+		// Metrics endpoint (Prometheus)
+		v1.GET("/metrics", s.metricsMiddleware.MetricsHandler())
 	}
 
 	// Root endpoints

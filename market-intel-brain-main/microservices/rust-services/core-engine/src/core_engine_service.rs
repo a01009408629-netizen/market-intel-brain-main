@@ -138,14 +138,19 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
             active_agents: vec![],
         };
 
+        self.record_request_metrics("GetStatus", &Status::ok(()), start.elapsed());
+        
         Ok(Response::new(response))
     }
 
-    // Data Ingestion Services
     async fn fetch_market_data(
         &self,
         request: Request<FetchMarketDataRequest>,
     ) -> Result<Response<FetchMarketDataResponse>, Status> {
+        let start = Instant::now();
+        let (context, _span) = self.extract_trace_context(&request);
+        let _guard = context.enter();
+
         let req = request.into_inner();
         
         match self.data_ingestion.fetch_market_data(req.symbols, &req.source_id).await {
@@ -171,15 +176,17 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
                     market_data: proto_market_data,
                 };
 
+                self.record_request_metrics("FetchMarketData", &Status::ok(()), start.elapsed());
+                
                 Ok(Response::new(response))
             }
             Err(e) => {
-                let response = FetchMarketDataResponse {
-                    status: ResponseStatus::ResponseStatusError as i32,
-                    message: format!("Failed to fetch market data: {}", e),
-                    market_data: vec![],
-                };
-                Ok(Response::new(response))
+                error!("Failed to fetch market data: {}", e);
+                
+                let status = Status::internal(format!("Failed to fetch market data: {}", e));
+                self.record_request_metrics("FetchMarketData", &status, start.elapsed());
+                
+                Err(status)
             }
         }
     }
@@ -188,6 +195,10 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
         &self,
         request: Request<FetchNewsDataRequest>,
     ) -> Result<Response<FetchNewsDataResponse>, Status> {
+        let start = Instant::now();
+        let (context, _span) = self.extract_trace_context(&request);
+        let _guard = context.enter();
+
         let req = request.into_inner();
         
         match self.data_ingestion.fetch_news_data(req.keywords, &req.source_id, req.hours_back).await {
@@ -213,15 +224,17 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
                     news_items: proto_news_items,
                 };
 
+                self.record_request_metrics("FetchNewsData", &Status::ok(()), start.elapsed());
+                
                 Ok(Response::new(response))
             }
             Err(e) => {
-                let response = FetchNewsDataResponse {
-                    status: ResponseStatus::ResponseStatusError as i32,
-                    message: format!("Failed to fetch news data: {}", e),
-                    news_items: vec![],
-                };
-                Ok(Response::new(response))
+                error!("Failed to fetch news data: {}", e);
+                
+                let status = Status::internal(format!("Failed to fetch news data: {}", e));
+                self.record_request_metrics("FetchNewsData", &status, start.elapsed());
+                
+                Err(status)
             }
         }
     }
@@ -230,6 +243,10 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
         &self,
         request: Request<GetMarketDataBufferRequest>,
     ) -> Result<Response<GetMarketDataBufferResponse>, Status> {
+        let start = Instant::now();
+        let (context, _span) = self.extract_trace_context(&request);
+        let _guard = context.enter();
+
         let req = request.into_inner();
         
         let symbol = if req.symbol.is_empty() { None } else { Some(req.symbol) };
@@ -258,15 +275,17 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
                     market_data: proto_market_data,
                 };
 
+                self.record_request_metrics("GetMarketDataBuffer", &Status::ok(()), start.elapsed());
+                
                 Ok(Response::new(response))
             }
             Err(e) => {
-                let response = GetMarketDataBufferResponse {
-                    status: ResponseStatus::ResponseStatusError as i32,
-                    message: format!("Failed to get market data buffer: {}", e),
-                    market_data: vec![],
-                };
-                Ok(Response::new(response))
+                error!("Failed to get market data buffer: {}", e);
+                
+                let status = Status::internal(format!("Failed to get market data buffer: {}", e));
+                self.record_request_metrics("GetMarketDataBuffer", &status, start.elapsed());
+                
+                Err(status)
             }
         }
     }
@@ -275,6 +294,10 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
         &self,
         request: Request<GetNewsBufferRequest>,
     ) -> Result<Response<GetNewsBufferResponse>, Status> {
+        let start = Instant::now();
+        let (context, _span) = self.extract_trace_context(&request);
+        let _guard = context.enter();
+
         let req = request.into_inner();
         
         let keywords = if req.keywords.is_empty() { None } else { Some(req.keywords) };
@@ -303,23 +326,31 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
                     news_items: proto_news_items,
                 };
 
+                self.record_request_metrics("GetNewsBuffer", &Status::ok(()), start.elapsed());
+                
                 Ok(Response::new(response))
             }
             Err(e) => {
-                let response = GetNewsBufferResponse {
-                    status: ResponseStatus::ResponseStatusError as i32,
-                    message: format!("Failed to get news buffer: {}", e),
-                    news_items: vec![],
-                };
-                Ok(Response::new(response))
+                error!("Failed to get news buffer: {}", e);
+                
+                let status = Status::internal(format!("Failed to get news buffer: {}", e));
+                self.record_request_metrics("GetNewsBuffer", &status, start.elapsed());
+                
+                Err(status)
             }
         }
     }
 
     async fn get_ingestion_stats(
         &self,
-        _request: Request<prost_types::Empty>,
+        request: Request<prost_types::Empty>,
     ) -> Result<Response<GetIngestionStatsResponse>, Status> {
+        let start = Instant::now();
+        let (context, _span) = self.extract_trace_context(&request);
+        let _guard = context.enter();
+
+        info!("Getting ingestion statistics");
+
         match self.data_ingestion.get_ingestion_stats().await {
             Ok(stats) => {
                 let proto_data_sources: std::collections::HashMap<String, DataSourceInfo> = stats
@@ -349,15 +380,17 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
                     stats: Some(proto_stats),
                 };
 
+                self.record_request_metrics("GetIngestionStats", &Status::ok(()), start.elapsed());
+                
                 Ok(Response::new(response))
             }
             Err(e) => {
-                let response = GetIngestionStatsResponse {
-                    status: ResponseStatus::ResponseStatusError as i32,
-                    message: format!("Failed to get ingestion stats: {}", e),
-                    stats: None,
-                };
-                Ok(Response::new(response))
+                error!("Failed to get ingestion stats: {}", e);
+                
+                let status = Status::internal(format!("Failed to get ingestion stats: {}", e));
+                self.record_request_metrics("GetIngestionStats", &status, start.elapsed());
+                
+                Err(status)
             }
         }
     }
@@ -366,6 +399,10 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
         &self,
         request: Request<ConnectDataSourceRequest>,
     ) -> Result<Response<ConnectDataSourceResponse>, Status> {
+        let start = Instant::now();
+        let (context, _span) = self.extract_trace_context(&request);
+        let _guard = context.enter();
+
         let req = request.into_inner();
         
         let api_key = if req.api_key.is_empty() { None } else { Some(req.api_key) };
@@ -381,15 +418,17 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
                     },
                     connected,
                 };
+                self.record_request_metrics("ConnectDataSource", &Status::ok(()), start.elapsed());
+                
                 Ok(Response::new(response))
             }
             Err(e) => {
-                let response = ConnectDataSourceResponse {
-                    status: ResponseStatus::ResponseStatusError as i32,
-                    message: format!("Failed to connect to data source: {}", e),
-                    connected: false,
-                };
-                Ok(Response::new(response))
+                error!("Failed to connect to data source: {}", e);
+                
+                let status = Status::internal(format!("Failed to connect to data source: {}", e));
+                self.record_request_metrics("ConnectDataSource", &status, start.elapsed());
+                
+                Err(status)
             }
         }
     }

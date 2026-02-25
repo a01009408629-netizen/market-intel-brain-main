@@ -32,24 +32,36 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Initialize logger
+	// Initialize structured logging
 	logger.Init()
 
+	// Initialize OpenTelemetry
+	if err := otel.InitOpenTelemetry(); err != nil {
+		logger.Fatalf("Failed to initialize OpenTelemetry: %v", err)
+	}
+	defer func() {
+		if err := otel.Shutdown(context.Background()); err != nil {
+			logger.Errorf("Failed to shutdown OpenTelemetry: %v", err)
+		}
+	}()
+
+	logger.Info("Starting Market Intel Brain API Gateway")
+
 	// Load configuration
-	cfg, err := config.Load(*configFile)
+	config, err := config.Load(*configFile)
 	if err != nil {
 		logger.Fatalf("Failed to load configuration: %v", err)
 	}
 
 	logger.WithFields(map[string]interface{}{
 		"version":    Version,
-		"environment": cfg.Environment,
-		"http_port":   cfg.HTTPPort,
-		"grpc_port":   cfg.GRPCPort,
+		"environment": config.Environment,
+		"http_port":   config.HTTPPort,
+		"grpc_port":   config.GRPCPort,
 	}).Info("Starting Market Intel Brain API Gateway")
 
-	// Create Core Engine client
-	coreEngineClient, err := services.NewCoreEngineClient(cfg.CoreEngineURL)
+	// Create core engine client
+	coreEngineClient, err := services.NewCoreEngineClient(config.CoreEngineURL)
 	if err != nil {
 		logger.Errorf("Failed to create Core Engine client: %v", err)
 		// Continue without Core Engine connection for now
@@ -59,21 +71,21 @@ func main() {
 	}
 
 	// Create HTTP server
-	httpServer := server.NewHTTPServer(cfg, coreEngineClient)
+	httpServer := server.NewHTTPServer(config, coreEngineClient)
 	
 	// Create gRPC server
-	grpcServer := server.NewGRPCServer(cfg)
+	grpcServer := server.NewGRPCServer(config)
 
 	// Start servers in goroutines
 	go func() {
-		logger.Infof("Starting HTTP server on port %d", cfg.HTTPPort)
+		logger.Infof("Starting HTTP server on port %d", config.HTTPPort)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatalf("HTTP server failed to start: %v", err)
 		}
 	}()
 
 	go func() {
-		logger.Infof("Starting gRPC server on port %d", cfg.GRPCPort)
+		logger.Infof("Starting gRPC server on port %d", config.GRPCPort)
 		if err := grpcServer.Start(); err != nil {
 			logger.Errorf("gRPC server failed to start: %v", err)
 		}
@@ -86,6 +98,7 @@ func main() {
 
 	logger.Info("Shutting down servers...")
 
+	// Create a deadline for shutdown
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

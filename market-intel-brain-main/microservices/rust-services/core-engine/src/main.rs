@@ -7,6 +7,7 @@ use std::net::SocketAddr;
 use tonic::transport::Server;
 use tracing::{info, error, warn};
 use tracing_subscriber;
+use tokio::signal;
 
 mod core_engine_service;
 mod config;
@@ -14,13 +15,15 @@ mod data_ingestion;
 
 use core_engine_service::CoreEngineServiceImpl;
 use config::CoreEngineConfig;
+use crate::otel;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
-        .init();
+    // Initialize OpenTelemetry
+    otel::init_telemetry("core-engine", env!("CARGO_PKG_VERSION"))?;
+    
+    // Set up graceful shutdown
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
 
     info!("Starting Market Intel Brain Core Engine v{}", env!("CARGO_PKG_VERSION"));
 
@@ -40,19 +43,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], config.grpc_port));
     info!("Core Engine gRPC server listening on {}", addr);
 
-    // Start server
-    Server::builder()
+    // Start server with graceful shutdown
+    let server = Server::builder()
         .add_service(
             market_intel::core_engine::core_engine_service_server::CoreEngineServiceServer::new(
                 core_engine_service
             )
         )
-        .serve(addr)
-        .await
-        .map_err(|e| {
-            error!("Failed to start gRPC server: {}", e);
-            e
-        })?;
+        .serve_with_shutdown(addr, async {
+            shutdown_rx.await.ok();
+            info!("Received shutdown signal");
+        });
 
+    // Wait for Ctrl+C signal
+    tokio::select! {
+        result = server => {
+            if let Err(e) = result {
+                error!("Failed to start gRPC server: {}", e);
+                return Err(e.into());
+            }
+        }
+        _ = signal::ctrl_c() => {
+            info!("Received Ctrl+C signal");
+        }
+    }
+
+    // Graceful shutdown
+    info!("Shutting down Core Engine...");
+    
+    // Shutdown OpenTelemetry
+    otel::shutdown_telemetry();
+
+    info!("Core Engine shutdown complete");
     Ok(())
 }

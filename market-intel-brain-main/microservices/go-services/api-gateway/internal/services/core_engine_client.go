@@ -7,9 +7,11 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 
 	pb "github.com/market-intel/api-gateway/proto"
 	"github.com/market-intel/api-gateway/pkg/logger"
+	"github.com/market-intel/api-gateway/pkg/otel"
 )
 
 type CoreEngineClient struct {
@@ -45,7 +47,24 @@ func (c *CoreEngineClient) Close() error {
 	return nil
 }
 
+// injectTraceContext injects OpenTelemetry trace context into gRPC metadata
+func (c *CoreEngineClient) injectTraceContext(ctx context.Context) context.Context {
+	// Extract trace ID from context
+	traceID := otel.GetTraceID(ctx)
+	if traceID != "" {
+		// Create metadata with trace ID
+		md := metadata.New(map[string]string{
+			"trace_id": traceID,
+		})
+		return metadata.NewOutgoingContext(ctx, md)
+	}
+	return ctx
+}
+
 func (c *CoreEngineClient) HealthCheck(ctx context.Context, serviceName string) (*pb.HealthCheckResponse, error) {
+	// Inject trace context
+	ctx = c.injectTraceContext(ctx)
+	
 	req := &pb.HealthCheckRequest{
 		ServiceName: serviceName,
 		Metadata:    map[string]string{
@@ -65,6 +84,9 @@ func (c *CoreEngineClient) HealthCheck(ctx context.Context, serviceName string) 
 }
 
 func (c *CoreEngineClient) GetStatus(ctx context.Context) (*pb.EngineStatusResponse, error) {
+	// Inject trace context
+	ctx = c.injectTraceContext(ctx)
+	
 	req := &pb.Empty{}
 
 	resp, err := c.client.GetStatus(ctx, req)
@@ -81,6 +103,9 @@ func (c *CoreEngineClient) GetStatus(ctx context.Context) (*pb.EngineStatusRespo
 // Data Ingestion Methods
 
 func (c *CoreEngineClient) FetchMarketData(ctx context.Context, req *pb.FetchMarketDataRequest) (*pb.FetchMarketDataResponse, error) {
+	// Inject trace context
+	ctx = c.injectTraceContext(ctx)
+	
 	resp, err := c.client.FetchMarketData(ctx, req)
 	if err != nil {
 		logger.Errorf("Failed to fetch market data: %v", err)
@@ -93,6 +118,9 @@ func (c *CoreEngineClient) FetchMarketData(ctx context.Context, req *pb.FetchMar
 }
 
 func (c *CoreEngineClient) FetchNewsData(ctx context.Context, req *pb.FetchNewsDataRequest) (*pb.FetchNewsDataResponse, error) {
+	// Inject trace context
+	ctx = c.injectTraceContext(ctx)
+	
 	resp, err := c.client.FetchNewsData(ctx, req)
 	if err != nil {
 		logger.Errorf("Failed to fetch news data: %v", err)
@@ -105,6 +133,9 @@ func (c *CoreEngineClient) FetchNewsData(ctx context.Context, req *pb.FetchNewsD
 }
 
 func (c *CoreEngineClient) GetMarketDataBuffer(ctx context.Context, req *pb.GetMarketDataBufferRequest) (*pb.GetMarketDataBufferResponse, error) {
+	// Inject trace context
+	ctx = c.injectTraceContext(ctx)
+	
 	resp, err := c.client.GetMarketDataBuffer(ctx, req)
 	if err != nil {
 		logger.Errorf("Failed to get market data buffer: %v", err)
@@ -117,6 +148,9 @@ func (c *CoreEngineClient) GetMarketDataBuffer(ctx context.Context, req *pb.GetM
 }
 
 func (c *CoreEngineClient) GetNewsBuffer(ctx context.Context, req *pb.GetNewsBufferRequest) (*pb.GetNewsBufferResponse, error) {
+	// Inject trace context
+	ctx = c.injectTraceContext(ctx)
+	
 	resp, err := c.client.GetNewsBuffer(ctx, req)
 	if err != nil {
 		logger.Errorf("Failed to get news buffer: %v", err)
@@ -129,6 +163,9 @@ func (c *CoreEngineClient) GetNewsBuffer(ctx context.Context, req *pb.GetNewsBuf
 }
 
 func (c *CoreEngineClient) GetIngestionStats(ctx context.Context, req *pb.Empty) (*pb.GetIngestionStatsResponse, error) {
+	// Inject trace context
+	ctx = c.injectTraceContext(ctx)
+	
 	resp, err := c.client.GetIngestionStats(ctx, req)
 	if err != nil {
 		logger.Errorf("Failed to get ingestion stats: %v", err)
@@ -141,6 +178,9 @@ func (c *CoreEngineClient) GetIngestionStats(ctx context.Context, req *pb.Empty)
 }
 
 func (c *CoreEngineClient) ConnectDataSource(ctx context.Context, req *pb.ConnectDataSourceRequest) (*pb.ConnectDataSourceResponse, error) {
+	// Inject trace context
+	ctx = c.injectTraceContext(ctx)
+	
 	resp, err := c.client.ConnectDataSource(ctx, req)
 	if err != nil {
 		logger.Errorf("Failed to connect to data source: %v", err)
