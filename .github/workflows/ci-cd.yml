@@ -21,7 +21,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  RUST_VERSION: '1.75'
+  RUST_VERSION: 'stable'
   GO_VERSION: '1.21'
 
 # Concurrency Control
@@ -47,7 +47,7 @@ jobs:
     - name: 🦀 Setup Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: ${{ env.RUST_VERSION }}
+        toolchain: stable
         components: rustfmt, clippy
 
     - name: 🐹 Setup Go
@@ -123,7 +123,7 @@ jobs:
     - name: 🦀 Setup Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: ${{ env.RUST_VERSION }}
+        toolchain: stable
 
     - name: 🐹 Setup Go
       uses: actions/setup-go@v4
