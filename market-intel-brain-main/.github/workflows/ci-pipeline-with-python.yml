@@ -1,4 +1,4 @@
-name: CI Pipeline - Final (Rust & Go Only)
+name: CI Pipeline - Fixed (Rust & Go Only)
 
 on:
   push:
