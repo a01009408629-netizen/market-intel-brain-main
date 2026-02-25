@@ -51,6 +51,7 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 
 	// Create handlers
 	healthHandler := handlers.NewHealthHandler(s.config, s.coreEngineClient)
+	dataIngestionHandler := handlers.NewDataIngestionHandler(s.config, s.coreEngineClient)
 
 	// Setup routes
 	v1 := router.Group("/api/v1")
@@ -59,12 +60,37 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 		v1.GET("/health", healthHandler.Health)
 		v1.GET("/ping", healthHandler.Ping)
 		v1.GET("/ping/core-engine", healthHandler.PingCoreEngine)
+
+		// Data ingestion endpoints
+		v1.POST("/market-data/fetch", dataIngestionHandler.FetchMarketData)
+		v1.POST("/news/fetch", dataIngestionHandler.FetchNewsData)
+		v1.GET("/market-data/buffer", dataIngestionHandler.GetMarketDataBuffer)
+		v1.GET("/news/buffer", dataIngestionHandler.GetNewsBuffer)
+		v1.GET("/ingestion/stats", dataIngestionHandler.GetIngestionStats)
+		v1.POST("/data-sources/connect", dataIngestionHandler.ConnectDataSource)
+
+		// WebSocket endpoints
+		v1.GET("/ws/market-data", dataIngestionHandler.WebSocketMarketData)
 	}
 
 	// Root endpoints
 	router.GET("/health", healthHandler.Health)
 	router.GET("/ping", healthHandler.Ping)
 	router.GET("/ping/core-engine", healthHandler.PingCoreEngine)
+
+	// Legacy compatibility endpoints (redirect to v1)
+	router.GET("/api/market-data/fetch", func(c *gin.Context) {
+		c.Redirect(301, "/api/v1/market-data/fetch")
+	})
+	router.GET("/api/news/fetch", func(c *gin.Context) {
+		c.Redirect(301, "/api/v1/news/fetch")
+	})
+	router.GET("/api/market-data/buffer", func(c *gin.Context) {
+		c.Redirect(301, "/api/v1/market-data/buffer")
+	})
+	router.GET("/api/news/buffer", func(c *gin.Context) {
+		c.Redirect(301, "/api/v1/news/buffer")
+	})
 
 	return router
 }

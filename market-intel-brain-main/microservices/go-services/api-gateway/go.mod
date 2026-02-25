@@ -8,6 +8,9 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	google.golang.org/grpc v1.58.0
 	google.golang.org/protobuf v1.31.0
+	github.com/gorilla/websocket v1.5.0
+	github.com/joho/godotenv v1.4.0
+	golang.org/x/time v0.3.0
 )
 
 require (
