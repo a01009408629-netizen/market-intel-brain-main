@@ -57,13 +57,13 @@ jobs:
 
     - name: 📦 Install Rust Dependencies
       run: |
-        cd microservices/rust-services/core-engine
+        cd market-intel-brain-main/microservices/rust-services/core-engine
         cargo fetch
         cargo generate-lockfile || echo "Lockfile exists"
 
     - name: 📦 Install Go Dependencies
       run: |
-        cd microservices/go-services/api-gateway
+        cd market-intel-brain-main/microservices/go-services/api-gateway
         go mod download
 
     - name: 🔍 Code Quality Checks
@@ -72,7 +72,7 @@ jobs:
         echo "Running comprehensive quality checks..."
         
         # Rust quality checks
-        cd microservices/rust-services/core-engine
+        cd market-intel-brain-main/microservices/rust-services/core-engine
         echo "=== Rust Quality Checks ==="
         cargo fmt --all -- --check || echo "Rust formatting issues found"
         cargo clippy --all-targets --all-features -- -D warnings || echo "Rust clippy issues found"
@@ -99,8 +99,8 @@ jobs:
       with:
         name: quality-reports
         path: |
-          microservices/rust-services/core-engine/target/audit/
-          microservices/go-services/api-gateway/gosec-report.json
+          market-intel-brain-main/microservices/rust-services/core-engine/target/audit/
+          market-intel-brain-main/microservices/go-services/api-gateway/gosec-report.json
         retention-days: 30
         if-no-files-found: warn
 
@@ -135,7 +135,7 @@ jobs:
         echo "Installing Rust and Go dependencies..."
         
         # Rust dependencies
-        cd microservices/rust-services/core-engine
+        cd market-intel-brain-main/microservices/rust-services/core-engine
         cargo fetch
         
         # Go dependencies
@@ -148,7 +148,7 @@ jobs:
         
         # Rust tests
         echo "=== Rust Tests ==="
-        cd microservices/rust-services/core-engine
+        cd market-intel-brain-main/microservices/rust-services/core-engine
         cargo test --all-features --verbose || echo "Rust tests completed with issues"
         
         # Go tests
@@ -171,8 +171,8 @@ jobs:
       if: always()
       with:
         files: |
-          ./microservices/rust-services/core-engine/target/codecov.xml
-          ./microservices/go-services/api-gateway/coverage.out
+          ./market-intel-brain-main/microservices/rust-services/core-engine/target/codecov.xml
+          ./market-intel-brain-main/microservices/go-services/api-gateway/coverage.out
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
@@ -183,8 +183,8 @@ jobs:
       with:
         name: test-results
         path: |
-          microservices/rust-services/core-engine/target/ctest/
-          microservices/go-services/api-gateway/test-results/
+          market-intel-brain-main/microservices/rust-services/core-engine/target/ctest/
+          market-intel-brain-main/microservices/go-services/api-gateway/test-results/
         retention-days: 30
         if-no-files-found: warn
 
@@ -208,7 +208,7 @@ jobs:
         
         # Build Rust service
         echo "Building Rust core engine..."
-        cd microservices/rust-services/core-engine
+        cd market-intel-brain-main/microservices/rust-services/core-engine
         docker build -t rust-core-engine:${{ github.sha }} .
         docker tag rust-core-engine:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }}
         
