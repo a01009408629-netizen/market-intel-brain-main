@@ -59,6 +59,11 @@ redis = { version = "0.24", features = ["tokio-comp"] }
 # Message queue (Redpanda/Kafka)
 rdkafka = { version = "0.36", features = ["cmake-build", "ssl", "sasl", "zstd"] }
 
+# Analytics dependencies
+uuid = { workspace = true, features = ["v4", "serde"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
 # Metrics
 prometheus = "0.13"
 

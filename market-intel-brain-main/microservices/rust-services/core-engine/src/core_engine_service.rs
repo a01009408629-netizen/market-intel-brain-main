@@ -2,15 +2,18 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::{Request, Response, Status};
+use tracing::{info, warn, error};
 
 use crate::config::CoreEngineConfig;
 use crate::data_ingestion::DataIngestionService;
 use crate::proto::common::*;
 use crate::proto::core_engine::*;
+use crate::analytics::{AnalyticsManager, AnalyticsEvent, AnalyticsEventType, AnalyticsEventSeverity};
 
 pub struct CoreEngineServiceImpl {
     config: CoreEngineConfig,
     data_ingestion: DataIngestionService,
+    analytics: Option<AnalyticsManager>,
 }
 
 impl CoreEngineServiceImpl {
@@ -18,10 +21,45 @@ impl CoreEngineServiceImpl {
         let data_ingestion = DataIngestionService::new()
             .map_err(|e| format!("Failed to create data ingestion service: {}", e))?;
 
+        // Initialize analytics manager if enabled
+        let analytics = if config.analytics_enabled {
+            match AnalyticsManager::new(config.analytics_config.clone()).await {
+                Ok(analytics) => {
+                    info!("Analytics manager initialized successfully");
+                    Some(analytics)
+                }
+                Err(e) => {
+                    warn!("Failed to initialize analytics manager: {}. Continuing without analytics.", e);
+                    None
+                }
+            }
+        } else {
+            info!("Analytics is disabled");
+            None
+        };
+
         Ok(Self { 
             config,
             data_ingestion,
+            analytics,
         })
+    }
+    
+    /// Publish analytics event (fire-and-forget)
+    async fn publish_analytics_event(&self, event_type: AnalyticsEventType, payload: Option<serde_json::Value>) {
+        if let Some(analytics) = &self.analytics {
+            let event = AnalyticsEvent {
+                event_type,
+                service: "core-engine".to_string(),
+                instance_id: self.config.instance_id.clone(),
+                payload,
+                ..Default::default()
+            };
+            
+            if let Err(e) = analytics.publish_event(event).await {
+                error!("Failed to publish analytics event: {}", e);
+            }
+        }
     }
 }
 
@@ -32,6 +70,16 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
         request: Request<HealthCheckRequest>,
     ) -> Result<Response<HealthCheckResponse>, Status> {
         let req = request.into_inner();
+        
+        // Publish analytics event
+        self.publish_analytics_event(
+            AnalyticsEventType::HealthCheck,
+            Some(serde_json::json!({
+                "request_id": req.request_id,
+                "service": "core-engine",
+                "instance_id": self.config.instance_id
+            }))
+        ).await;
         
         // Basic health check - always return healthy for now
         let response = HealthCheckResponse {
@@ -153,6 +201,16 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
 
         let req = request.into_inner();
         
+        // Publish analytics event for market data request
+        self.publish_analytics_event(
+            AnalyticsEventType::MarketDataReceived,
+            Some(serde_json::json!({
+                "symbols": req.symbols,
+                "source_id": req.source_id,
+                "request_size": req.symbols.len()
+            }))
+        ).await;
+        
         match self.data_ingestion.fetch_market_data(req.symbols, &req.source_id).await {
             Ok(market_data) => {
                 let proto_market_data: Vec<MarketData> = market_data
@@ -175,6 +233,16 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
                     message: format!("Fetched {} market data items", proto_market_data.len()),
                     market_data: proto_market_data,
                 };
+
+                // Publish analytics event for successful market data processing
+                self.publish_analytics_event(
+                    AnalyticsEventType::MarketDataProcessed,
+                    Some(serde_json::json!({
+                        "symbols_count": proto_market_data.len(),
+                        "processing_time_us": start.elapsed().as_micros(),
+                        "source_id": req.source_id
+                    }))
+                ).await;
 
                 self.record_request_metrics("FetchMarketData", &Status::ok(()), start.elapsed());
                 

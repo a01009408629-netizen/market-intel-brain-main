@@ -6,3 +6,7 @@ pub mod common {
 pub mod core_engine {
     tonic::include_proto!("market_intel.core_engine");
 }
+
+pub mod analytics {
+    tonic::include_proto!("analytics");
+}

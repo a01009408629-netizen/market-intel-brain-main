@@ -1,0 +1,572 @@
+syntax = "proto3";
+
+package analytics;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// Analytics event service definition
+service AnalyticsService {
+  // Publish analytics events
+  rpc PublishEvents(PublishEventsRequest) returns (PublishEventsResponse);
+  
+  // Get analytics statistics
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+  
+  // Stream analytics events
+  rpc StreamEvents(StreamEventsRequest) returns (stream AnalyticsEvent);
+}
+
+// Analytics event types
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_MARKET_DATA_RECEIVED = 1;
+  EVENT_TYPE_MARKET_DATA_PROCESSED = 2;
+  EVENT_TYPE_ORDER_EXECUTED = 3;
+  EVENT_TYPE_ORDER_FAILED = 4;
+  EVENT_TYPE_CACHE_HIT = 5;
+  EVENT_TYPE_CACHE_MISS = 6;
+  EVENT_TYPE_RATE_LIMIT_TRIGGERED = 7;
+  EVENT_TYPE_CIRCUIT_BREAKER_OPENED = 8;
+  EVENT_TYPE_CIRCUIT_BREAKER_CLOSED = 9;
+  EVENT_TYPE_SERVICE_STARTED = 10;
+  EVENT_TYPE_SERVICE_STOPPED = 11;
+  EVENT_TYPE_HEALTH_CHECK = 12;
+  EVENT_TYPE_CUSTOM = 13;
+}
+
+// Event severity levels
+enum EventSeverity {
+  EVENT_SEVERITY_UNSPECIFIED = 0;
+  EVENT_SEVERITY_INFO = 1;
+  EVENT_SEVERITY_WARNING = 2;
+  EVENT_SEVERITY_ERROR = 3;
+  EVENT_SEVERITY_CRITICAL = 4;
+}
+
+// Analytics event message
+message AnalyticsEvent {
+  // Event unique identifier
+  string id = 1;
+  
+  // Event type
+  EventType event_type = 2;
+  
+  // Event timestamp
+  google.protobuf.Timestamp timestamp = 3;
+  
+  // Service name
+  string service = 4;
+  
+  // Instance ID
+  string instance_id = 5;
+  
+  // Session ID
+  string session_id = 6;
+  
+  // User ID
+  string user_id = 7;
+  
+  // Request ID
+  string request_id = 8;
+  
+  // Trace ID
+  string trace_id = 9;
+  
+  // Span ID
+  string span_id = 10;
+  
+  // Event payload
+  google.protobuf.Struct payload = 11;
+  
+  // Event metadata
+  google.protobuf.Struct metadata = 12;
+  
+  // Event version
+  string version = 13;
+  
+  // Event severity
+  EventSeverity severity = 14;
+  
+  // Event source
+  string source = 15;
+  
+  // Event tags
+  repeated string tags = 16;
+  
+  // Event duration in microseconds
+  uint64 duration_us = 17;
+  
+  // Event size in bytes
+  uint64 size_bytes = 18;
+  
+  // Error information
+  ErrorInfo error = 19;
+}
+
+// Error information
+message ErrorInfo {
+  // Error code
+  string code = 1;
+  
+  // Error message
+  string message = 2;
+  
+  // Error stack trace
+  string stack_trace = 3;
+  
+  // Error context
+  google.protobuf.Struct context = 4;
+}
+
+// Market data event payload
+message MarketDataPayload {
+  // Symbol
+  string symbol = 1;
+  
+  // Price
+  double price = 2;
+  
+  // Volume
+  uint64 volume = 3;
+  
+  // Timestamp
+  google.protobuf.Timestamp market_timestamp = 4;
+  
+  // Exchange
+  string exchange = 5;
+  
+  // Market data type
+  string data_type = 6;
+  
+  // Additional fields
+  google.protobuf.Struct additional_fields = 7;
+}
+
+// Order execution event payload
+message OrderExecutionPayload {
+  // Order ID
+  string order_id = 1;
+  
+  // Symbol
+  string symbol = 2;
+  
+  // Order type
+  string order_type = 3;
+  
+  // Order side
+  string order_side = 4;
+  
+  // Quantity
+  uint64 quantity = 5;
+  
+  // Price
+  double price = 6;
+  
+  // Execution timestamp
+  google.protobuf.Timestamp execution_timestamp = 7;
+  
+  // Execution venue
+  string venue = 8;
+  
+  // Commission
+  double commission = 9;
+  
+  // Status
+  string status = 10;
+  
+  // Additional fields
+  google.protobuf.Struct additional_fields = 11;
+}
+
+// Cache event payload
+message CachePayload {
+  // Cache key
+  string key = 1;
+  
+  // Cache operation
+  string operation = 2;
+  
+  // Cache type
+  string cache_type = 3;
+  
+  // Hit/miss status
+  bool hit = 4;
+  
+  // Cache size
+  uint64 cache_size = 5;
+  
+  // TTL in seconds
+  uint64 ttl_seconds = 6;
+  
+  // Additional fields
+  google.protobuf.Struct additional_fields = 7;
+}
+
+// Rate limit event payload
+message RateLimitPayload {
+  // Client identifier
+  string client_id = 1;
+  
+  // Request type
+  string request_type = 2;
+  
+  // Limit type
+  string limit_type = 3;
+  
+  // Current count
+  uint64 current_count = 4;
+  
+  // Limit
+  uint64 limit = 5;
+  
+  // Window in seconds
+  uint64 window_seconds = 6;
+  
+  // Reset time
+  google.protobuf.Timestamp reset_time = 7;
+  
+  // Additional fields
+  google.protobuf.Struct additional_fields = 8;
+}
+
+// Circuit breaker event payload
+message CircuitBreakerPayload {
+  // Circuit breaker name
+  string name = 1;
+  
+  // Service name
+  string service = 2;
+  
+  // State
+  string state = 3;
+  
+  // Failure count
+  uint64 failure_count = 4;
+  
+  // Success count
+  uint64 success_count = 5;
+  
+  // Failure threshold
+  uint64 failure_threshold = 6;
+  
+  // Success threshold
+  uint64 success_threshold = 7;
+  
+  // Timeout in seconds
+  uint64 timeout_seconds = 8;
+  
+  // Additional fields
+  google.protobuf.Struct additional_fields = 9;
+}
+
+// Service event payload
+message ServicePayload {
+  // Service name
+  string service_name = 1;
+  
+  // Service version
+  string version = 2;
+  
+  // Service status
+  string status = 3;
+  
+  // Start time
+  google.protobuf.Timestamp start_time = 4;
+  
+  // End time
+  google.protobuf.Timestamp end_time = 5;
+  
+  // Uptime in seconds
+  uint64 uptime_seconds = 6;
+  
+  // Memory usage in bytes
+  uint64 memory_usage_bytes = 7;
+  
+  // CPU usage percentage
+  double cpu_usage_percent = 8;
+  
+  // Active connections
+  uint64 active_connections = 9;
+  
+  // Additional fields
+  google.protobuf.Struct additional_fields = 10;
+}
+
+// Health check event payload
+message HealthCheckPayload {
+  // Service name
+  string service_name = 1;
+  
+  // Check type
+  string check_type = 2;
+  
+  // Status
+  string status = 3;
+  
+  // Response time in milliseconds
+  uint64 response_time_ms = 4;
+  
+  // Error message
+  string error_message = 5;
+  
+  // Additional fields
+  google.protobuf.Struct additional_fields = 6;
+}
+
+// Publish events request
+message PublishEventsRequest {
+  // Events to publish
+  repeated AnalyticsEvent events = 1;
+  
+  // Request metadata
+  google.protobuf.Struct metadata = 2;
+}
+
+// Publish events response
+message PublishEventsResponse {
+  // Published events count
+  uint32 published_count = 1;
+  
+  // Failed events count
+  uint32 failed_count = 2;
+  
+  // Failed event IDs
+  repeated string failed_event_ids = 3;
+  
+  // Response metadata
+  google.protobuf.Struct metadata = 4;
+}
+
+// Get stats request
+message GetStatsRequest {
+  // Service name filter
+  string service_name = 1;
+  
+  // Event type filter
+  EventType event_type = 2;
+  
+  // Time range start
+  google.protobuf.Timestamp start_time = 3;
+  
+  // Time range end
+  google.protobuf.Timestamp end_time = 4;
+  
+  // Request metadata
+  google.protobuf.Struct metadata = 5;
+}
+
+// Get stats response
+message GetStatsResponse {
+  // Total events
+  uint64 total_events = 1;
+  
+  // Successful events
+  uint64 successful_events = 2;
+  
+  // Failed events
+  uint64 failed_events = 3;
+  
+  // Average latency in microseconds
+  uint64 avg_latency_us = 4;
+  
+  // Current channel depth
+  uint32 channel_depth = 5;
+  
+  // Current batch size
+  uint32 batch_size = 6;
+  
+  // Batches published
+  uint64 batches_published = 7;
+  
+  // Last error
+  string last_error = 8;
+  
+  // Uptime in seconds
+  uint64 uptime_seconds = 9;
+  
+  // Events by type
+  map<string, uint64> events_by_type = 10;
+  
+  // Events by service
+  map<string, uint64> events_by_service = 11;
+  
+  // Events by severity
+  map<string, uint64> events_by_severity = 12;
+  
+  // Response metadata
+  google.protobuf.Struct metadata = 13;
+}
+
+// Stream events request
+message StreamEventsRequest {
+  // Event type filter
+  EventType event_type = 1;
+  
+  // Service name filter
+  string service_name = 2;
+  
+  // Severity filter
+  EventSeverity severity = 3;
+  
+  // Tags filter
+  repeated string tags = 4;
+  
+  // Start time
+  google.protobuf.Timestamp start_time = 5;
+  
+  // End time
+  google.protobuf.Timestamp end_time = 6;
+  
+  // Request metadata
+  google.protobuf.Struct metadata = 7;
+}
+
+// Analytics configuration
+message AnalyticsConfig {
+  // Enable analytics
+  bool enabled = 1;
+  
+  // Publisher configuration
+  PublisherConfig publisher = 2;
+  
+  // Metrics collection interval in seconds
+  uint32 metrics_interval_seconds = 3;
+  
+  // Enable metrics collection
+  bool enable_metrics = 4;
+  
+  // Enable event validation
+  bool enable_validation = 5;
+}
+
+// Publisher configuration
+message PublisherConfig {
+  // Kafka bootstrap servers
+  repeated string bootstrap_servers = 1;
+  
+  // Kafka topic for analytics events
+  string topic = 2;
+  
+  // Client ID for Kafka
+  string client_id = 3;
+  
+  // Compression type
+  CompressionType compression_type = 4;
+  
+  // Acknowledgment timeout in seconds
+  uint32 ack_timeout_seconds = 5;
+  
+  // Retry count
+  uint32 retry_count = 6;
+  
+  // Enable idempotent publishing
+  bool enable_idempotency = 7;
+  
+  // Enable metrics collection
+  bool enable_metrics = 8;
+  
+  // Channel buffer size
+  uint32 channel_size = 9;
+  
+  // Batch size
+  uint32 batch_size = 10;
+  
+  // Batch timeout in milliseconds
+  uint32 batch_timeout_ms = 11;
+}
+
+// Compression types
+enum CompressionType {
+  COMPRESSION_TYPE_UNSPECIFIED = 0;
+  COMPRESSION_TYPE_NONE = 1;
+  COMPRESSION_TYPE_GZIP = 2;
+  COMPRESSION_TYPE_SNAPPY = 3;
+  COMPRESSION_TYPE_LZ4 = 4;
+}
+
+// Publisher statistics
+message PublisherStats {
+  // Total events published
+  uint64 total_events = 1;
+  
+  // Events published successfully
+  uint64 successful_events = 2;
+  
+  // Events failed to publish
+  uint64 failed_events = 3;
+  
+  // Average publishing latency in microseconds
+  uint64 avg_latency_us = 4;
+  
+  // Current channel depth
+  uint32 channel_depth = 5;
+  
+  // Current batch size
+  uint32 batch_size = 6;
+  
+  // Batches published
+  uint64 batches_published = 7;
+  
+  // Last error message
+  string last_error = 8;
+  
+  // Uptime in seconds
+  uint64 uptime_seconds = 9;
+}
+
+// Analytics metrics
+message AnalyticsMetrics {
+  // Events published
+  uint64 events_published = 1;
+  
+  // Events failed
+  uint64 events_failed = 2;
+  
+  // Average publishing latency in milliseconds
+  double avg_latency_ms = 3;
+  
+  // Current channel depth
+  uint32 channel_depth = 4;
+  
+  // Current batch size
+  uint32 batch_size = 5;
+  
+  // Batches published
+  uint64 batches_published = 6;
+  
+  // Publisher uptime in seconds
+  uint64 uptime_seconds = 7;
+}
+
+// Event filter
+message EventFilter {
+  // Filter name
+  string name = 1;
+  
+  // Filter type
+  FilterType filter_type = 2;
+  
+  // Filter pattern
+  string pattern = 3;
+  
+  // Include or exclude
+  FilterAction action = 4;
+}
+
+// Filter action type
+enum FilterAction {
+  FILTER_ACTION_UNSPECIFIED = 0;
+  FILTER_ACTION_INCLUDE = 1;
+  FILTER_ACTION_EXCLUDE = 2;
+}
+
+// Filter type
+enum FilterType {
+  FILTER_TYPE_UNSPECIFIED = 0;
+  FILTER_TYPE_EVENT_TYPE = 1;
+  FILTER_TYPE_SERVICE = 2;
+  FILTER_TYPE_SEVERITY = 3;
+  FILTER_TYPE_TAG = 4;
+  FILTER_TYPE_CUSTOM = 5;
+}

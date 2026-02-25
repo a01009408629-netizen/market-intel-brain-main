@@ -20,16 +20,21 @@ mod proto;
 mod otel;
 mod metrics;
 mod tls;
+mod analytics;
 
 use core_engine_service::CoreEngineServiceImpl;
 use config::CoreEngineConfig;
 use crate::otel;
 use crate::tls::TlsConfig;
+use crate::analytics;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize OpenTelemetry
     otel::init_telemetry("core-engine", env!("CARGO_PKG_VERSION"))?;
+    
+    // Initialize Analytics
+    analytics::init();
     
     // Set up graceful shutdown
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
@@ -95,6 +100,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Shutdown OpenTelemetry
     otel::shutdown_telemetry();
+    
+    // Cleanup Analytics
+    analytics::cleanup();
     
     info!("Core Engine service shutdown complete");
     Ok(())
