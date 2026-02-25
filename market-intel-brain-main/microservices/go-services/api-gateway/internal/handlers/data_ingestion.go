@@ -16,7 +16,6 @@ import (
 	"github.com/market-intel/api-gateway/internal/config"
 	"github.com/market-intel/api-gateway/internal/services"
 	"github.com/market-intel/api-gateway/pkg/logger"
-	pb "github.com/market-intel/api-gateway/proto"
 )
 
 // DataIngestionHandler handles data ingestion endpoints
@@ -691,49 +690,50 @@ func (h *DataIngestionHandler) sendWebSocketError(conn *websocket.Conn, message 
 // mapGRPCToHTTPError maps gRPC errors to HTTP status codes
 func (h *DataIngestionHandler) mapGRPCToHTTPError(err error) (int, string) {
 	if grpcErr, ok := status.FromError(err); ok {
-		switch grpcErr.Code() {
-		case codes.InvalidArgument:
-			return http.StatusBadRequest, grpcErr.Message()
-		case codes.NotFound:
-			return http.StatusNotFound, grpcErr.Message()
-		case codes.PermissionDenied:
-			return http.StatusForbidden, grpcErr.Message()
-		case codes.Unauthenticated:
-			return http.StatusUnauthorized, grpcErr.Message()
-		case codes.DeadlineExceeded:
-			return http.StatusRequestTimeout, "Request timeout"
-		case codes.ResourceExhausted:
-			return http.StatusTooManyRequests, "Too many requests"
-		case codes.Unavailable:
-			return http.StatusServiceUnavailable, "Service unavailable"
-		case codes.Internal:
-			return http.StatusInternalServerError, "Internal server error"
-		default:
-			return http.StatusInternalServerError, grpcErr.Message()
-		}
+		return mapGRPCToHTTPStatus(grpcErr.Code())
 	}
 	
 	// Non-gRPC errors
 	return http.StatusInternalServerError, err.Error()
 }
 
-// mapResponseStatus maps protobuf response status to HTTP status codes
-func (h *DataIngestionHandler) mapResponseStatus(status pb.ResponseStatus) (int, string) {
-	switch status {
-	case pb.ResponseStatus_RESPONSE_STATUS_SUCCESS:
+// mapGRPCToHTTPStatus maps gRPC status codes to HTTP status codes
+func mapGRPCToHTTPStatus(grpcStatus codes.Code) (int, string) {
+	switch grpcStatus {
+	case codes.OK:
 		return http.StatusOK, "Success"
-	case pb.ResponseStatus_RESPONSE_STATUS_ERROR:
-		return http.StatusInternalServerError, "Internal server error"
-	case pb.ResponseStatus_RESPONSE_STATUS_NOT_FOUND:
+	case codes.Canceled:
+		return http.StatusRequestTimeout, "Request canceled"
+	case codes.Unknown:
+		return http.StatusInternalServerError, "Unknown error"
+	case codes.InvalidArgument:
+		return http.StatusBadRequest, "Invalid argument"
+	case codes.DeadlineExceeded:
+		return http.StatusRequestTimeout, "Deadline exceeded"
+	case codes.NotFound:
 		return http.StatusNotFound, "Not found"
-	case pb.ResponseStatus_RESPONSE_STATUS_UNAUTHORIZED:
+	case codes.AlreadyExists:
+		return http.StatusConflict, "Already exists"
+	case codes.PermissionDenied:
+		return http.StatusForbidden, "Permission denied"
+	case codes.Unauthenticated:
 		return http.StatusUnauthorized, "Unauthorized"
-	case pb.ResponseStatus_RESPONSE_STATUS_FORBIDDEN:
-		return http.StatusForbidden, "Forbidden"
-	case pb.ResponseStatus_RESPONSE_STATUS_VALIDATION_ERROR:
-		return http.StatusBadRequest, "Validation error"
-	case pb.ResponseStatus_RESPONSE_STATUS_INTERNAL_ERROR:
+	case codes.ResourceExhausted:
+		return http.StatusTooManyRequests, "Resource exhausted"
+	case codes.FailedPrecondition:
+		return http.StatusPreconditionFailed, "Failed precondition"
+	case codes.Aborted:
+		return http.StatusConflict, "Aborted"
+	case codes.OutOfRange:
+		return http.StatusBadRequest, "Out of range"
+	case codes.Unimplemented:
+		return http.StatusNotImplemented, "Unimplemented"
+	case codes.Internal:
 		return http.StatusInternalServerError, "Internal error"
+	case codes.Unavailable:
+		return http.StatusServiceUnavailable, "Service unavailable"
+	case codes.DataLoss:
+		return http.StatusInternalServerError, "Data loss"
 	default:
 		return http.StatusInternalServerError, "Unknown error"
 	}
