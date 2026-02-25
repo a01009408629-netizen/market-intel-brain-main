@@ -16,7 +16,7 @@ RUN go mod download
 COPY . .
 
 # Copy proto files
-COPY ../../proto ./proto
+COPY ../../../microservices/proto ./proto
 
 # Generate gRPC code
 RUN go generate ./...
@@ -54,7 +54,7 @@ EXPOSE 8080 8081
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+    CMD ["/bin/sh", "-c", "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"]
 
 # Set environment variables
 ENV GIN_MODE=release

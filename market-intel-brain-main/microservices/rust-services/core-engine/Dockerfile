@@ -1,5 +1,5 @@
 # Multi-stage build for Rust Core Engine
-FROM rust:1.75-slim as builder
+FROM rust:1.85-slim as builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -13,7 +13,7 @@ WORKDIR /app
 
 # Copy source code
 COPY . .
-COPY ../../proto ./proto
+COPY ../../../microservices/proto ./proto
 
 # Generate gRPC code
 RUN cargo build --release
@@ -51,7 +51,7 @@ EXPOSE 50052
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD grpc_health_probe -addr=:50052 || exit 1
+    CMD ["/bin/sh", "-c", "grpc_health_probe -addr=:50052 || exit 1"]
 
 # Set environment variables
 ENV RUST_LOG=info

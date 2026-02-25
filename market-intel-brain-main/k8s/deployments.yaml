@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rust-core-engine
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: core-engine
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: core-engine
+  template:
+    metadata:
+      labels:
+        app: market-intel-brain
+        component: core-engine
+    spec:
+      containers:
+      - name: rust-core-engine
+        image: ghcr.io/a01009408629-netizen/market-intel-brain:rust-core-latest
+        ports:
+        - containerPort: 50052
+          name: grpc
+        envFrom:
+        - configMapRef:
+            name: market-intel-brain-config
+        - secretRef:
+            name: market-intel-brain-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "grpc_health_probe -addr=:50052 || exit 1"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "grpc_health_probe -addr=:50052 || exit 1"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-api-gateway
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: api-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: api-gateway
+  template:
+    metadata:
+      labels:
+        app: market-intel-brain
+        component: api-gateway
+    spec:
+      containers:
+      - name: go-api-gateway
+        image: ghcr.io/a01009408629-netizen/market-intel-brain:go-gateway-latest
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8081
+          name: grpc
+        envFrom:
+        - configMapRef:
+            name: market-intel-brain-config
+        - secretRef:
+            name: market-intel-brain-secrets
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5

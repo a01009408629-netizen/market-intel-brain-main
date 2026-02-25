@@ -198,18 +198,17 @@ jobs:
         retention-days: 30
         if-no-files-found: warn
 
-    - name: � Cache Dependencies
-      uses: actions/cache@v3
+    - name: 🗄️ Cache Dependencies
+      uses: actions/cache@v4
       with:
         path: |
-          market-intel-brain-main/microservices/rust-services/core-engine/target/
-          market-intel-brain-main/microservices/go-services/api-gateway/go.sum
           ~/.cargo/registry/
           ~/.cargo/git/
           ~/go/pkg/mod/
-        key: v2-${{ runner.os }}-deps-v4-${{ hashFiles('market-intel-brain-main/microservices/rust-services/core-engine/Cargo.lock', 'market-intel-brain-main/microservices/go-services/api-gateway/go.sum') }}
+          market-intel-brain-main/microservices/rust-services/core-engine/target/
+        key: ${{ runner.os }}-cache-${{ hashFiles('**/Cargo.lock', '**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-deps-
+          ${{ runner.os }}-cache-
 
     - name: �� Set up Docker Buildx
       uses: docker/setup-buildx-action@v3

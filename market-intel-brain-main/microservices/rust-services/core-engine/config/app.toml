@@ -1,0 +1,68 @@
+[server]
+host = "0.0.0.0"
+port = 50052
+workers = 4
+max_connections = 1000
+keep_alive = 30
+
+[database]
+url = "postgresql://postgres:password@localhost:5432/market_intel_brain"
+max_connections = 20
+min_connections = 5
+connection_timeout = 30
+idle_timeout = 600
+
+[redis]
+url = "redis://localhost:6379"
+pool_size = 10
+connection_timeout = 5
+command_timeout = 3
+
+[kafka]
+brokers = ["localhost:9092"]
+topics = ["data-ingestion", "analytics-events", "notifications"]
+consumer_group = "core-engine-group"
+batch_size = 100
+batch_timeout = 100
+compression_type = "gzip"
+
+[logging]
+level = "info"
+format = "json"
+output = "stdout"
+file_path = "/var/log/core-engine/app.log"
+max_size = 100
+max_backups = 3
+max_age = 28
+compress = true
+
+[metrics]
+enabled = true
+port = 9091
+endpoint = "/metrics"
+interval = 30
+
+[tracing]
+enabled = true
+service_name = "core-engine"
+jaeger_endpoint = "http://localhost:14268/api/traces"
+
+[processing]
+buffer_size = 1048576
+batch_size = 1000
+processing_timeout = 30
+max_retries = 3
+retry_delay = 1
+
+[security]
+tls_enabled = true
+cert_path = "/etc/ssl/certs/server.crt"
+key_path = "/etc/ssl/private/server.key"
+ca_path = "/etc/ssl/certs/ca.crt"
+
+[monitoring]
+health_check_interval = 30
+metrics_collection_interval = 60
+alert_threshold_cpu = 80
+alert_threshold_memory = 85
+alert_threshold_disk = 90

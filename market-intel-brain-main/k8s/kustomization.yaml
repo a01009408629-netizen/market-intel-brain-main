@@ -1,0 +1,50 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: market-intel-brain
+
+resources:
+- namespace.yaml
+- configmap.yaml
+- secrets.yaml
+- deployments.yaml
+- services.yaml
+- ingress.yaml
+
+commonLabels:
+  app: market-intel-brain
+  version: v1
+
+commonAnnotations:
+  managed-by: kustomize
+  project: market-intel-brain
+
+images:
+- name: ghcr.io/a01009408629-netizen/market-intel-brain
+  newTag: latest
+
+replicas:
+- name: rust-core-engine
+  count: 3
+- name: go-api-gateway
+  count: 2
+
+patchesStrategicMerge:
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: rust-core-engine
+  spec:
+    template:
+      spec:
+        containers:
+        - name: rust-core-engine
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"

@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: market-intel-brain-config
+  namespace: market-intel-brain
+data:
+  GIN_MODE: "release"
+  PORT: "8080"
+  GRPC_PORT: "8081"
+  RUST_LOG: "info"
+  NUM_PROCESSORS: "4"
+  BUFFER_SIZE: "1048576"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  KAFKA_BROKERS: "kafka-service:9092"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: market-intel-brain-config
+  namespace: market-intel-brain-staging
+data:
+  GIN_MODE: "debug"
+  PORT: "8080"
+  GRPC_PORT: "8081"
+  RUST_LOG: "debug"
+  NUM_PROCESSORS: "2"
+  BUFFER_SIZE: "524288"
+  REDIS_HOST: "redis-service-staging"
+  REDIS_PORT: "6379"
+  KAFKA_BROKERS: "kafka-service-staging:9092"

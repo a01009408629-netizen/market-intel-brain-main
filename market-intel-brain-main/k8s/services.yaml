@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rust-core-engine-service
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: core-engine
+spec:
+  type: ClusterIP
+  ports:
+  - port: 50052
+    targetPort: 50052
+    protocol: TCP
+    name: grpc
+  selector:
+    app: market-intel-brain
+    component: core-engine
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-api-gateway-service
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: api-gateway
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+    name: grpc
+  selector:
+    app: market-intel-brain
+    component: api-gateway
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: redis
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+    name: redis
+  selector:
+    app: market-intel-brain
+    component: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: kafka
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9092
+    targetPort: 9092
+    protocol: TCP
+    name: kafka
+  selector:
+    app: market-intel-brain
+    component: kafka
