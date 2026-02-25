@@ -59,15 +59,15 @@ func InitOpenTelemetry() error {
 	}
 
 	// Create trace provider
-	traceProvider := sdk.NewTracerProvider(
+	traceProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(otel.NewBatchSpanProcessor(jaegerExp)),
 		sdktrace.WithResource(res),
 	)
 
 	// Create meter provider
-	meterProvider := otel.NewMeterProvider(
-		metric.WithReader(prometheusExp),
-		metric.WithResource(res),
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(prometheusExp),
+		sdkmetric.WithResource(res),
 	)
 
 	// Create OTel provider
@@ -76,7 +76,7 @@ func InitOpenTelemetry() error {
 
 	// Register trace propagator
 	otel.SetTextMapPropagator(propagation.TraceContext{})
-	otel.SetBaggagePropagator(propagation.MapBaggage{})
+	otel.SetTextMapPropagator(propagation.Baggage{})
 
 	// Create metrics
 	meter := otel.Meter("market_intel_api_gateway")
