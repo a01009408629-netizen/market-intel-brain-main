@@ -1,0 +1,373 @@
+"""
+MAIFA v3 Data Ingestion Service - Perception Layer
+Handles market feeds, news APIs, tickers, economic calendars
+"""
+
+import asyncio
+import aiohttp
+import json
+import logging
+from typing import Dict, List, Any, Optional, AsyncIterator
+from datetime import datetime, timedelta
+from dataclasses import dataclass
+
+from models.schemas import MarketData, NewsItem
+from models.datatypes import DataSourceConfig
+
+class DataIngestionService:
+    """
+    MAIFA v3 Data Ingestion Service - Perception Layer
+    
+    Handles real-time ingestion of market data, news feeds, and
+    economic events from various financial data sources.
+    """
+    
+    def __init__(self):
+        self.logger = logging.getLogger("DataIngestionService")
+        self._active_connections: Dict[str, aiohttp.ClientSession] = {}
+        self._data_sources: Dict[str, DataSourceConfig] = {}
+        self._market_data_buffer: List[MarketData] = []
+        self._news_buffer: List[NewsItem] = []
+        self._buffer_lock = asyncio.Lock()
+        self._max_buffer_size = 1000
+        
+    async def initialize(self):
+        """Initialize data ingestion service"""
+        self.logger.info("Initializing Data Ingestion Service...")
+        
+        # Setup default data sources
+        await self._setup_default_sources()
+        
+        # Start background data collection
+        asyncio.create_task(self._background_collection())
+        
+        self.logger.info("Data Ingestion Service initialized")
+    
+    async def _setup_default_sources(self):
+        """Setup default financial data sources"""
+        default_sources = {
+            "yahoo_finance": {
+                "type": "market_data",
+                "url": "https://query1.finance.yahoo.com/v8/finance/chart/",
+                "rate_limit": 100,  # requests per minute
+                "enabled": True
+            },
+            "alpha_vantage": {
+                "type": "market_data", 
+                "url": "https://www.alphavantage.co/query",
+                "rate_limit": 5,  # free tier limit
+                "enabled": False  # Requires API key
+            },
+            "news_api": {
+                "type": "news",
+                "url": "https://newsapi.org/v2/everything",
+                "rate_limit": 1000,
+                "enabled": False  # Requires API key
+            },
+            "financial_calendar": {
+                "type": "events",
+                "url": "https://api.example.com/calendar",
+                "rate_limit": 60,
+                "enabled": False
+            }
+        }
+        
+        for source_id, config in default_sources.items():
+            self._data_sources[source_id] = config
+    
+    async def connect_data_source(self, 
+                                 source_id: str, 
+                                 api_key: Optional[str] = None) -> bool:
+        """
+        Connect to a data source
+        
+        Args:
+            source_id: Source identifier
+            api_key: Optional API key for authentication
+            
+        Returns:
+            True if connected successfully
+        """
+        try:
+            if source_id not in self._data_sources:
+                self.logger.error(f"Unknown data source: {source_id}")
+                return False
+            
+            source_config = self._data_sources[source_id]
+            
+            # Create HTTP session with appropriate headers
+            headers = {"User-Agent": "MAIFA-Intelligence/1.0"}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            
+            session = aiohttp.ClientSession(headers=headers)
+            self._active_connections[source_id] = session
+            
+            self.logger.info(f"Connected to data source: {source_id}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to connect to {source_id}: {e}")
+            return False
+    
+    async def fetch_market_data(self, 
+                              symbols: List[str], 
+                              source_id: str = "yahoo_finance") -> List[MarketData]:
+        """
+        Fetch market data for specified symbols
+        
+        Args:
+            symbols: List of financial symbols
+            source_id: Data source to use
+            
+        Returns:
+            List of market data
+        """
+        try:
+            if source_id not in self._active_connections:
+                await self.connect_data_source(source_id)
+            
+            session = self._active_connections[source_id]
+            source_config = self._data_sources[source_id]
+            
+            market_data = []
+            
+            for symbol in symbols:
+                try:
+                    # Yahoo Finance API endpoint
+                    url = f"{source_config['url']}{symbol}"
+                    
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            
+                            # Parse Yahoo Finance response
+                            parsed_data = self._parse_yahoo_finance_data(symbol, data)
+                            if parsed_data:
+                                market_data.append(parsed_data)
+                                await self._add_to_market_buffer(parsed_data)
+                        else:
+                            self.logger.warning(f"Failed to fetch data for {symbol}: {response.status}")
+                    
+                    # Rate limiting
+                    await asyncio.sleep(60 / source_config["rate_limit"])
+                    
+                except Exception as e:
+                    self.logger.error(f"Error fetching data for {symbol}: {e}")
+            
+            self.logger.info(f"Fetched market data for {len(market_data)} symbols")
+            return market_data
+            
+        except Exception as e:
+            self.logger.error(f"Market data fetch failed: {e}")
+            return []
+    
+    async def fetch_news_data(self, 
+                            keywords: List[str],
+                            source_id: str = "news_api",
+                            hours_back: int = 24) -> List[NewsItem]:
+        """
+        Fetch news data for specified keywords
+        
+        Args:
+            keywords: List of keywords to search for
+            source_id: News source to use
+            hours_back: Hours to look back for news
+            
+        Returns:
+            List of news items
+        """
+        try:
+            if source_id not in self._active_connections:
+                self.logger.warning(f"News source {source_id} not connected")
+                return []
+            
+            session = self._active_connections[source_id]
+            source_config = self._data_sources[source_id]
+            
+            # Build query
+            query = " OR ".join(keywords)
+            from_time = datetime.now() - timedelta(hours=hours_back)
+            
+            params = {
+                "q": query,
+                "from": from_time.isoformat(),
+                "sortBy": "publishedAt",
+                "pageSize": 50
+            }
+            
+            async with session.get(source_config["url"], params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    news_items = []
+                    for article in data.get("articles", []):
+                        news_item = NewsItem(
+                            title=article.get("title", ""),
+                            content=article.get("description", ""),
+                            source=article.get("source", {}).get("name", "unknown"),
+                            timestamp=datetime.fromisoformat(
+                                article.get("publishedAt", "").replace("Z", "+00:00")
+                            ),
+                            relevance_score=self._calculate_news_relevance(
+                                article.get("title", "") + " " + article.get("description", ""),
+                                keywords
+                            )
+                        )
+                        
+                        news_items.append(news_item)
+                        await self._add_to_news_buffer(news_item)
+                    
+                    self.logger.info(f"Fetched {len(news_items)} news items")
+                    return news_items
+                else:
+                    self.logger.warning(f"News API returned status {response.status}")
+                    return []
+                    
+        except Exception as e:
+            self.logger.error(f"News data fetch failed: {e}")
+            return []
+    
+    def _parse_yahoo_finance_data(self, symbol: str, data: Dict[str, Any]) -> Optional[MarketData]:
+        """Parse Yahoo Finance API response"""
+        try:
+            result = data.get("chart", {}).get("result", [])
+            if not result:
+                return None
+            
+            chart = result[0]
+            meta = chart.get("meta", {})
+            timestamps = chart.get("timestamp", [])
+            close_prices = chart.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+            
+            if not timestamps or not close_prices:
+                return None
+            
+            # Get latest data
+            latest_timestamp = timestamps[-1]
+            latest_price = close_prices[-1]
+            
+            return MarketData(
+                symbol=symbol,
+                price=latest_price,
+                volume=meta.get("regularMarketVolume", 0),
+                timestamp=datetime.fromtimestamp(latest_timestamp),
+                source="yahoo_finance",
+                additional_data={
+                    "currency": meta.get("currency"),
+                    "market_state": meta.get("marketState"),
+                    "exchange": meta.get("exchangeName")
+                }
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Failed to parse Yahoo Finance data for {symbol}: {e}")
+            return None
+    
+    def _calculate_news_relevance(self, text: str, keywords: List[str]) -> float:
+        """Calculate relevance score for news item"""
+        text_lower = text.lower()
+        keyword_matches = sum(1 for keyword in keywords if keyword.lower() in text_lower)
+        return min(keyword_matches / len(keywords), 1.0) if keywords else 0.0
+    
+    async def _add_to_market_buffer(self, data: MarketData):
+        """Add market data to buffer"""
+        async with self._buffer_lock:
+            self._market_data_buffer.append(data)
+            
+            # Maintain buffer size
+            if len(self._market_data_buffer) > self._max_buffer_size:
+                self._market_data_buffer = self._market_data_buffer[-self._max_buffer_size:]
+    
+    async def _add_to_news_buffer(self, news: NewsItem):
+        """Add news item to buffer"""
+        async with self._buffer_lock:
+            self._news_buffer.append(news)
+            
+            # Maintain buffer size
+            if len(self._news_buffer) > self._max_buffer_size:
+                self._news_buffer = self._news_buffer[-self._max_buffer_size:]
+    
+    async def get_market_data(self, 
+                            symbol: Optional[str] = None,
+                            limit: int = 100) -> List[MarketData]:
+        """Get market data from buffer"""
+        async with self._buffer_lock:
+            data = self._market_data_buffer.copy()
+            
+            if symbol:
+                data = [item for item in data if item.symbol == symbol]
+            
+            # Sort by timestamp (newest first) and limit
+            data.sort(key=lambda x: x.timestamp, reverse=True)
+            return data[:limit]
+    
+    async def get_news_data(self, 
+                          keywords: Optional[List[str]] = None,
+                          limit: int = 100) -> List[NewsItem]:
+        """Get news data from buffer"""
+        async with self._buffer_lock:
+            news = self._news_buffer.copy()
+            
+            if keywords:
+                news = [
+                    item for item in news 
+                    if any(keyword.lower() in item.title.lower() or keyword.lower() in item.content.lower()
+                          for keyword in keywords)
+                ]
+            
+            # Sort by timestamp (newest first) and limit
+            news.sort(key=lambda x: x.timestamp, reverse=True)
+            return news[:limit]
+    
+    async def _background_collection(self):
+        """Background task for continuous data collection"""
+        while True:
+            try:
+                # Collect data for major symbols every minute
+                major_symbols = ["AAPL", "GOOGL", "MSFT", "AMZN", "TSLA", "BTC-USD"]
+                
+                await self.fetch_market_data(major_symbols)
+                
+                # Collect news every 5 minutes
+                if datetime.now().minute % 5 == 0:
+                    financial_keywords = ["stock", "market", "trading", "bitcoin", "economy"]
+                    await self.fetch_news_data(financial_keywords)
+                
+                await asyncio.sleep(60)  # Wait 1 minute
+                
+            except Exception as e:
+                self.logger.error(f"Background collection error: {e}")
+                await asyncio.sleep(60)  # Wait before retrying
+    
+    async def get_ingestion_stats(self) -> Dict[str, Any]:
+        """Get data ingestion statistics"""
+        async with self._buffer_lock:
+            return {
+                "active_connections": len(self._active_connections),
+                "configured_sources": len(self._data_sources),
+                "market_data_buffer_size": len(self._market_data_buffer),
+                "news_buffer_size": len(self._news_buffer),
+                "max_buffer_size": self._max_buffer_size,
+                "data_sources": {
+                    source_id: {
+                        "type": config["type"],
+                        "enabled": config["enabled"],
+                        "connected": source_id in self._active_connections
+                    }
+                    for source_id, config in self._data_sources.items()
+                }
+            }
+    
+    async def shutdown(self):
+        """Shutdown data ingestion service"""
+        # Close all connections
+        for session in self._active_connections.values():
+            await session.close()
+        
+        self._active_connections.clear()
+        self.logger.info("Data Ingestion Service shutdown")
+
+
+# Global data ingestion service instance
+data_ingestion_service = DataIngestionService()

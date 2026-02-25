@@ -1,126 +1,48 @@
 """
-MAIFA v3 Financial Intelligence Platform - Unified Orchestrator Entry Point
-Main entry point for the complete 5-stage MAIFA workflow system
+Market Intel Brain - Microservices Entry Point
 
-This file serves as the unified orchestrator that coordinates:
-1. Input → Preprocessing → Event Classification → Multi-Agent Analysis → Aggregation → Final Report
-2. All MAIFA v3 components with proper initialization and cleanup
-3. Performance monitoring and system health checks
-4. Graceful shutdown and error handling
+This file serves as the main entry point for the microservices architecture.
+The actual business logic has been migrated to:
+- Rust Core Engine (high-performance processing)
+- Go API Gateway (HTTP/WebSocket layer)
+
+To run the system:
+1. Start Rust Core Engine: cd microservices/rust-services/core-engine && cargo run
+2. Start Go API Gateway: cd microservices/go-services/api-gateway && go run cmd/api-gateway/main.go
+3. Access API at: http://localhost:8080
 """
 
-import asyncio
 import sys
 import os
-import time
-import json
-import signal
-import logging
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-from pathlib import Path
 
-# Add current directory to Python path for absolute imports
-current_dir = Path(__file__).parent
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
+def main():
+    print("🚀 Market Intel Brain - Microservices Architecture")
+    print("=" * 50)
+    print("")
+    print("The system has been migrated to microservices architecture:")
+    print("")
+    print("🦀 Rust Core Engine: High-performance data processing")
+    print("🌐 Go API Gateway: HTTP/WebSocket API layer")
+    print("")
+    print("To start the system:")
+    print("1. cd microservices/rust-services/core-engine && cargo run")
+    print("2. cd microservices/go-services/api-gateway && go run cmd/api-gateway/main.go")
+    print("3. Access API at: http://localhost:8080")
+    print("")
+    print("📚 Documentation:")
+    print("- microservices/README.md - Architecture overview")
+    print("- microservices/PHASE2_IMPLEMENTATION.md - Phase 2 details")
+    print("- microservices/PHASE3_IMPLEMENTATION.md - Phase 3 details")
+    print("- microservices/PHASE4_IMPLEMENTATION.md - Phase 4 details")
+    print("")
+    print("🔧 Scripts:")
+    print("- microservices/scripts/e2e-validation.sh - End-to-end testing")
+    print("- microservices/scripts/cleanup-legacy-code.sh - Legacy cleanup")
+    print("")
+    print("✅ Migration completed successfully!")
 
-# Import MAIFA v3 components
-from core.orchestrator import orchestrator
-from core.context import context_manager
-from core.governance import governance_manager
-from core.event_fabric import event_fabric
-from services.data_ingestion import get_orchestrator
-from services.sentiment_engine import sentiment_engine
-from services.ai_models import ai_models_service
-from services.classifier import classifier_service
-from services.agents.registry import agent_registry
-from pipelines.preprocessing import preprocessing_pipeline
-from pipelines.event_classification import event_classification_pipeline
-from pipelines.multi_agent_analysis import multi_agent_analysis_pipeline
-from pipelines.aggregation import aggregation_pipeline
-from utils.logger import maifa_logger, get_logger
-from utils.rate_limiter import rate_limiter
-from utils.helpers import TimeHelper
-
-# Initialize logger
-logger = get_logger("main")
-
-class MAIFASystem:
-    """
-    MAIFA v3 System Manager - Complete system lifecycle management
-    
-    Handles initialization, execution, monitoring, and shutdown of all
-    MAIFA v3 components in the correct order with proper dependency management.
-    """
-    
-    def __init__(self):
-        self.logger = get_logger("MAIFASystem")
-        self.start_time = time.time()
-        self.is_running = False
-        self.is_shutting_down = False
-        
-        # Component status tracking
-        self.component_status = {
-            "logger": "not_initialized",
-            "context": "not_initialized", 
-            "governance": "not_initialized",
-            "event_fabric": "not_initialized",
-            "services": "not_initialized",
-            "agents": "not_initialized",
-            "pipelines": "not_initialized",
-            "orchestrator": "not_initialized"
-        }
-        
-        # Performance metrics
-        self.system_metrics = {
-            "total_requests": 0,
-            "successful_requests": 0,
-            "failed_requests": 0,
-            "avg_response_time": 0.0,
-            "sub_5s_requests": 0,
-            "system_uptime": 0.0
-        }
-    
-    async def initialize(self) -> bool:
-        """Initialize all MAIFA v3 components in dependency order"""
-        try:
-            self.logger.info("🚀 Initializing MAIFA v3 Financial Intelligence Platform...")
-            
-            # Stage 1: Core Infrastructure
-            await self._initialize_core_infrastructure()
-            
-            # Stage 2: Services Layer
-            await self._initialize_services()
-            
-            # Stage 3: Agent Registry
-            await self._initialize_agents()
-            
-            # Stage 4: Pipeline Layer
-            await self._initialize_pipelines()
-            
-            # Stage 5: Orchestrator (last, depends on all others)
-            await self._initialize_orchestrator()
-            
-            # Stage 6: Start background processes
-            await self._start_background_processes()
-            
-            self.is_running = True
-            initialization_time = time.time() - self.start_time
-            
-            self.logger.info(f"✅ MAIFA v3 initialized successfully in {initialization_time:.2f}s")
-            await self._log_system_status()
-            
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"❌ MAIFA v3 initialization failed: {e}")
-            await self.shutdown()
-            return False
-    
-    async def _initialize_core_infrastructure(self):
-        """Initialize core infrastructure components"""
-        self.logger.info("🔧 Initializing core infrastructure...")
+if __name__ == "__main__":
+    main()
         
         # Logger is already initialized via maifa_logger
         self.component_status["logger"] = "initialized"
