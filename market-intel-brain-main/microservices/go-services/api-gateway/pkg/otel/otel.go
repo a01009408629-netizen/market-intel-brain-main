@@ -100,9 +100,6 @@ func InitOpenTelemetry() error {
 		metric.WithExplicitBucketBoundaries([]float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0}),
 	)
 
-	// Register metrics globally
-	otel.RegisterMeterProvider(meterProvider)
-	
 	// Store metrics for later use
 	RequestCounter = requestCounter
 	ErrorCounter = errorCounter
@@ -120,12 +117,11 @@ var (
 
 // GetTraceID extracts trace ID from context
 func GetTraceID(ctx context.Context) string {
-	traceID := ""
-	spanCtx := trace.SpanFromContext(ctx)
-	if spanCtx.HasTraceID() {
-		traceID = spanCtx.TraceID().String()
+	spanCtx := trace.SpanContextFromContext(ctx)
+	if !spanCtx.IsValid() {
+		return ""
 	}
-	return traceID
+	return spanCtx.TraceID().String()
 }
 
 // InjectTraceID injects trace ID into gRPC metadata
@@ -136,8 +132,8 @@ func InjectTraceID(ctx context.Context, metadata map[string]string) {
 }
 
 // CreateSpan creates a new span with the given name
-func CreateSpan(ctx context.Context, name string, operation string) (context.Context, otel.Span) {
-	tracer := otel.Tracer("market_intel_api_gateway")
+func CreateSpan(ctx context.Context, name string, operation string) (context.Context, trace.Span) {
+	tracer := otel.Tracer(serviceName)
 	
 	ctx, span := tracer.Start(
 		ctx,
@@ -153,7 +149,7 @@ func CreateSpan(ctx context.Context, name string, operation string) (context.Con
 }
 
 // RecordError records an error in the current span
-func RecordError(ctx context.Context, span otel.Span, err error) {
+func RecordError(ctx context.Context, span trace.Span, err error) {
 	span.SetStatus(codes.Error, err.Error())
 	span.RecordError(err)
 	ErrorCounter.Add(ctx, 1)
@@ -179,7 +175,7 @@ func Shutdown(ctx context.Context) error {
 }
 
 // RecordRequest records a request in the current span
-func RecordRequest(ctx context.Context, span otel.Span, method, path string, statusCode int) {
+func RecordRequest(ctx context.Context, span trace.Span, method, path string, statusCode int) {
 	span.SetAttributes(
 		attribute.String("http.method", method),
 		attribute.String("http.path", path),

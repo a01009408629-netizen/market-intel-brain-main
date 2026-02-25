@@ -48,7 +48,7 @@ func (m *OtelMiddleware) Middleware() gin.HandlerFunc {
 		duration := time.Since(start)
 
 		// Record request metrics
-		otel.RecordRequest(span, c.Request.Method, c.Request.URL.Path, c.Writer.Status())
+		otel.RecordRequest(c.Request.Context(), span, c.Request.Method, c.Request.URL.Path, c.Writer.Status())
 
 		// Add trace ID to response headers
 		if traceID := otel.GetTraceID(c.Request.Context()); traceID != "" {
