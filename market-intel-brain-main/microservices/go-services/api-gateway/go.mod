@@ -24,7 +24,7 @@ require (
 	
 	// Prometheus
 	github.com/prometheus/client_golang v1.17.0
-	github.com/prometheus/client_golang/prometheus/promhttp
+	github.com/prometheus/client_golang/prometheus/promhttp v0.44.1
 )
 
 require (
