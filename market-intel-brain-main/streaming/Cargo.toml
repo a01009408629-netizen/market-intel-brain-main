@@ -1,0 +1,54 @@
+[package]
+name = "market-intel-streaming"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Redpanda-based streaming for Market Intel Brain"
+
+[dependencies]
+# Workspace dependencies
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+futures = "0.3"
+num_cpus = "1.16"
+toml = "0.8"
+
+# Internal dependencies
+core = { path = "../core" }
+metrics = { path = "../metrics" }
+
+# Redpanda/Kafka dependencies
+rdkafka = { version = "0.36", features = ["cmake-build", "ssl", "sasl", "zstd"] }
+
+# Async utilities
+async-trait = { workspace = true }
+tokio-util = { workspace = true }
+
+# Serialization
+prost = { version = "0.12", features = ["prost"] }
+prost-types = "0.12"
+
+# Compression
+zstd = "0.13"
+lz4_flex = "0.11"
+
+# Metrics
+prometheus = "0.13"
+
+# Configuration
+config = "0.14"
+
+[dev-dependencies]
+tokio-test = "0.4"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "streaming_bench"
+harness = false
