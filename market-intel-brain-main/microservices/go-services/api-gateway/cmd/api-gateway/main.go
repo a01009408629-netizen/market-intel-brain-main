@@ -15,6 +15,7 @@ import (
 	"github.com/market-intel/api-gateway/internal/server"
 	"github.com/market-intel/api-gateway/internal/services"
 	"github.com/market-intel/api-gateway/pkg/logger"
+	"github.com/market-intel/api-gateway/pkg/otel"
 )
 
 var (

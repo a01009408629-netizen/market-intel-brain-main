@@ -4,16 +4,19 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.iootel/propagation"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io//sdk/resource"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/semconv/v1.13.1/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -57,9 +60,9 @@ func InitOpenTelemetry() error {
 	}
 
 	// Create trace provider
-	traceProvider := otel.NewTracerProvider(
-		trace.WithBatcher(otel.NewBatchSpanProcessor(jaegerExp)),
-		trace.WithResource(res),
+	traceProvider := sdk.NewTracerProvider(
+		sdktrace.WithBatcher(otel.NewBatchSpanProcessor(jaegerExp)),
+		sdktrace.WithResource(res),
 	)
 
 	// Create meter provider
@@ -151,14 +154,33 @@ func CreateSpan(ctx context.Context, name string, operation string) (context.Con
 }
 
 // RecordError records an error in the current span
-func RecordError(span otel.Span, err error) {
+func RecordError(ctx context.Context, span otel.Span, err error) {
 	span.SetStatus(codes.Error, err.Error())
 	span.RecordError(err)
 	ErrorCounter.Add(ctx, 1)
 }
 
+// Shutdown gracefully shuts down OpenTelemetry
+func Shutdown(ctx context.Context) error {
+	// Shutdown trace provider
+	if tp := otel.GetTracerProvider(); tp != nil {
+		if err := tp.(interface{ Shutdown(context.Context) error }).Shutdown(ctx); err != nil {
+			return fmt.Errorf("failed to shutdown tracer provider: %w", err)
+		}
+	}
+	
+	// Shutdown meter provider
+	if mp := otel.GetMeterProvider(); mp != nil {
+		if err := mp.(interface{ Shutdown(context.Context) error }).Shutdown(ctx); err != nil {
+			return fmt.Errorf("failed to shutdown meter provider: %w", err)
+		}
+	}
+	
+	return nil
+}
+
 // RecordRequest records a request in the current span
-func RecordRequest(span otel.Span, method, path string, statusCode int) {
+func RecordRequest(ctx context.Context, span otel.Span, method, path string, statusCode int) {
 	span.SetAttributes(
 		attribute.String("http.method", method),
 		attribute.String("http.path", path),
@@ -166,7 +188,6 @@ func RecordRequest(span otel.Span, method, path string, statusCode int) {
 	)
 	
 	// Record status code as metric
-	statusCodeStr := fmt.Sprintf("%d", statusCode)
 	RequestCounter.Add(ctx, 1)
 	
 	// Record request duration
@@ -177,6 +198,6 @@ func RecordRequest(span otel.Span, method, path string, statusCode int) {
 	if statusCode >= 400 {
 		span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", statusCode))
 	} else {
-	span.SetStatus(codes.Ok, "OK")
+		span.SetStatus(codes.Ok, "OK")
 	}
 }
