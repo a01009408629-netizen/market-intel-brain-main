@@ -13,22 +13,12 @@ use tracing_subscriber;
 use tokio::signal;
 use tower::ServiceBuilder;
 
-mod core_engine_service;
-mod config;
-mod data_ingestion;
-mod proto;
-mod otel;
-mod metrics;
-mod tls;
-mod analytics;
-mod vector_store;
-
-use core_engine_service::CoreEngineServiceImpl;
-use config::CoreEngineConfig;
-use crate::otel;
-use crate::tls::TlsConfig;
-use crate::analytics;
-use crate::vector_store;
+use market_intel_core_engine::core_engine_service::CoreEngineServiceImpl;
+use market_intel_core_engine::config::CoreEngineConfig;
+use market_intel_core_engine::otel;
+use market_intel_core_engine::tls::TlsConfig;
+use market_intel_core_engine::analytics;
+use market_intel_core_engine::vector_store;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -65,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Create gRPC service
     let core_engine_service = CoreEngineServiceImpl::new(config.clone());
-    let core_engine_service = market_intel::core_engine::core_engine_service_server::CoreEngineServiceServer::new(core_engine_service);
+    let core_engine_service = market_intel_core_engine::proto::core_engine::core_engine_service_server::CoreEngineServiceServer::new(core_engine_service);
 
     // Create server address
     let addr = SocketAddr::from(([0, 0, 0, 0], config.grpc_port));
@@ -76,8 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let server = Server::builder()
         .add_service(core_engine_service)
         .add_optional_service(
-            tonic_health::server::health_server::HealthServer::default(),
-            Some("health".to_string()),
+            Some(tonic_health::server::health_server::HealthServer::default()),
         );
     
     // Start server with or without TLS based on configuration

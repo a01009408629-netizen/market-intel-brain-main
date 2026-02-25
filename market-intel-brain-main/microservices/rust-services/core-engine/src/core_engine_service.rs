@@ -4,12 +4,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::{Request, Response, Status};
 use tracing::{info, warn, error};
 
-use crate::config::CoreEngineConfig;
-use crate::data_ingestion::DataIngestionService;
-use crate::proto::common::*;
-use crate::proto::core_engine::*;
-use crate::analytics::{AnalyticsManager, AnalyticsEvent, AnalyticsEventType, AnalyticsEventSeverity};
-use crate::vector_store::{VectorStoreManager, VectorStoreConfig};
+use market_intel_core_engine::config::CoreEngineConfig;
+use market_intel_core_engine::data_ingestion::DataIngestionService;
+use market_intel_core_engine::proto::common::*;
+use market_intel_core_engine::proto::core_engine::*;
+use market_intel_core_engine::analytics::{AnalyticsManager, AnalyticsEvent, AnalyticsEventType, AnalyticsEventSeverity};
+use market_intel_core_engine::vector_store::{VectorStoreManager, VectorStoreConfig};
 use std::collections::HashMap;
 
 pub struct CoreEngineServiceImpl {

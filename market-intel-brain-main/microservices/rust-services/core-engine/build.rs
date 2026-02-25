@@ -6,11 +6,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .out_dir("src/proto")
         .compile(
             &[
-                "../../proto/common.proto",
-                "../../proto/core_engine.proto",
-                "../../proto/analytics.proto",
+                "microservices/proto/versions/v1/common.proto",
+                "microservices/proto/versions/v1/core_engine.proto",
+                "microservices/proto/versions/v1/analytics.proto",
             ],
-            &["../../proto"],
+            &["microservices/proto/versions/v1"],
         )?;
     Ok(())
 }

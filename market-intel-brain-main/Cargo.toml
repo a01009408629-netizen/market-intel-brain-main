@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "core",
-    "api",
+    "api", 
     "messaging",
     "streaming",
     "data-ingestion", 
@@ -12,6 +12,7 @@ members = [
     "networking",
     "security",
     "config",
+    "microservices/rust-services/core-engine",
 ]
 resolver = "2"
 
