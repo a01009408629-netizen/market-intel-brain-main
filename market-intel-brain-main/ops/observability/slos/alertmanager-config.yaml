@@ -1,0 +1,575 @@
+# Alertmanager Configuration for Market Intel Brain SLOs
+# Maps SLO alerts to existing Alertmanager configuration with proper routing and notification
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: observability
+    tier: alertmanager
+  annotations:
+    description: "Alertmanager configuration for SLO alerts and routing"
+    version: "v1.0.0"
+data:
+  alertmanager.yml: |
+    global:
+      # SMTP configuration for email notifications
+      smtp_smarthost: 'smtp.gmail.com:587'
+      smtp_from: 'alerts@market-intel.com'
+      smtp_auth_username: 'alerts@market-intel.com'
+      smtp_auth_password: 'your-app-password'
+      smtp_require_tls: true
+      
+      # Slack webhook URL
+      slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+      
+      # PagerDuty configuration
+      pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+      
+      # Resolve timeout
+      resolve_timeout: 5m
+      
+      # HTTP configuration
+      http_config:
+        tls_config:
+          insecure_skip_verify: false
+          cert_file: /etc/tls/certs/client.crt
+          key_file: /etc/tls/certs/client.key
+          ca_file: /etc/tls/certs/ca.crt
+
+    # Template files for notifications
+    templates:
+      - '/etc/alertmanager/templates/*.tmpl'
+
+    # Route configuration for SLO alerts
+    route:
+      # Default receiver
+      receiver: 'default'
+      
+      # Group by these labels
+      group_by: ['service', 'slo_type', 'severity']
+      
+      # Group wait interval
+      group_wait: 30s
+      
+      # Group interval
+      group_interval: 5m
+      
+      # Repeat interval
+      repeat_interval: 12h
+      
+      # Default route settings
+      routes:
+        # Critical alerts - immediate notification
+        - match:
+            severity: critical
+          receiver: 'critical-alerts'
+          group_wait: 0s
+          group_interval: 1m
+          repeat_interval: 5m
+          routes:
+            # SLO breaches - highest priority
+            - match:
+                slo_type: availability
+                service: system
+              receiver: 'slo-breaches'
+              group_wait: 0s
+              group_interval: 30s
+              repeat_interval: 2m
+              continue: true
+            # API Gateway critical alerts
+            - match:
+                service: api-gateway
+              receiver: 'api-gateway-critical'
+              group_wait: 0s
+              group_interval: 1m
+              repeat_interval: 5m
+              continue: true
+            # Core Engine critical alerts
+            - match:
+                service: core-engine
+              receiver: 'core-engine-critical'
+              group_wait: 0s
+              group_interval: 1m
+              repeat_interval: 5m
+              continue: true
+        
+        # Warning alerts - standard notification
+        - match:
+            severity: warning
+          receiver: 'warning-alerts'
+          group_wait: 30s
+          group_interval: 5m
+          repeat_interval: 4h
+          routes:
+            # Performance warnings
+            - match:
+                slo_type: latency
+              receiver: 'performance-alerts'
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 2h
+              continue: true
+            # Saturation warnings
+            - match:
+                slo_type: saturation
+              receiver: 'saturation-alerts'
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 2h
+              continue: true
+        
+        # Circuit breaker alerts - immediate attention
+        - match:
+            slo_type: circuit_breaker
+          receiver: 'circuit-breaker-alerts'
+          group_wait: 0s
+          group_interval: 30s
+          repeat_interval: 2m
+        
+        # Throughput alerts - business impact
+        - match:
+            slo_type: throughput
+          receiver: 'throughput-alerts'
+          group_wait: 30s
+          group_interval: 5m
+          repeat_interval: 1h
+
+    # Inhibition rules to prevent alert spam
+    inhibit_rules:
+      # Inhibit warning alerts if critical alerts are firing for same service
+      - source_match:
+          severity: critical
+        target_match:
+          severity: warning
+        equal: ['service', 'slo_type']
+      
+      # Inhibit availability alerts if system SLO is breached
+      - source_match:
+          service: system
+          slo_type: availability
+        target_match:
+          slo_type: availability
+        equal: ['severity']
+      
+      # Inhibit latency alerts if availability is compromised
+      - source_match:
+          slo_type: availability
+          severity: critical
+        target_match:
+          slo_type: latency
+        equal: ['service']
+
+    # Receivers for different alert types
+    receivers:
+      # Default receiver
+      - name: 'default'
+        email_configs:
+          - to: 'platform-team@market-intel.com'
+            subject: '[Market Intel Brain] {{ .GroupLabels.alertname }}'
+            body: |
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Service: {{ .Labels.service }}
+              SLO Type: {{ .Labels.slo_type }}
+              Severity: {{ .Labels.severity }}
+              Runbook: {{ .Annotations.runbook_url }}
+              {{ end }}
+        
+        slack_configs:
+          - channel: '#market-intel-alerts'
+            title: 'Market Intel Brain Alert'
+            text: |
+              {{ range .Alerts }}
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Service:* {{ .Labels.service }}
+              *SLO Type:* {{ .Labels.slo_type }}
+              *Severity:* {{ .Labels.severity }}
+              *Runbook:* {{ .Annotations.runbook_url }}
+              {{ end }}
+            color: 'warning'
+            send_resolved: true
+
+      # Critical alerts receiver
+      - name: 'critical-alerts'
+        email_configs:
+          - to: 'platform-team@market-intel.com'
+            subject: '[CRITICAL] Market Intel Brain - {{ .GroupLabels.alertname }}'
+            body: |
+              {{ range .Alerts }}
+              CRITICAL ALERT
+              
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Service: {{ .Labels.service }}
+              SLO Type: {{ .Labels.slo_type }}
+              Severity: {{ .Labels.severity }}
+              Runbook: {{ .Annotations.runbook_url }}
+              
+              IMMEDIATE ACTION REQUIRED
+              {{ end }}
+        
+        slack_configs:
+          - channel: '#market-intel-critical'
+            title: '🚨 CRITICAL - Market Intel Brain'
+            text: |
+              {{ range .Alerts }}
+              *CRITICAL ALERT*
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Service:* {{ .Labels.service }}
+              *SLO Type:* {{ .Labels.slo_type }}
+              *Severity:* {{ .Labels.severity }}
+              *Runbook:* {{ .Annotations.runbook_url }}
+              
+              IMMEDIATE ACTION REQUIRED
+              {{ end }}
+            color: 'danger'
+            send_resolved: true
+        
+        pagerduty_configs:
+          - service_key: 'your-pagerduty-service-key'
+            description: '{{ .Annotations.summary }}'
+            severity: 'critical'
+            class: '{{ .Labels.service }}'
+            component: '{{ .Labels.slo_type }}'
+            details:
+              service: '{{ .Labels.service }}'
+              slo_type: '{{ .Labels.slo_type }}'
+              severity: '{{ .Labels.severity }}'
+              runbook: '{{ .Annotations.runbook_url }}'
+
+      # SLO breaches receiver
+      - name: 'slo-breaches'
+        email_configs:
+          - to: 'platform-team@market-intel.com'
+            subject: '🚨 SLO BREACHED - Market Intel Brain'
+            body: |
+              {{ range .Alerts }}
+              SLO BREACH DETECTED
+              
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Service: {{ .Labels.service }}
+              SLO Type: {{ .Labels.slo_type }}
+              Severity: {{ .Labels.severity }}
+              Runbook: {{ .Annotations.runbook_url }}
+              
+              SLO TARGET: 99.9%
+              CURRENT VALUE: {{ .Value }}
+              
+              EMERGENCY RESPONSE REQUIRED
+              {{ end }}
+        
+        slack_configs:
+          - channel: '#market-intel-emergency'
+            title: '🚨 SLO BREACHED - Market Intel Brain'
+            text: |
+              {{ range .Alerts }}
+              *SLO BREACH*
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Service:* {{ .Labels.service }}
+              *SLO Type:* {{ .Labels.slo_type }}
+              *Severity:* {{ .Labels.severity }}
+              *Runbook:* {{ .Annotations.runbook_url }}
+              
+              SLO TARGET: 99.9%
+              CURRENT VALUE: {{ .Value }}
+              
+              EMERGENCY RESPONSE REQUIRED
+              {{ end }}
+            color: 'danger'
+            send_resolved: true
+        
+        pagerduty_configs:
+          - service_key: 'your-pagerduty-emergency-key'
+            description: 'SLO BREACHED: {{ .Annotations.summary }}'
+            severity: 'critical'
+            class: 'slo-breach'
+            component: '{{ .Labels.service }}'
+            details:
+              service: '{{ .Labels.service }}'
+              slo_type: '{{ .Labels.slo_type }}'
+              severity: '{{ .Labels.severity }}'
+              runbook: '{{ .Annotations.runbook_url }}'
+              slo_target: '99.9%'
+              current_value: '{{ .Value }}'
+
+      # API Gateway critical receiver
+      - name: 'api-gateway-critical'
+        email_configs:
+          - to: 'api-gateway-team@market-intel.com'
+            subject: '[CRITICAL] API Gateway - {{ .GroupLabels.alertname }}'
+            body: |
+              {{ range .Alerts }}
+              API Gateway Critical Alert
+              
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Service: {{ .Labels.service }}
+              SLO Type: {{ .Labels.slo_type }}
+              Severity: {{ .Labels.severity }}
+              Runbook: {{ .Annotations.runbook_url }}
+              
+              Check API Gateway logs and health status
+              {{ end }}
+        
+        slack_configs:
+          - channel: '#api-gateway-alerts'
+            title: '🚨 API Gateway Critical'
+            text: |
+              {{ range .Alerts }}
+              *API Gateway Critical Alert*
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Service:* {{ .Labels.service }}
+              *SLO Type:* {{ .Labels.slo_type }}
+              *Severity:* {{ .Labels.severity }}
+              *Runbook:* {{ .Annotations.runbook_url }}
+              {{ end }}
+            color: 'danger'
+            send_resolved: true
+
+      # Core Engine critical receiver
+      - name: 'core-engine-critical'
+        email_configs:
+          - to: 'core-engine-team@market-intel.com'
+            subject: '[CRITICAL] Core Engine - {{ .GroupLabels.alertname }}'
+            body: |
+              {{ range .Alerts }}
+              Core Engine Critical Alert
+              
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Service: {{ .Labels.service }}
+              SLO Type: {{ .Labels.slo_type }}
+              Severity: {{ .Labels.severity }}
+              Runbook: {{ .Annotations.runbook_url }}
+              
+              Check Core Engine logs and health status
+              {{ end }}
+        
+        slack_configs:
+          - channel: '#core-engine-alerts'
+            title: '🚨 Core Engine Critical'
+            text: |
+              {{ range .Alerts }}
+              *Core Engine Critical Alert*
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Service:* {{ .Labels.service }}
+              *SLO Type:* {{ .Labels.slo_type }}
+              *Severity:* {{ .Labels.severity }}
+              *Runbook:* {{ .Annotations.runbook_url }}
+              {{ end }}
+            color: 'danger'
+            send_resolved: true
+
+      # Warning alerts receiver
+      - name: 'warning-alerts'
+        email_configs:
+          - to: 'platform-team@market-intel.com'
+            subject: '[WARNING] Market Intel Brain - {{ .GroupLabels.alertname }}'
+            body: |
+              {{ range .Alerts }}
+              Warning Alert
+              
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Service: {{ .Labels.service }}
+              SLO Type: {{ .Labels.slo_type }}
+              Severity: {{ .Labels.severity }}
+              Runbook: {{ .Annotations.runbook_url }}
+              {{ end }}
+        
+        slack_configs:
+          - channel: '#market-intel-warnings'
+            title: '⚠️ Market Intel Brain Warning'
+            text: |
+              {{ range .Alerts }}
+              *Warning Alert*
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Service:* {{ .Labels.service }}
+              *SLO Type:* {{ .Labels.slo_type }}
+              *Severity:* {{ .Labels.severity }}
+              *Runbook:* {{ .Annotations.runbook_url }}
+              {{ end }}
+            color: 'warning'
+            send_resolved: true
+
+      # Performance alerts receiver
+      - name: 'performance-alerts'
+        email_configs:
+          - to: 'performance-team@market-intel.com'
+            subject: '[PERFORMANCE] Market Intel Brain - {{ .GroupLabels.alertname }}'
+            body: |
+              {{ range .Alerts }}
+              Performance Alert
+              
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Service: {{ .Labels.service }}
+              SLO Type: {{ .Labels.slo_type }}
+              Severity: {{ .Labels.severity }}
+              Runbook: {{ .Annotations.runbook_url }}
+              
+              Check performance metrics and consider optimization
+              {{ end }}
+        
+        slack_configs:
+          - channel: '#market-intel-performance'
+            title: '📈 Performance Alert'
+            text: |
+              {{ range .Alerts }}
+              *Performance Alert*
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Service:* {{ .Labels.service }}
+              *SLO Type:* {{ .Labels.slo_type }}
+              *Severity:* {{ .Labels.severity }}
+              *Runbook:* {{ .Annotations.runbook_url }}
+              {{ end }}
+            color: 'warning'
+            send_resolved: true
+
+      # Saturation alerts receiver
+      - name: 'saturation-alerts'
+        email_configs:
+          - to: 'infrastructure-team@market-intel.com'
+            subject: '[SATURATION] Market Intel Brain - {{ .GroupLabels.alertname }}'
+            body: |
+              {{ range .Alerts }}
+              Saturation Alert
+              
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Service: {{ .Labels.service }}
+              SLO Type: {{ .Labels.slo_type }}
+              Severity: {{ .Labels.severity }}
+              Runbook: {{ .Annotations.runbook_url }}
+              
+              Check resource utilization and consider scaling
+              {{ end }}
+        
+        slack_configs:
+          - channel: '#market-intel-infrastructure'
+            title: '📊 Saturation Alert'
+            text: |
+              {{ range .Alerts }}
+              *Saturation Alert*
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Service:* {{ .Labels.service }}
+              *SLO Type:* {{ .Labels.slo_type }}
+              *Severity:* {{ .Labels.severity }}
+              *Runbook:* {{ .Annotations.runbook_url }}
+              {{ end }}
+            color: 'warning'
+            send_resolved: true
+
+      # Circuit breaker alerts receiver
+      - name: 'circuit-breaker-alerts'
+        email_configs:
+          - to: 'platform-team@market-intel.com'
+            subject: '[CIRCUIT BREAKER] Market Intel Brain - {{ .GroupLabels.alertname }}'
+            body: |
+              {{ range .Alerts }}
+              Circuit Breaker Alert
+              
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Service: {{ .Labels.service }}
+              SLO Type: {{ .Labels.slo_type }}
+              Severity: {{ .Labels.severity }}
+              Runbook: {{ .Annotations.runbook_url }}
+              
+              Check upstream service health immediately
+              {{ end }}
+        
+        slack_configs:
+          - channel: '#market-intel-critical'
+            title: '⚡ Circuit Breaker Alert'
+            text: |
+              {{ range .Alerts }}
+              *Circuit Breaker Alert*
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Service:* {{ .Labels.service }}
+              *SLO Type:* {{ .Labels.slo_type }}
+              *Severity:* {{ .Labels.severity }}
+              *Runbook:* {{ .Annotations.runbook_url }}
+              {{ end }}
+            color: 'danger'
+            send_resolved: true
+
+      # Throughput alerts receiver
+      - name: 'throughput-alerts'
+        email_configs:
+          - to: 'business-team@market-intel.com'
+            subject: '[THROUGHPUT] Market Intel Brain - {{ .GroupLabels.alertname }}'
+            body: |
+              {{ range .Alerts }}
+              Throughput Alert
+              
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Service: {{ .Labels.service }}
+              SLO Type: {{ .Labels.slo_type }}
+              Severity: {{ .Labels.severity }}
+              Runbook: {{ .Annotations.runbook_url }}
+              
+              Check for business impact and service availability
+              {{ end }}
+        
+        slack_configs:
+          - channel: '#market-intel-business'
+            title: '📊 Throughput Alert'
+            text: |
+              {{ range .Alerts }}
+              *Throughput Alert*
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Service:* {{ .Labels.service }}
+              *SLO Type:* {{ .Labels.slo_type }}
+              *Severity:* {{ .Labels.severity }}
+              *Runbook:* {{ .Annotations.runbook_url }}
+              {{ end }}
+            color: 'warning'
+            send_resolved: true
+
+    # Time intervals for evaluation
+    time_intervals:
+      - name: business_hours
+        time_intervals:
+          - times:
+              - start_time: '09:00'
+                end_time: '17:00'
+            weekdays: ['monday:friday']
+            location: 'UTC'
+      
+      - name: after_hours
+        time_intervals:
+          - times:
+              - start_time: '17:00'
+                end_time: '09:00'
+            weekdays: ['monday:friday']
+            location: 'UTC'
+          - weekdays: ['saturday', 'sunday']
+            location: 'UTC'
+
+    # Mute time intervals
+    mute_time_intervals:
+      - name: maintenance_window
+        time_intervals:
+          - times:
+              - start_time: '02:00'
+                end_time: '04:00'
+            weekdays: ['sunday']
+            location: 'UTC'
