@@ -88,7 +88,7 @@ jobs:
         
         # Security scanning
         go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
-        gosec ./... || echo "Go security issues found"
+        gosec -fmt json -out gosec-report.json ./... || echo "Go security issues found"
         
         # Set output
         echo "passed=true" >> $GITHUB_OUTPUT
@@ -130,7 +130,17 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
 
-    - name: 📦 Install Dependencies
+    - name: � Syntax Check (Fail-Fast)
+      run: |
+        echo "Running syntax validation before dependency installation..."
+        
+        # Go syntax check
+        cd market-intel-brain-main/microservices/go-services/api-gateway
+        go fmt ./...
+        go vet ./...
+        echo "Go syntax validation passed"
+
+    - name: �📦 Install Dependencies
       run: |
         echo "Installing Rust and Go dependencies..."
         
@@ -188,7 +198,20 @@ jobs:
         retention-days: 30
         if-no-files-found: warn
 
-    - name: 🔑 Set up Docker Buildx
+    - name: � Cache Dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          market-intel-brain-main/microservices/rust-services/core-engine/target/
+          market-intel-brain-main/microservices/go-services/api-gateway/go.sum
+          ~/.cargo/registry/
+          ~/.cargo/git/
+          ~/go/pkg/mod/
+        key: ${{ runner.os }}-deps-${{ hashFiles('market-intel-brain-main/microservices/rust-services/core-engine/Cargo.lock', 'market-intel-brain-main/microservices/go-services/api-gateway/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
+
+    - name: �� Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
     - name: 🏷️ Extract Metadata
