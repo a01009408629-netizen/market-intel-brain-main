@@ -28,10 +28,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Loaded configuration: {:?}", config);
 
     // Create core engine service
-    let core_engine_service = CoreEngineServiceImpl::new(config.clone()).await?;
+    let core_engine_service = CoreEngineServiceImpl::new(config.clone());
 
     // Create gRPC server
-    let addr = SocketAddr::from(([0, 0, 0, 0]), config.grpc_port);
+    let addr = SocketAddr::from(([0, 0, 0, 0], config.grpc_port));
     info!("Core Engine gRPC server listening on {}", addr);
 
     // Start server

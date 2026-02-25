@@ -11,12 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
-
 	"github.com/market-intel/api-gateway/internal/config"
 	"github.com/market-intel/api-gateway/internal/server"
+	"github.com/market-intel/api-gateway/internal/services"
 	"github.com/market-intel/api-gateway/pkg/logger"
 )
 
@@ -25,11 +22,13 @@ var (
 	version    = flag.Bool("version", false, "Show version information")
 )
 
+const Version = "0.1.0"
+
 func main() {
 	flag.Parse()
 
 	if *version {
-		fmt.Printf("Market Intel Brain API Gateway v%s\n", config.Version)
+		fmt.Printf("Market Intel Brain API Gateway v%s\n", Version)
 		os.Exit(0)
 	}
 
@@ -39,34 +38,44 @@ func main() {
 	// Load configuration
 	cfg, err := config.Load(*configFile)
 	if err != nil {
-		logrus.WithError(err).Fatal("Failed to load configuration")
+		logger.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"version":    config.Version,
+	logger.WithFields(map[string]interface{}{
+		"version":    Version,
 		"environment": cfg.Environment,
 		"http_port":   cfg.HTTPPort,
 		"grpc_port":   cfg.GRPCPort,
 	}).Info("Starting Market Intel Brain API Gateway")
 
+	// Create Core Engine client
+	coreEngineClient, err := services.NewCoreEngineClient(cfg.CoreEngineURL)
+	if err != nil {
+		logger.Errorf("Failed to create Core Engine client: %v", err)
+		// Continue without Core Engine connection for now
+		coreEngineClient = nil
+	} else {
+		defer coreEngineClient.Close()
+	}
+
 	// Create HTTP server
-	httpServer := server.NewHTTPServer(cfg)
+	httpServer := server.NewHTTPServer(cfg, coreEngineClient)
 	
 	// Create gRPC server
 	grpcServer := server.NewGRPCServer(cfg)
 
 	// Start servers in goroutines
 	go func() {
-		logrus.Infof("Starting HTTP server on port %d", cfg.HTTPPort)
+		logger.Infof("Starting HTTP server on port %d", cfg.HTTPPort)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logrus.WithError(err).Fatal("HTTP server failed to start")
+			logger.Fatalf("HTTP server failed to start: %v", err)
 		}
 	}()
 
 	go func() {
-		logrus.Infof("Starting gRPC server on port %d", cfg.GRPCPort)
+		logger.Infof("Starting gRPC server on port %d", cfg.GRPCPort)
 		if err := grpcServer.Start(); err != nil {
-			logrus.WithError(err).Fatal("gRPC server failed to start")
+			logger.Errorf("gRPC server failed to start: %v", err)
 		}
 	}()
 
@@ -75,19 +84,19 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	logrus.Info("Shutting down servers...")
+	logger.Info("Shutting down servers...")
 
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Shutdown HTTP server
-	if err := httpServer.Shutdown(ctx); err != nil {
-		logrus.WithError(err).Error("HTTP server shutdown error")
+	if err := httpServer.Shutdown(); err != nil {
+		logger.Errorf("HTTP server shutdown error: %v", err)
 	}
 
 	// Shutdown gRPC server
 	grpcServer.Stop()
 
-	logrus.Info("Servers stopped successfully")
+	logger.Info("Servers stopped successfully")
 }
