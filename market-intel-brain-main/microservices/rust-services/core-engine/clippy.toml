@@ -1,0 +1,149 @@
+# Clippy configuration for Market Intel Core Engine
+
+# Allowed lints
+allow = [
+    "clippy::module_name_repetitions",
+    "clippy::must_use_candidate",
+    "clippy::missing_errors_doc",
+    "clippy::missing_panics_doc",
+]
+
+# Denied lints (will cause errors)
+deny = [
+    "clippy::unwrap_used",
+    "clippy::expect_used",
+    "clippy::panic",
+    "clippy::unimplemented",
+    "clippy::todo",
+    "clippy::unreachable",
+    "clippy::indexing_slicing",
+]
+
+# Warn lints (will produce warnings)
+warn = [
+    "clippy::pedantic",
+    "clippy::nursery",
+    "clippy::cargo",
+    "clippy::missing_docs_in_private_items",
+    "clippy::missing_inline_in_public_items",
+    "clippy::multiple_crate_versions",
+    "clippy::wildcard_dependencies",
+    "clippy::redundant_pub_crate",
+]
+
+# Specific configuration for certain lints
+[too-many-arguments]
+threshold = 7
+
+[type-complexity]
+threshold = 25
+
+[single-char-binding-names]
+allow-single-char = true
+
+[trivial-copy]
+allow = ["*"]
+
+[upper-case-acronyms]
+aggressive = true
+
+[doc-markdown]
+# Allow certain markdown patterns
+allow-urls-in-doc-comments = true
+allow-prose-in-doc-comments = true
+
+# Cargo-specific lints
+[cargo]
+# Warn about duplicate dependencies
+duplicate_crate_names = true
+
+# Warn about multiple versions of the same crate
+multiple_versions = "warn"
+
+# Warn about wildcard dependencies
+wildcard_dependencies = "warn"
+
+# Warn about self-dependencies
+self_dependency = "warn"
+
+# Warn about workspace dependencies
+workspace_dependencies = "warn"
+
+# Specific crate exclusions
+[[lints.clippy]]
+name = "cargo_common_metadata"
+priority = 1
+level = "warn"
+
+[[lints.clippy]]
+name = "multiple_crate_versions"
+priority = 1
+level = "warn"
+
+[[lints.clippy]]
+name = "wildcard_dependencies"
+priority = 1
+level = "warn"
+
+# Allow certain patterns in tests
+[[lints.clippy]]
+name = "expect_used"
+path = "src/**/*_test.rs"
+level = "allow"
+
+[[lints.clippy]]
+name = "unwrap_used"
+path = "src/**/*_test.rs"
+level = "allow"
+
+[[lints.clippy]]
+name = "panic"
+path = "src/**/*_test.rs"
+level = "allow"
+
+[[lints.clippy]]
+name = "indexing_slicing"
+path = "src/**/*_test.rs"
+level = "allow"
+
+# Allow certain patterns in examples
+[[lints.clippy]]
+name = "expect_used"
+path = "examples/**"
+level = "allow"
+
+[[lints.clippy]]
+name = "unwrap_used"
+path = "examples/**"
+level = "allow"
+
+[[lints.clippy]]
+name = "panic"
+path = "examples/**"
+level = "allow"
+
+[[lints.clippy]]
+name = "indexing_slicing"
+path = "examples/**"
+level = "allow"
+
+# Allow certain patterns in benchmarks
+[[lints.clippy]]
+name = "expect_used"
+path = "benches/**"
+level = "allow"
+
+[[lints.clippy]]
+name = "unwrap_used"
+path = "benches/**"
+level = "allow"
+
+[[lints.clippy]]
+name = "panic"
+path = "benches/**"
+level = "allow"
+
+[[lints.clippy]]
+name = "indexing_slicing"
+path = "benches/**"
+level = "allow"

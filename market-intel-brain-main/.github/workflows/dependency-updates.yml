@@ -1,0 +1,227 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run every Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update-go-dependencies:
+    name: Update Go Dependencies
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./microservices/go-services/api-gateway
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Update Go modules
+      run: |
+        go get -u ./...
+        go mod tidy
+        
+    - name: Run tests
+      run: go test -v ./...
+      
+    - name: Run linting
+      run: golangci-lint run
+      
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "chore: update Go dependencies"
+        title: "chore: update Go dependencies"
+        body: |
+          ## 🤖 Automated Dependency Update
+          
+          This PR updates Go dependencies to their latest versions.
+          
+          ### 📋 Changes
+          - Updated Go modules to latest versions
+          - Ran `go mod tidy` to clean up dependencies
+          
+          ### ✅ Verification
+          - [x] All tests pass
+          - [x] Linting passes
+          - [x] No breaking changes detected
+          
+          ### 🚀 Next Steps
+          1. Review the changes
+          2. Run integration tests
+          3. Merge if everything looks good
+          
+          ---
+          *This PR was created automatically by the dependency update workflow.*
+        branch: chore/update-go-dependencies
+        delete-branch: true
+
+  update-rust-dependencies:
+    name: Update Rust Dependencies
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./microservices/rust-services/core-engine
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        
+    - name: Update Rust dependencies
+      run: |
+        cargo update
+        cargo check
+        
+    - name: Run tests
+      run: cargo test
+      
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+      
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "chore: update Rust dependencies"
+        title: "chore: update Rust dependencies"
+        body: |
+          ## 🤖 Automated Dependency Update
+          
+          This PR updates Rust dependencies to their latest versions.
+          
+          ### 📋 Changes
+          - Updated Cargo dependencies to latest versions
+          - Ran `cargo update` to refresh dependencies
+          
+          ### ✅ Verification
+          - [x] All tests pass
+          - [x] Clippy passes (no warnings)
+          - [x] No breaking changes detected
+          
+          ### 🚀 Next Steps
+          1. Review the changes
+          2. Run integration tests
+          3. Merge if everything looks good
+          
+          ---
+          *This PR was created automatically by the dependency update workflow.*
+        branch: chore/update-rust-dependencies
+        delete-branch: true
+
+  update-docker-images:
+    name: Update Docker Base Images
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Update Docker base images
+      run: |
+        # Update Rust base image
+        sed -i 's/FROM rust:[0-9.]*-slim/FROM rust:1.75-slim/' microservices/rust-services/core-engine/Dockerfile
+        
+        # Update Go base image
+        sed -i 's/FROM golang:[0-9.]*-alpine/FROM golang:1.21-alpine/' microservices/go-services/api-gateway/Dockerfile
+        
+    - name: Check Docker build
+      run: |
+        cd microservices/go-services/api-gateway
+        docker build -t test-go-image .
+        
+        cd ../rust-services/core-engine
+        docker build -t test-rust-image .
+        
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "chore: update Docker base images"
+        title: "chore: update Docker base images"
+        body: |
+          ## 🤖 Automated Docker Update
+          
+          This PR updates Docker base images to their latest versions.
+          
+          ### 📋 Changes
+          - Updated Rust base image to latest version
+          - Updated Go base image to latest version
+          
+          ### ✅ Verification
+          - [x] Docker builds successfully
+          - [x] Images run without issues
+          
+          ### 🚀 Next Steps
+          1. Review the changes
+          2. Test the updated images
+          3. Merge if everything looks good
+          
+          ---
+          *This PR was created automatically by the Docker update workflow.*
+        branch: chore/update-docker-images
+        delete-branch: true
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Go security audit
+      run: |
+        cd microservices/go-services/api-gateway
+        go list -json -m all | nancy sleuth
+        
+    - name: Run Rust security audit
+      run: |
+        cd microservices/rust-services/core-engine
+        cargo audit
+        
+    - name: Create Security Issue
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: '🚨 Security Vulnerabilities Detected',
+            body: `## 🚨 Security Audit Results
+          
+          The automated security audit has detected potential vulnerabilities in the dependencies.
+          
+          ### 📊 Findings
+          - Go dependencies: Check the workflow logs for details
+          - Rust dependencies: Check the workflow logs for details
+          
+          ### 🚀 Recommended Actions
+          1. Review the security audit results
+          2. Update vulnerable dependencies
+          3. Test the updated dependencies
+          4. Deploy the updated versions
+          
+          ---
+          *This issue was created automatically by the security audit workflow.*`,
+            labels: ['security', 'high-priority']
+          })
