@@ -1,4 +1,4 @@
-name: CI Pipeline - Clean (Rust & Go Only)
+name: CI Pipeline
 
 on:
   push:
