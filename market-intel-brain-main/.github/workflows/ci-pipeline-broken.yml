@@ -1,4 +1,4 @@
-name: CI Pipeline - Fixed (Rust & Go Only)
+name: CI Pipeline - Clean (Rust & Go Only)
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
         cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
         
     - name: Cache Go modules
-      uses: actions/cache@v4
+      uses: actions/cache@v3
       with:
         path: |
           ~/.cache/go-build
@@ -69,7 +69,7 @@ jobs:
       run: go test -v -race -coverprofile=coverage.out ./...
       
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v3
       with:
         file: ./microservices/go-services/api-gateway/coverage.out
         flags: go
@@ -122,7 +122,7 @@ jobs:
         override: true
         
     - name: Cache cargo registry
-      uses: actions/cache@v4
+      uses: actions/cache@v3
       with:
         path: |
           ~/.cargo/registry/index
@@ -148,7 +148,7 @@ jobs:
         cargo tarpaulin --out Xml --output-dir ./coverage
         
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v3
       with:
         file: ./microservices/rust-services/core-engine/coverage/cobertura.xml
         flags: rust
@@ -212,7 +212,7 @@ jobs:
       run: buf generate --template buf.md
       
     - name: Upload protobuf documentation
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: protobuf-docs
         path: ./microservices/proto/buf.md
@@ -274,7 +274,7 @@ jobs:
         
     - name: Upload test logs
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: integration-test-logs
         path: |
@@ -304,7 +304,7 @@ jobs:
         output: 'trivy-results.sarif'
         
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v2
       with:
         sarif_file: 'trivy-results.sarif'
         
@@ -335,7 +335,7 @@ jobs:
         toolchain: ${{ env.RUST_VERSION }}
         
     - name: Cache Go modules
-      uses: actions/cache@v4
+      uses: actions/cache@v3
       with:
         path: |
           ~/.cache/go-build
@@ -343,7 +343,7 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         
     - name: Cache cargo registry
-      uses: actions/cache@v4
+      uses: actions/cache@v3
       with:
         path: |
           ~/.cargo/registry/index
