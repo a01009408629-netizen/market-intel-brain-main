@@ -1,0 +1,522 @@
+// Copyright (c) 2024 Market Intel Brain Team
+// Version: v1.0.0
+// Authentication service protobuf definitions
+// This file contains authentication and authorization related messages
+
+syntax = "proto3";
+
+package market_intel.auth.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "versions/v1/common.proto";
+
+option go_package = "github.com/a01009408629-netizen/market-intel-brain/microservices/proto/auth/v1;authv1";
+option rust_package = "market_intel.auth.v1";
+
+// Authentication service definition
+service AuthService {
+  // User authentication
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  
+  // User management
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  
+  // Password management
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+  rpc ConfirmPasswordReset(ConfirmPasswordResetRequest) returns (ConfirmPasswordResetResponse);
+  
+  // API key management
+  rpc CreateApiKey(CreateApiKeyRequest) returns (CreateApiKeyResponse);
+  rpc ListApiKeys(ListApiKeysRequest) returns (ListApiKeysResponse);
+  rpc RevokeApiKey(RevokeApiKeyRequest) returns (RevokeApiKeyResponse);
+  
+  // Role and permission management
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  rpc GetRole(GetRoleRequest) returns (GetRoleResponse);
+  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
+  rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+  
+  // Session management
+  rpc GetSessions(GetSessionsRequest) returns (GetSessionsResponse);
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+  rpc RevokeAllSessions(RevokeAllSessionsRequest) returns (RevokeAllSessionsResponse);
+  
+  // Two-factor authentication
+  rpc EnableTwoFactorAuth(EnableTwoFactorAuthRequest) returns (EnableTwoFactorAuthResponse);
+  rpc DisableTwoFactorAuth(DisableTwoFactorAuthRequest) returns (DisableTwoFactorAuthResponse);
+  rpc VerifyTwoFactorAuth(VerifyTwoFactorAuthRequest) returns (VerifyTwoFactorAuthResponse);
+  
+  // Audit and logging
+  rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse);
+  rpc LogSecurityEvent(LogSecurityEventRequest) returns (LogSecurityEventResponse);
+}
+
+// Login request
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+  string client_id = 3;
+  string client_secret = 4;
+  string device_id = 5;
+  string ip_address = 6;
+  string user_agent = 7;
+  bool remember_me = 8;
+  string two_factor_code = 9;
+}
+
+// Login response
+message LoginResponse {
+  bool success = 1;
+  string message = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  string token_type = 5;
+  int32 expires_in = 6;
+  market_intel.common.v1.UserProfile user = 7;
+  repeated string permissions = 8;
+  google.protobuf.Timestamp token_expires_at = 9;
+  bool requires_two_factor = 10;
+  string two_factor_method = 11;
+}
+
+// Logout request
+message LogoutRequest {
+  string refresh_token = 1;
+  string session_id = 2;
+  bool logout_all_devices = 3;
+}
+
+// Logout response
+message LogoutResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Refresh token request
+message RefreshTokenRequest {
+  string refresh_token = 1;
+  string client_id = 2;
+  string client_secret = 3;
+}
+
+// Refresh token response
+message RefreshTokenResponse {
+  bool success = 1;
+  string message = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  string token_type = 5;
+  int32 expires_in = 6;
+  google.protobuf.Timestamp token_expires_at = 7;
+}
+
+// Create user request
+message CreateUserRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string timezone = 6;
+  string currency = 7;
+  string risk_profile = 8;
+  repeated string roles = 9;
+  repeated string permissions = 10;
+  bool send_welcome_email = 11;
+  bool require_password_change = 12;
+  map<string, google.protobuf.Value> metadata = 13;
+}
+
+// Create user response
+message CreateUserResponse {
+  bool success = 1;
+  string message = 2;
+  string user_id = 3;
+  market_intel.common.v1.UserProfile user = 4;
+}
+
+// Get user request
+message GetUserRequest {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+}
+
+// Get user response
+message GetUserResponse {
+  bool success = 1;
+  string message = 2;
+  market_intel.common.v1.UserProfile user = 3;
+  repeated string roles = 4;
+  repeated string permissions = 5;
+  google.protobuf.Timestamp last_login_at = 6;
+  google.protobuf.Timestamp password_changed_at = 7;
+  bool is_active = 8;
+  bool is_locked = 9;
+  google.protobuf.Timestamp locked_until = 10;
+}
+
+// Update user request
+message UpdateUserRequest {
+  string user_id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string timezone = 4;
+  string currency = 5;
+  string risk_profile = 6;
+  repeated string roles = 7;
+  repeated string permissions = 8;
+  bool is_active = 9;
+  map<string, google.protobuf.Value> metadata = 10;
+}
+
+// Update user response
+message UpdateUserResponse {
+  bool success = 1;
+  string message = 2;
+  market_intel.common.v1.UserProfile user = 3;
+}
+
+// Delete user request
+message DeleteUserRequest {
+  string user_id = 1;
+  bool hard_delete = 2;
+}
+
+// Delete user response
+message DeleteUserResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// List users request
+message ListUsersRequest {
+  market_intel.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+  repeated string roles = 3;
+  bool is_active = 4;
+  string sort_by = 5;
+  string sort_order = 6;
+}
+
+// List users response
+message ListUsersResponse {
+  bool success = 1;
+  string message = 2;
+  repeated market_intel.common.v1.UserProfile users = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Change password request
+message ChangePasswordRequest {
+  string user_id = 1;
+  string current_password = 2;
+  string new_password = 3;
+  string confirm_password = 4;
+}
+
+// Change password response
+message ChangePasswordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Reset password request
+message ResetPasswordRequest {
+  string email = 1;
+  string username = 2;
+  string client_id = 3;
+}
+
+// Reset password response
+message ResetPasswordResponse {
+  bool success = 1;
+  string message = 2;
+  string reset_token = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+// Confirm password reset request
+message ConfirmPasswordResetRequest {
+  string reset_token = 1;
+  string new_password = 2;
+  string confirm_password = 3;
+}
+
+// Confirm password reset response
+message ConfirmPasswordResetResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Create API key request
+message CreateApiKeyRequest {
+  string user_id = 1;
+  string name = 2;
+  repeated string permissions = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  map<string, google.protobuf.Value> metadata = 5;
+}
+
+// Create API key response
+message CreateApiKeyResponse {
+  bool success = 1;
+  string message = 2;
+  market_intel.common.v1.ApiKey api_key = 3;
+  string api_key_value = 4; // Only returned once during creation
+}
+
+// List API keys request
+message ListApiKeysRequest {
+  string user_id = 1;
+  market_intel.common.v1.PaginationRequest pagination = 2;
+  bool is_active = 3;
+}
+
+// List API keys response
+message ListApiKeysResponse {
+  bool success = 1;
+  string message = 2;
+  repeated market_intel.common.v1.ApiKey api_keys = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Revoke API key request
+message RevokeApiKeyRequest {
+  string api_key_id = 1;
+  string user_id = 2;
+}
+
+// Revoke API key response
+message RevokeApiKeyResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Create role request
+message CreateRoleRequest {
+  string name = 1;
+  string description = 2;
+  repeated string permissions = 3;
+  bool is_system_role = 4;
+  map<string, google.protobuf.Value> metadata = 5;
+}
+
+// Create role response
+message CreateRoleResponse {
+  bool success = 1;
+  string message = 2;
+  Role role = 3;
+}
+
+// Role definition
+message Role {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string permissions = 4;
+  bool is_system_role = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  map<string, google.protobuf.Value> metadata = 8;
+}
+
+// Get role request
+message GetRoleRequest {
+  string role_id = 1;
+  string name = 2;
+}
+
+// Get role response
+message GetRoleResponse {
+  bool success = 1;
+  string message = 2;
+  Role role = 3;
+}
+
+// Update role request
+message UpdateRoleRequest {
+  string role_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string permissions = 4;
+  map<string, google.protobuf.Value> metadata = 5;
+}
+
+// Update role response
+message UpdateRoleResponse {
+  bool success = 1;
+  string message = 2;
+  Role role = 3;
+}
+
+// Delete role request
+message DeleteRoleRequest {
+  string role_id = 1;
+}
+
+// Delete role response
+message DeleteRoleResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// List roles request
+message ListRolesRequest {
+  market_intel.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+  bool is_system_role = 3;
+}
+
+// List roles response
+message ListRolesResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Role roles = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Get sessions request
+message GetSessionsRequest {
+  string user_id = 1;
+  market_intel.common.v1.PaginationRequest pagination = 2;
+  bool is_active = 3;
+}
+
+// Get sessions response
+message GetSessionsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Session sessions = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Session definition
+message Session {
+  string id = 1;
+  string user_id = 2;
+  string device_id = 3;
+  string ip_address = 4;
+  string user_agent = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp last_accessed_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  bool is_active = 9;
+  map<string, google.protobuf.Value> metadata = 10;
+}
+
+// Revoke session request
+message RevokeSessionRequest {
+  string session_id = 1;
+  string user_id = 2;
+}
+
+// Revoke session response
+message RevokeSessionResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Revoke all sessions request
+message RevokeAllSessionsRequest {
+  string user_id = 1;
+  string exclude_current_session = 2;
+}
+
+// Revoke all sessions response
+message RevokeAllSessionsResponse {
+  bool success = 1;
+  string message = 2;
+  int32 revoked_count = 3;
+}
+
+// Enable two-factor authentication request
+message EnableTwoFactorAuthRequest {
+  string user_id = 1;
+  string method = 2; // "totp", "sms", "email"
+  string phone_number = 3; // Required for SMS
+  string email = 4; // Required for email
+}
+
+// Enable two-factor authentication response
+message EnableTwoFactorAuthResponse {
+  bool success = 1;
+  string message = 2;
+  string secret = 3; // TOTP secret (only for TOTP)
+  string qr_code = 4; // QR code for TOTP setup
+  repeated string backup_codes = 5;
+}
+
+// Disable two-factor authentication request
+message DisableTwoFactorAuthRequest {
+  string user_id = 1;
+  string password = 2;
+  string two_factor_code = 3;
+}
+
+// Disable two-factor authentication response
+message DisableTwoFactorAuthResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Verify two-factor authentication request
+message VerifyTwoFactorAuthRequest {
+  string user_id = 1;
+  string code = 2;
+  string backup_code = 3;
+}
+
+// Verify two-factor authentication response
+message VerifyTwoFactorAuthResponse {
+  bool success = 1;
+  string message = 2;
+  bool is_verified = 3;
+}
+
+// Get audit logs request
+message GetAuditLogsRequest {
+  market_intel.common.v1.PaginationRequest pagination = 1;
+  string user_id = 2;
+  string action = 3;
+  string resource_type = 4;
+  market_intel.common.v1.TimestampRange date_range = 5;
+  string ip_address = 6;
+  bool success = 7;
+}
+
+// Get audit logs response
+message GetAuditLogsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated market_intel.common.v1.AuditLogEntry audit_logs = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Log security event request
+message LogSecurityEventRequest {
+  string user_id = 1;
+  string event_type = 2;
+  string description = 3;
+  string ip_address = 4;
+  string user_agent = 5;
+  string resource_type = 6;
+  string resource_id = 7;
+  map<string, google.protobuf.Value> details = 8;
+}
+
+// Log security event response
+message LogSecurityEventResponse {
+  bool success = 1;
+  string message = 2;
+  string event_id = 3;
+}

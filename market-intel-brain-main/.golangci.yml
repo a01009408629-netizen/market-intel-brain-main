@@ -1,0 +1,555 @@
+# golangci-lint configuration for Market Intel Brain
+# Strict linting rules to ensure code quality and security
+
+# Run settings
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  skip-dirs:
+    - vendor
+    - testdata
+    - generated
+    - proto
+  skip-files:
+    - ".*\\.pb\\.go$"
+    - ".*_generated\\.go$"
+  modules-download-mode: readonly
+
+# Output settings
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true
+  show-stats: true
+
+# Linters settings
+linters-settings:
+  # errcheck - check for unchecked errors
+  errcheck:
+    check-type-assertions: true
+    check-blank: false
+    ignore: fmt:.*,io/ioutil:^Read.*,^Write.*
+    exclude-functions:
+      - (os.*).New
+      - (net/http.*).New
+      - (github.com/go-redis/redis/v8.*).New
+
+  # gosec - security vulnerability checker
+  gosec:
+    severity: medium
+    confidence: medium
+    excludes:
+      - G101  # Look for hardcoded credentials
+      - G107  # Url provided to HTTP request as taint input
+      - G204  # Audit use of command execution
+      - G304  # File path provided as taint input
+      - G401  # Detect the usage of DES, RC4, MD5 or SHA1
+      - G402  # Check for weak TLS configuration
+      - G403  # Check for weak cryptographic primitives
+      - G404  # Check for weak random number generation
+      - G501  # Import blocklist: crypto/md5
+      - G502  # Import blocklist: crypto/des
+      - G503  # Import blocklist: crypto/rc4
+      - G504  # Import blocklist: net/http/cgi
+      - G505  # Import blocklist: crypto/sha1
+    config:
+      G306: "0600"  # Expect file permissions to be 0600 or less
+      G307: "0644"  # Expect file permissions to be 0644 or less for non-executable files
+
+  # revive - fast, configurable, extensible linter
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+        disabled: false
+        arguments:
+          - "checkPrivateReceivers"
+          - "sayRepetitiveInsteadOfStutters"
+      - name: var-naming
+        severity: warning
+        disabled: false
+        arguments:
+          - ["ID", "ID", "HTTP", "URL", "JSON", "XML", "YAML", "TOML", "SQL", "API", "REST", "gRPC", "TLS", "SSL", "TCP", "UDP", "IP", "DNS", "CDN", "CI", "CD", "IDE", "SDK", "CPU", "GPU", "RAM", "SSD", "HDD", "OS", "FS", "DB", "ACID", "BASE", "CAP", "SOLID", "DRY", "KISS", "YAGNI", "POC", "MVP", "QA", "QC", "UX", "UI", "HTML", "CSS", "JS", "TS", "DOM", "CSV", "PDF", "PNG", "JPG", "SVG", "GIF", "MP4", "MP3", "ZIP", "TAR", "GZIP", "SHA", "MD5", "RSA", "AES", "ECDSA", "UUID", "GUID", "OK", "TODO", "FIXME", "NOTE", "XXX", "HACK", "BUG", "WARN", "ERROR", "INFO", "DEBUG", "TRACE"]
+      - name: package-comments
+        severity: warning
+        disabled: false
+        arguments:
+          - "checkPackageComment"
+          - "checkTopLevel"
+      - name: dot-imports
+        severity: error
+        disabled: false
+      - name: blank-imports
+        severity: error
+        disabled: false
+      - name: error-naming
+        severity: error
+        disabled: false
+      - name: errorf
+        severity: warning
+        disabled: false
+        arguments:
+          - "single"
+      - name: context-as-argument
+        severity: warning
+        disabled: false
+      - name: context-keys-type
+        severity: warning
+        disabled: false
+      - name: time-naming
+        severity: warning
+        disabled: false
+      - name: unexported-return
+        severity: warning
+        disabled: false
+      - name: error-strings
+        severity: warning
+        disabled: false
+        arguments:
+          - "capitalized"
+      - name: range-val-in-closure
+        severity: warning
+        disabled: false
+      - name: waitgroup-by-value
+        severity: warning
+        disabled: false
+      - name: atomic
+        severity: warning
+        disabled: false
+      - name: empty-lines
+        severity: warning
+        disabled: false
+      - name: import-shadowing
+        severity: warning
+        disabled: false
+      - name: unconditional-recursion
+        severity: warning
+        disabled: false
+      - name: unreachable-code
+        severity: error
+        disabled: false
+      - name: redundant-import-alias
+        severity: warning
+        disabled: false
+      - name: defer
+        severity: warning
+        disabled: false
+        arguments:
+          - "check-call-chain"
+          - "check-both"
+      - name: receiver-naming
+        severity: warning
+        disabled: false
+      - name: constant-logical-expr
+        severity: warning
+        disabled: false
+      - name: bool-literal-in-expr
+        severity: warning
+        disabled: false
+      - name: use-any
+        severity: warning
+        disabled: false
+      - name: confusing-naming
+        severity: warning
+        disabled: false
+      - name: get-return
+        severity: warning
+        disabled: false
+      - name: modifies-parameter
+        severity: warning
+        disabled: false
+      - name: confusing-results
+        severity: warning
+        disabled: false
+      - name: deep-exit
+        severity: warning
+        disabled: false
+      - name: unused-parameter
+        severity: warning
+        disabled: false
+      - name: unchecked-err
+        severity: error
+        disabled: false
+      - name: argument-limit
+        severity: warning
+        disabled: false
+        arguments:
+          - 5
+      - name: cyclomatic
+        severity: warning
+        disabled: false
+        arguments:
+          - 10
+      - name: max-public-structs
+        severity: warning
+        disabled: false
+        arguments:
+          - 5
+      - name: file-header
+        severity: warning
+        disabled: false
+        arguments:
+          - "Copyright \\(c\\) \\d{4} Market Intel Brain Team"
+      - name: function-length
+        severity: warning
+        disabled: false
+        arguments:
+          - 50
+          - 0
+      - name: function-result-limit
+        severity: warning
+        disabled: false
+        arguments:
+          - 3
+      - name: line-length-limit
+        severity: warning
+        disabled: false
+        arguments:
+          - 120
+      - name: banned-characters
+        severity: warning
+        disabled: false
+        arguments:
+          - " "
+          - "\t"
+      - name: imports-blacklist
+        severity: warning
+        disabled: false
+        arguments:
+          - "crypto/md5"
+          - "crypto/des"
+          - "crypto/rc4"
+          - "crypto/sha1"
+          - "net/http/cgi"
+      - name: nesting
+        severity: warning
+        disabled: false
+        arguments:
+          - 5
+      - name: superfluous-else
+        severity: warning
+        disabled: false
+      - name: flag-parameter
+        severity: warning
+        disabled: false
+
+  # gocritic - go source code critic
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport # https://github.com/go-critic/go-critic/issues/845
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+
+  # gocyclo - cyclomatic complexity linter
+  gocyclo:
+    min-complexity: 10
+
+  # dupl - code duplication detector
+  dupl:
+    threshold: 100
+
+  # goconst - repeated strings detector
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  # gocognit - cognitive complexity linter
+  gocognit:
+    min-complexity: 20
+
+  # godot - check if comments end in a period
+  godot:
+    scope: all
+    exclude:
+      - "TODO"
+      - "FIXME"
+      - "NOTE"
+      - "XXX"
+      - "HACK"
+      - "BUG"
+    period: true
+    capital: true
+
+  # godox - tool for TODO/FIXME/XXX comments
+  godox:
+    keywords:
+      - TODO
+      - FIXME
+      - XXX
+      - HACK
+      - BUG
+      - NOTE
+
+  # gofmt - gofmt code formatter
+  gofmt:
+    simplify: true
+
+  # goimports - code formatting and import management
+  goimports:
+    local-prefixes: github.com/a01009408629-netizen/market-intel-brain
+
+  # golint - golint linter
+  golint:
+    min-confidence: 0.8
+
+  # gomnd - magic number detector
+  gomnd:
+    settings:
+      mnd:
+        checks:
+          - argument
+          - case
+          - condition
+          - operation
+          - return
+        ignored-numbers:
+          - 0
+          - 1
+          - 2
+          - 10
+          - 100
+          - 1000
+        ignored-functions:
+          - os.*
+          - strconv.*
+          - time.*
+          - strings.*
+          - math.*
+
+  # govet - go vet
+  govet:
+    check-shadowing: true
+    enable-all: true
+
+  # ineffassign - ineffectual assignment detector
+  ineffassign:
+    enabled: true
+
+  # interfacer - linter for interfaces
+  interfacer:
+    enabled: false # Deprecated
+
+  # lll - long line linter
+  lll:
+    line-length: 120
+
+  # maligned - struct alignment checker
+  maligned:
+    suggest-new: true
+
+  # misspell - misspelling checker
+  misspell:
+    locale: US
+
+  # nakedret - naked returns linter
+  nakedret:
+    max-func-lines: 30
+
+  # noctx - noctx checks whether http.Request uses context
+  noctx:
+    enabled: true
+
+  # nolintlint - linter for nolint directives
+  nolintlint:
+    allow-leading-space: true
+    allow-unused: false
+    require-explanation: true
+    require-specific: true
+
+  # rowserrcheck - check if Err is checked
+  rowserrcheck:
+    packages:
+      - github.com/jmoiron/sqlx
+
+  # scopelint - scopelint checks for unpinned variables
+  scopelint:
+    enabled: false # Deprecated
+
+  # staticcheck - staticcheck is a go vet on steroids
+  staticcheck:
+    enabled: true
+
+  # structcheck - struct checker
+  structcheck:
+    enabled: false # Deprecated
+
+  # stylecheck - stylecheck is a replacement for golint
+  stylecheck:
+    enabled: true
+    checks:
+      - all
+    dot-import-whitelist:
+      - fmt
+    http-status-name-whitelist:
+      - HTTPStatusCode
+
+  # typecheck - typecheck
+  typecheck:
+    enabled: true
+
+  # unconvert - unconvert checks for unnecessary type conversions
+  unconvert:
+    enabled: true
+
+  # unparam - unused parameter checker
+  unparam:
+    check-exported: false
+
+  # unused - unused code checker
+  unused:
+    enabled: true
+
+  # varcheck - varcheck
+  varcheck:
+    enabled: false # Deprecated
+
+  # whitespace - whitespace checker
+  whitespace:
+    multi-if: false
+    multi-func: false
+
+# Enable/disable linters
+linters:
+  disable-all: true
+  enable:
+    # Default linters
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    
+    # Security
+    - gosec
+    
+    # Style and formatting
+    - revive
+    - gofmt
+    - goimports
+    - gocritic
+    - godot
+    - misspell
+    - whitespace
+    
+    # Performance and complexity
+    - gocyclo
+    - dupl
+    - goconst
+    - gocognit
+    - nakedret
+    - prealloc
+    
+    # Code quality
+    - bodyclose
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - exportloopref
+    - exhaustive
+    - gochecknoinits
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - golint
+    - gomnd
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - interfacer
+    - lll
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - scopelint
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - whitespace
+
+  fast: false
+
+# Issues configuration
+issues:
+  exclude-rules:
+    # Exclude some linters from running on test files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - lll
+        - gocritic
+        - goconst
+        - gocognit
+        - nakedret
+        - prealloc
+
+    # Exclude known linter issues
+    - text: "weak cryptographic primitive"
+      linters:
+        - gosec
+
+    # Exclude shadow checking on err variables
+    - text: "shadow: declaration of \"err\""
+      linters:
+        - govet
+
+    # Exclude certain golint issues
+    - text: "should have a package comment"
+      linters:
+        - golint
+
+    # Exclude certain errcheck issues
+    - text: "Error return value of `.*` is not checked"
+      linters:
+        - errcheck
+
+    # Exclude certain gosec issues
+    - text: "G101: Potential hardcoded credentials"
+      linters:
+        - gosec
+
+    # Exclude certain revive issues
+    - text: "exported: exported function.*should have comment"
+      linters:
+        - revive
+
+    # Exclude certain stylecheck issues
+    - text: "ST1000: package comment should be of the form"
+      linters:
+        - stylecheck
+
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+
+# Severity configuration
+severity:
+  default-severity: error
+  case-sensitive: false

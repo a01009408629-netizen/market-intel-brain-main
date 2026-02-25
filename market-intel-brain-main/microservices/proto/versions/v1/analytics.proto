@@ -1,0 +1,914 @@
+// Copyright (c) 2024 Market Intel Brain Team
+// Version: v1.0.0
+// Analytics service protobuf definitions
+// This file contains analytics related messages and service definitions
+
+syntax = "proto3";
+
+package market_intel.analytics.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/any.proto";
+import "versions/v1/common.proto";
+
+option go_package = "github.com/a01009408629-netizen/market-intel-brain/microservices/proto/analytics/v1;analyticsv1";
+option rust_package = "market_intel.analytics.v1";
+
+// Analytics service definition
+service AnalyticsService {
+  // Health check
+  rpc HealthCheck(market_intel.common.v1.HealthCheckRequest) returns (market_intel.common.v1.HealthCheckResponse);
+  
+  // Market data analysis
+  rpc AnalyzeMarketData(AnalyzeMarketDataRequest) returns (AnalyzeMarketDataResponse);
+  rpc GetMarketAnalysis(GetMarketAnalysisRequest) returns (GetMarketAnalysisResponse);
+  rpc BatchAnalyzeMarketData(BatchAnalyzeMarketDataRequest) returns (BatchAnalyzeMarketDataResponse);
+  
+  // Technical analysis
+  rpc CalculateTechnicalIndicators(CalculateTechnicalIndicatorsRequest) returns (CalculateTechnicalIndicatorsResponse);
+  rpc GetTechnicalIndicators(GetTechnicalIndicatorsRequest) returns (GetTechnicalIndicatorsResponse);
+  
+  // Sentiment analysis
+  rpc AnalyzeSentiment(AnalyzeSentimentRequest) returns (AnalyzeSentimentResponse);
+  rpc GetSentimentAnalysis(GetSentimentAnalysisRequest) returns (GetSentimentAnalysisResponse);
+  rpc BatchAnalyzeSentiment(BatchAnalyzeSentimentRequest) returns (BatchAnalyzeSentimentResponse);
+  
+  // Pattern recognition
+  rpc DetectPatterns(DetectPatternsRequest) returns (DetectPatternsResponse);
+  rpc GetDetectedPatterns(GetDetectedPatternsRequest) returns (GetDetectedPatternsResponse);
+  
+  // Correlation analysis
+  rpc CalculateCorrelations(CalculateCorrelationsRequest) returns (CalculateCorrelationsResponse);
+  rpc GetCorrelations(GetCorrelationsRequest) returns (GetCorrelationsResponse);
+  
+  // Volatility analysis
+  rpc AnalyzeVolatility(AnalyzeVolatilityRequest) returns (AnalyzeVolatilityResponse);
+  rpc GetVolatilityAnalysis(GetVolatilityAnalysisRequest) returns (GetVolatilityAnalysisResponse);
+  
+  // Risk metrics
+  rpc CalculateRiskMetrics(CalculateRiskMetricsRequest) returns (CalculateRiskMetricsResponse);
+  rpc GetRiskMetrics(GetRiskMetricsRequest) returns (GetRiskMetricsResponse);
+  
+  // Performance analytics
+  rpc CalculatePerformanceMetrics(CalculatePerformanceMetricsRequest) returns (CalculatePerformanceMetricsResponse);
+  rpc GetPerformanceAnalytics(GetPerformanceAnalyticsRequest) returns (GetPerformanceAnalyticsResponse);
+  
+  // Predictive analytics
+  rpc GeneratePredictions(GeneratePredictionsRequest) returns (GeneratePredictionsResponse);
+  rpc GetPredictions(GetPredictionsRequest) returns (GetPredictionsResponse);
+  
+  // Backtesting
+  rpc RunBacktest(RunBacktestRequest) returns (RunBacktestResponse);
+  rpc GetBacktestResults(GetBacktestResultsRequest) returns (GetBacktestResultsResponse);
+  
+  // Portfolio analytics
+  rpc AnalyzePortfolio(AnalyzePortfolioRequest) returns (AnalyzePortfolioResponse);
+  rpc GetPortfolioAnalytics(GetPortfolioAnalyticsRequest) returns (GetPortfolioAnalyticsResponse);
+  
+  // Custom analytics
+  rpc RunCustomAnalysis(RunCustomAnalysisRequest) returns (RunCustomAnalysisResponse);
+  rpc GetCustomAnalysisResults(GetCustomAnalysisResultsRequest) returns (GetCustomAnalysisResultsResponse);
+  
+  // Analytics configuration
+  rpc GetAnalyticsConfig(GetAnalyticsConfigRequest) returns (GetAnalyticsConfigResponse);
+  rpc UpdateAnalyticsConfig(UpdateAnalyticsConfigRequest) returns (UpdateAnalyticsConfigResponse);
+  
+  // Real-time analytics
+  rpc StreamAnalyticsUpdates(stream StreamAnalyticsUpdatesRequest) returns (stream StreamAnalyticsUpdatesResponse);
+  rpc SubscribeToAnalyticsEvents(SubscribeToAnalyticsEventsRequest) returns (stream AnalyticsEvent);
+}
+
+// Analyze market data request
+message AnalyzeMarketDataRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  repeated string analysis_types = 3;
+  map<string, google.protobuf.Value> parameters = 4;
+  bool async = 5;
+}
+
+// Analyze market data response
+message AnalyzeMarketDataResponse {
+  bool success = 1;
+  string message = 2;
+  string analysis_id = 3;
+  MarketAnalysisResult result = 4;
+  google.protobuf.Timestamp analyzed_at = 5;
+}
+
+// Market analysis result
+message MarketAnalysisResult {
+  string symbol = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  map<string, google.protobuf.Value> analysis_data = 3;
+  repeated TechnicalIndicator technical_indicators = 4;
+  SentimentAnalysis sentiment = 5;
+  repeated Pattern patterns = 6;
+  VolatilityAnalysis volatility = 7;
+  RiskMetrics risk_metrics = 8;
+  map<string, double> correlations = 9;
+  Predictions predictions = 10;
+  google.protobuf.Timestamp analyzed_at = 11;
+  map<string, google.protobuf.Value> metadata = 12;
+}
+
+// Get market analysis request
+message GetMarketAnalysisRequest {
+  string analysis_id = 1;
+  string symbol = 2;
+  market_intel.common.v1.TimestampRange time_range = 3;
+}
+
+// Get market analysis response
+message GetMarketAnalysisResponse {
+  bool success = 1;
+  string message = 2;
+  MarketAnalysisResult result = 3;
+}
+
+// Batch analyze market data request
+message BatchAnalyzeMarketDataRequest {
+  repeated AnalyzeMarketDataRequest requests = 1;
+  string batch_id = 2;
+  bool stop_on_error = 3;
+}
+
+// Batch analyze market data response
+message BatchAnalyzeMarketDataResponse {
+  bool success = 1;
+  string message = 2;
+  string batch_id = 3;
+  repeated AnalyzeMarketDataResponse results = 4;
+  int32 processed_count = 5;
+  int32 failed_count = 6;
+}
+
+// Calculate technical indicators request
+message CalculateTechnicalIndicatorsRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  repeated string indicators = 3;
+  map<string, google.protobuf.Value> parameters = 4;
+}
+
+// Calculate technical indicators response
+message CalculateTechnicalIndicatorsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated TechnicalIndicator indicators = 3;
+  google.protobuf.Timestamp calculated_at = 4;
+}
+
+// Technical indicator
+message TechnicalIndicator {
+  string symbol = 1;
+  string indicator_name = 2;
+  string timeframe = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  map<string, double> values = 5;
+  map<string, string> parameters = 6;
+  double signal_strength = 7;
+  string interpretation = 8;
+  map<string, google.protobuf.Value> metadata = 9;
+}
+
+// Get technical indicators request
+message GetTechnicalIndicatorsRequest {
+  repeated string symbols = 1;
+  repeated string indicators = 2;
+  market_intel.common.v1.TimestampRange time_range = 3;
+  string timeframe = 4;
+}
+
+// Get technical indicators response
+message GetTechnicalIndicatorsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated TechnicalIndicator indicators = 3;
+}
+
+// Analyze sentiment request
+message AnalyzeSentimentRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  repeated string sources = 3; // news, social_media, analyst_reports
+  map<string, google.protobuf.Value> parameters = 4;
+}
+
+// Analyze sentiment response
+message AnalyzeSentimentResponse {
+  bool success = 1;
+  string message = 2;
+  string analysis_id = 3;
+  SentimentAnalysis sentiment = 4;
+  google.protobuf.Timestamp analyzed_at = 5;
+}
+
+// Sentiment analysis
+message SentimentAnalysis {
+  string symbol = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  double overall_sentiment = 3; // -1 to 1
+  double confidence = 4;
+  map<string, double> source_sentiments = 5;
+  repeated SentimentDataPoint data_points = 6;
+  SentimentTrend trend = 7;
+  repeated string key_topics = 8;
+  repeated string key_entities = 9;
+  map<string, google.protobuf.Value> metadata = 10;
+}
+
+// Sentiment data point
+message SentimentDataPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  double sentiment_score = 2;
+  double confidence = 3;
+  string source = 4;
+  string content_id = 5;
+  map<string, google.protobuf.Value> metadata = 6;
+}
+
+// Sentiment trend
+message SentimentTrend {
+  enum TrendDirection {
+    NEUTRAL = 0;
+    IMPROVING = 1;
+    DECLINING = 2;
+    VOLATILE = 3;
+  }
+  TrendDirection direction = 1;
+  double trend_strength = 2;
+  double change_rate = 3;
+  google.protobuf.Timestamp trend_start = 4;
+}
+
+// Get sentiment analysis request
+message GetSentimentAnalysisRequest {
+  string analysis_id = 1;
+  string symbol = 2;
+  market_intel.common.v1.TimestampRange time_range = 3;
+}
+
+// Get sentiment analysis response
+message GetSentimentAnalysisResponse {
+  bool success = 1;
+  string message = 2;
+  SentimentAnalysis sentiment = 3;
+}
+
+// Batch analyze sentiment request
+message BatchAnalyzeSentimentRequest {
+  repeated AnalyzeSentimentRequest requests = 1;
+  string batch_id = 2;
+  bool stop_on_error = 3;
+}
+
+// Batch analyze sentiment response
+message BatchAnalyzeSentimentResponse {
+  bool success = 1;
+  string message = 2;
+  string batch_id = 3;
+  repeated AnalyzeSentimentResponse results = 4;
+  int32 processed_count = 5;
+  int32 failed_count = 6;
+}
+
+// Detect patterns request
+message DetectPatternsRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  repeated string pattern_types = 3;
+  map<string, google.protobuf.Value> parameters = 4;
+}
+
+// Detect patterns response
+message DetectPatternsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Pattern patterns = 3;
+  google.protobuf.Timestamp detected_at = 4;
+}
+
+// Pattern
+message Pattern {
+  string id = 1;
+  string symbol = 2;
+  string pattern_type = 3;
+  string pattern_name = 4;
+  google.protobuf.Timestamp start_time = 5;
+  google.protobuf.Timestamp end_time = 6;
+  double confidence = 7;
+  double strength = 8;
+  string implication = 9; // bullish, bearish, neutral
+  map<string, double> pattern_data = 10;
+  map<string, google.protobuf.Value> metadata = 11;
+}
+
+// Get detected patterns request
+message GetDetectedPatternsRequest {
+  repeated string symbols = 1;
+  repeated string pattern_types = 2;
+  market_intel.common.v1.TimestampRange time_range = 3;
+  double min_confidence = 4;
+}
+
+// Get detected patterns response
+message GetDetectedPatternsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Pattern patterns = 3;
+}
+
+// Calculate correlations request
+message CalculateCorrelationsRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  string correlation_method = 3; // pearson, spearman, kendall
+  map<string, google.protobuf.Value> parameters = 4;
+}
+
+// Calculate correlations response
+message CalculateCorrelationsResponse {
+  bool success = 1;
+  string message = 2;
+  CorrelationMatrix correlation_matrix = 3;
+  google.protobuf.Timestamp calculated_at = 4;
+}
+
+// Correlation matrix
+message CorrelationMatrix {
+  repeated string symbols = 1;
+  repeated CorrelationPair correlations = 2;
+  string method = 3;
+  market_intel.common.v1.TimestampRange time_range = 4;
+  google.protobuf.Timestamp calculated_at = 5;
+}
+
+// Correlation pair
+message CorrelationPair {
+  string symbol1 = 1;
+  string symbol2 = 2;
+  double correlation = 3;
+  double p_value = 4;
+  double significance = 5;
+}
+
+// Get correlations request
+message GetCorrelationsRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  double min_correlation = 3;
+}
+
+// Get correlations response
+message GetCorrelationsResponse {
+  bool success = 1;
+  string message = 2;
+  CorrelationMatrix correlation_matrix = 3;
+}
+
+// Analyze volatility request
+message AnalyzeVolatilityRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  repeated string volatility_methods = 3; // historical, garch, ewma
+  map<string, google.protobuf.Value> parameters = 4;
+}
+
+// Analyze volatility response
+message AnalyzeVolatilityResponse {
+  bool success = 1;
+  string message = 2;
+  repeated VolatilityAnalysis volatility_analyses = 3;
+  google.protobuf.Timestamp analyzed_at = 4;
+}
+
+// Volatility analysis
+message VolatilityAnalysis {
+  string symbol = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  map<string, double> volatility_metrics = 3;
+  repeated VolatilityPoint volatility_series = 4;
+  VolatilityTrend trend = 5;
+  double implied_volatility = 6;
+  double historical_volatility = 7;
+  map<string, google.protobuf.Value> metadata = 8;
+}
+
+// Volatility point
+message VolatilityPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  double volatility = 2;
+  string method = 3;
+}
+
+// Volatility trend
+message VolatilityTrend {
+  enum TrendDirection {
+    STABLE = 0;
+    INCREASING = 1;
+    DECREASING = 2;
+    VOLATILE = 3;
+  }
+  TrendDirection direction = 1;
+  double trend_strength = 2;
+  double change_rate = 3;
+  google.protobuf.Timestamp trend_start = 4;
+}
+
+// Get volatility analysis request
+message GetVolatilityAnalysisRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  repeated string methods = 3;
+}
+
+// Get volatility analysis response
+message GetVolatilityAnalysisResponse {
+  bool success = 1;
+  string message = 2;
+  repeated VolatilityAnalysis volatility_analyses = 3;
+}
+
+// Calculate risk metrics request
+message CalculateRiskMetricsRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  repeated string risk_metrics = 3;
+  double confidence_level = 4;
+  map<string, google.protobuf.Value> parameters = 5;
+}
+
+// Calculate risk metrics response
+message CalculateRiskMetricsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated market_intel.common.v1.RiskMetrics risk_metrics = 3;
+  google.protobuf.Timestamp calculated_at = 4;
+}
+
+// Get risk metrics request
+message GetRiskMetricsRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  repeated string metrics = 3;
+}
+
+// Get risk metrics response
+message GetRiskMetricsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated market_intel.common.v1.RiskMetrics risk_metrics = 3;
+}
+
+// Calculate performance metrics request
+message CalculatePerformanceMetricsRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  string benchmark = 3;
+  repeated string performance_metrics = 4;
+  map<string, google.protobuf.Value> parameters = 5;
+}
+
+// Calculate performance metrics response
+message CalculatePerformanceMetricsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated market_intel.common.v1.PerformanceMetrics performance_metrics = 3;
+  google.protobuf.Timestamp calculated_at = 4;
+}
+
+// Get performance analytics request
+message GetPerformanceAnalyticsRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+  string benchmark = 3;
+}
+
+// Get performance analytics response
+message GetPerformanceAnalyticsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated market_intel.common.v1.PerformanceMetrics performance_metrics = 3;
+}
+
+// Generate predictions request
+message GeneratePredictionsRequest {
+  repeated string symbols = 1;
+  market_intel.common.v1.TimestampRange historical_range = 2;
+  market_intel.common.v1.TimestampRange prediction_range = 3;
+  repeated string prediction_methods = 4;
+  map<string, google.protobuf.Value> parameters = 5;
+}
+
+// Generate predictions response
+message GeneratePredictionsResponse {
+  bool success = 1;
+  string message = 2;
+  string prediction_id = 3;
+  Predictions predictions = 4;
+  google.protobuf.Timestamp generated_at = 5;
+}
+
+// Predictions
+message Predictions {
+  string prediction_id = 1;
+  repeated string symbols = 2;
+  market_intel.common.v1.TimestampRange historical_range = 3;
+  market_intel.common.v1.TimestampRange prediction_range = 4;
+  map<string, PredictionData> symbol_predictions = 5;
+  map<string, google.protobuf.Value> model_metadata = 6;
+  double overall_confidence = 7;
+  google.protobuf.Timestamp generated_at = 8;
+}
+
+// Prediction data
+message PredictionData {
+  string symbol = 1;
+  repeated PredictionPoint predictions = 2;
+  double confidence = 3;
+  string method = 4;
+  map<string, google.protobuf.Value> model_info = 5;
+}
+
+// Prediction point
+message PredictionPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  double predicted_price = 2;
+  double confidence_interval_lower = 3;
+  double confidence_interval_upper = 4;
+  double probability = 5;
+}
+
+// Get predictions request
+message GetPredictionsRequest {
+  string prediction_id = 1;
+  repeated string symbols = 2;
+}
+
+// Get predictions response
+message GetPredictionsResponse {
+  bool success = 1;
+  string message = 2;
+  Predictions predictions = 3;
+}
+
+// Run backtest request
+message RunBacktestRequest {
+  string strategy_name = 1;
+  market_intel.common.v1.TimestampRange backtest_range = 2;
+  repeated string symbols = 3;
+  map<string, google.protobuf.Value> strategy_parameters = 4;
+  double initial_capital = 5;
+  map<string, google.protobuf.Value> trading_parameters = 6;
+  bool async = 7;
+}
+
+// Run backtest response
+message RunBacktestResponse {
+  bool success = 1;
+  string message = 2;
+  string backtest_id = 3;
+  BacktestResult result = 4;
+  google.protobuf.Timestamp completed_at = 5;
+}
+
+// Backtest result
+message BacktestResult {
+  string backtest_id = 1;
+  string strategy_name = 2;
+  market_intel.common.v1.TimestampRange backtest_range = 3;
+  repeated string symbols = 4;
+  double initial_capital = 5;
+  double final_capital = 6;
+  double total_return = 7;
+  double annualized_return = 8;
+  double max_drawdown = 9;
+  double sharpe_ratio = 10;
+  double sortino_ratio = 11;
+  double win_rate = 12;
+  double profit_factor = 13;
+  int32 total_trades = 14;
+  int32 winning_trades = 15;
+  int32 losing_trades = 16;
+  repeated BacktestTrade trades = 17;
+  repeated BacktestEquityPoint equity_curve = 18;
+  map<string, google.protobuf.Value> performance_metrics = 19;
+  google.protobuf.Timestamp completed_at = 20;
+  map<string, google.protobuf.Value> metadata = 21;
+}
+
+// Backtest trade
+message BacktestTrade {
+  string trade_id = 1;
+  string symbol = 2;
+  string action = 3; // buy, sell
+  double quantity = 4;
+  double price = 5;
+  google.protobuf.Timestamp timestamp = 6;
+  double commission = 7;
+  double pnl = 8;
+  double cumulative_pnl = 9;
+  map<string, google.protobuf.Value> metadata = 10;
+}
+
+// Backtest equity point
+message BacktestEquityPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  double equity = 2;
+  double drawdown = 3;
+  double return_percentage = 4;
+}
+
+// Get backtest results request
+message GetBacktestResultsRequest {
+  string backtest_id = 1;
+}
+
+// Get backtest results response
+message GetBacktestResultsResponse {
+  bool success = 1;
+  string message = 2;
+  BacktestResult result = 3;
+}
+
+// Analyze portfolio request
+message AnalyzePortfolioRequest {
+  repeated market_intel.common.v1.Position positions = 1;
+  market_intel.common.v1.TimestampRange analysis_range = 2;
+  repeated string analysis_types = 3;
+  map<string, google.protobuf.Value> parameters = 4;
+}
+
+// Analyze portfolio response
+message AnalyzePortfolioResponse {
+  bool success = 1;
+  string message = 2;
+  string analysis_id = 3;
+  PortfolioAnalysisResult result = 4;
+  google.protobuf.Timestamp analyzed_at = 5;
+}
+
+// Portfolio analysis result
+message PortfolioAnalysisResult {
+  string analysis_id = 1;
+  repeated market_intel.common.v1.Position positions = 2;
+  market_intel.common.v1.TimestampRange analysis_range = 3;
+  PortfolioMetrics metrics = 4;
+  PortfolioRiskAnalysis risk_analysis = 5;
+  PortfolioPerformanceAnalysis performance_analysis = 6;
+  PortfolioCorrelationAnalysis correlation_analysis = 7;
+  PortfolioOptimization optimization = 8;
+  google.protobuf.Timestamp analyzed_at = 9;
+  map<string, google.protobuf.Value> metadata = 10;
+}
+
+// Portfolio metrics
+message PortfolioMetrics {
+  double total_value = 1;
+  double total_cost = 2;
+  double total_pnl = 3;
+  double total_return = 4;
+  double cash_balance = 5;
+  int32 position_count = 6;
+  repeated SectorAllocation sector_allocations = 7;
+  repeated GeographicAllocation geographic_allocations = 8;
+  map<string, google.protobuf.Value> additional_metrics = 9;
+}
+
+// Sector allocation
+message SectorAllocation {
+  string sector = 1;
+  double allocation_percentage = 2;
+  double value = 3;
+}
+
+// Geographic allocation
+message GeographicAllocation {
+  string country = 1;
+  double allocation_percentage = 2;
+  double value = 3;
+}
+
+// Portfolio risk analysis
+message PortfolioRiskAnalysis {
+  market_intel.common.v1.RiskMetrics risk_metrics = 1;
+  double portfolio_beta = 2;
+  double portfolio_volatility = 3;
+  double value_at_risk_95 = 4;
+  double value_at_risk_99 = 5;
+  double expected_shortfall = 6;
+  repeated RiskContribution risk_contributions = 7;
+  StressTestResults stress_test_results = 8;
+}
+
+// Risk contribution
+message RiskContribution {
+  string symbol = 1;
+  double contribution_percentage = 2;
+  double absolute_contribution = 3;
+}
+
+// Stress test results
+message StressTestResults {
+  repeated StressTestScenario scenarios = 7;
+}
+
+// Stress test scenario
+message StressTestScenario {
+  string scenario_name = 1;
+  double portfolio_impact = 2;
+  double worst_case_loss = 3;
+  map<string, double> symbol_impacts = 4;
+}
+
+// Portfolio performance analysis
+message PortfolioPerformanceAnalysis {
+  market_intel.common.v1.PerformanceMetrics performance_metrics = 1;
+  repeated PerformanceAttribution attributions = 2;
+  BenchmarkComparison benchmark_comparison = 3;
+}
+
+// Performance attribution
+message PerformanceAttribution {
+  string source = 1;
+  double contribution = 2;
+  double contribution_percentage = 3;
+}
+
+// Benchmark comparison
+message BenchmarkComparison {
+  string benchmark_name = 1;
+  double portfolio_return = 2;
+  double benchmark_return = 3;
+  double excess_return = 4;
+  double tracking_error = 5;
+  double information_ratio = 6;
+  double beta = 7;
+  double correlation = 8;
+}
+
+// Portfolio correlation analysis
+message PortfolioCorrelationAnalysis {
+  CorrelationMatrix correlation_matrix = 1;
+  double average_correlation = 2;
+  double effective_number_of_positions = 3;
+  repeated HighlyCorrelatedPair highly_correlated_pairs = 4;
+}
+
+// Highly correlated pair
+message HighlyCorrelatedPair {
+  string symbol1 = 1;
+  string symbol2 = 2;
+  double correlation = 3;
+}
+
+// Portfolio optimization
+message PortfolioOptimization {
+  string optimization_method = 1;
+  repeated OptimizedWeight optimized_weights = 2;
+  double expected_return = 3;
+  double expected_volatility = 4;
+  double sharpe_ratio = 5;
+  repeated OptimizationConstraint constraints = 6;
+}
+
+// Optimized weight
+message OptimizedWeight {
+  string symbol = 1;
+  double optimal_weight = 2;
+  double current_weight = 3;
+  double weight_change = 4;
+}
+
+// Optimization constraint
+message OptimizationConstraint {
+  string type = 1;
+  string symbol = 2;
+  double min_value = 3;
+  double max_value = 4;
+}
+
+// Get portfolio analytics request
+message GetPortfolioAnalyticsRequest {
+  string analysis_id = 1;
+}
+
+// Get portfolio analytics response
+message GetPortfolioAnalyticsResponse {
+  bool success = 1;
+  string message = 2;
+  PortfolioAnalysisResult result = 3;
+}
+
+// Run custom analysis request
+message RunCustomAnalysisRequest {
+  string analysis_name = 1;
+  string analysis_code = 2;
+  repeated string symbols = 3;
+  market_intel.common.v1.TimestampRange time_range = 4;
+  map<string, google.protobuf.Value> parameters = 5;
+  bool async = 6;
+}
+
+// Run custom analysis response
+message RunCustomAnalysisResponse {
+  bool success = 1;
+  string message = 2;
+  string analysis_id = 3;
+  google.protobuf.Any result = 4;
+  google.protobuf.Timestamp completed_at = 5;
+}
+
+// Get custom analysis results request
+message GetCustomAnalysisResultsRequest {
+  string analysis_id = 1;
+}
+
+// Get custom analysis results response
+message GetCustomAnalysisResultsResponse {
+  bool success = 1;
+  string message = 2;
+  string analysis_id = 3;
+  google.protobuf.Any result = 4;
+  AnalysisStatus status = 5;
+}
+
+// Analysis status
+message AnalysisStatus {
+  string analysis_id = 1;
+  enum Status {
+    PENDING = 0;
+    RUNNING = 1;
+    COMPLETED = 2;
+    FAILED = 3;
+    CANCELLED = 4;
+  }
+  Status status = 2;
+  google.protobuf.Timestamp started_at = 3;
+  google.protobuf.Timestamp completed_at = 4;
+  string error_message = 5;
+  double progress_percentage = 6;
+  map<string, google.protobuf.Value> metadata = 7;
+}
+
+// Get analytics config request
+message GetAnalyticsConfigRequest {
+  string component = 1;
+}
+
+// Get analytics config response
+message GetAnalyticsConfigResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, google.protobuf.Value> configuration = 3;
+}
+
+// Update analytics config request
+message UpdateAnalyticsConfigRequest {
+  string component = 1;
+  map<string, google.protobuf.Value> configuration = 2;
+}
+
+// Update analytics config response
+message UpdateAnalyticsConfigResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, google.protobuf.Value> updated_configuration = 3;
+}
+
+// Stream analytics updates request
+message StreamAnalyticsUpdatesRequest {
+  repeated string symbols = 1;
+  repeated string update_types = 2;
+  map<string, string> filters = 3;
+}
+
+// Stream analytics updates response
+message StreamAnalyticsUpdatesResponse {
+  string update_type = 1;
+  string symbol = 2;
+  google.protobuf.Any data = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  map<string, google.protobuf.Value> metadata = 5;
+}
+
+// Subscribe to analytics events request
+message SubscribeToAnalyticsEventsRequest {
+  repeated string event_types = 1;
+  repeated string symbols = 2;
+  map<string, string> filters = 3;
+}
+
+// Analytics event
+message AnalyticsEvent {
+  string event_id = 1;
+  string event_type = 2;
+  string symbol = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  google.protobuf.Any payload = 5;
+  map<string, string> headers = 6;
+  string correlation_id = 7;
+  map<string, google.protobuf.Value> metadata = 8;
+}

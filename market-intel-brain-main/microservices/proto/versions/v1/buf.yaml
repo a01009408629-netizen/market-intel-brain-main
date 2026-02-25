@@ -1,0 +1,60 @@
+# buf.yaml - Configuration for Buf Protobuf Linting and Breaking Change Detection
+# Version: v1.0.0
+# This configuration is for the versioned protobuf definitions
+
+version: v1
+name: buf.build/market-intel/market-intel-proto/v1
+
+deps:
+  - buf.build/googleapis/googleapis
+  - buf.build/grpc/grpc
+
+lint:
+  use:
+    - DEFAULT
+  except:
+    - FIELD_NOT_REQUIRED
+    - PACKAGE_DIRECTORY_MATCH
+  ignore_only:
+    - google/api/annotations.proto
+    - google/api/http.proto
+  rpc_allow_google_protobuf_empty_requests: true
+  rpc_allow_google_protobuf_empty_responses: true
+
+breaking:
+  use:
+    - FILE
+  except:
+    - FIELD_NO_DELETE
+    - FIELD_SAME_TYPE
+  ignore:
+    - google/api/annotations.proto
+    - google/api/http.proto
+
+# Plugin configuration for code generation
+plugins:
+  - plugin: buf.build/protocolbuffers/go
+    out: ../../go-services/api-gateway/proto/v1
+    opt:
+      - paths=source_relative
+  - plugin: buf.build/protocolbuffers/rust
+    out: ../../rust-services/core-engine/src/proto/v1
+    opt:
+      - generate_accessors
+      - generate_packaged_structs
+  - plugin: buf.build/grpc/go
+    out: ../../go-services/api-gateway/proto/v1
+    opt:
+      - paths=source_relative
+  - plugin: buf.build/grpc/rust
+    out: ../../rust-services/core-engine/src/proto/v1
+    opt:
+      - generate_accessors
+      - generate_packaged_structs
+
+# Build configuration
+build:
+  excludes:
+    - google/api
+    - google/rpc
+    - google/protobuf

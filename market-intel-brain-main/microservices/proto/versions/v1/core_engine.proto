@@ -1,0 +1,965 @@
+// Copyright (c) 2024 Market Intel Brain Team
+// Version: v1.0.0
+// Core engine service protobuf definitions
+// This file contains core engine related messages and service definitions
+
+syntax = "proto3";
+
+package market_intel.core_engine.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/any.proto";
+import "versions/v1/common.proto";
+
+option go_package = "github.com/a01009408629-netizen/market-intel-brain/microservices/proto/core_engine/v1;corev1";
+option rust_package = "market_intel.core_engine.v1";
+
+// Core engine service definition
+service CoreEngineService {
+  // Health check
+  rpc HealthCheck(market_intel.common.v1.HealthCheckRequest) returns (market_intel.common.v1.HealthCheckResponse);
+  
+  // Message processing
+  rpc ProcessMessage(ProcessMessageRequest) returns (ProcessMessageResponse);
+  rpc ProcessBatchMessages(ProcessBatchMessagesRequest) returns (ProcessBatchMessagesResponse);
+  rpc ProcessStreamMessages(stream ProcessStreamMessagesRequest) returns (stream ProcessStreamMessagesResponse);
+  
+  // Agent management
+  rpc CreateAgent(CreateAgentRequest) returns (CreateAgentResponse);
+  rpc GetAgent(GetAgentRequest) returns (GetAgentResponse);
+  rpc UpdateAgent(UpdateAgentRequest) returns (UpdateAgentResponse);
+  rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse);
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+  rpc StartAgent(StartAgentRequest) returns (StartAgentResponse);
+  rpc StopAgent(StopAgentRequest) returns (StopAgentResponse);
+  rpc RestartAgent(RestartAgentRequest) returns (RestartAgentResponse);
+  
+  // Configuration management
+  rpc GetConfiguration(GetConfigurationRequest) returns (GetConfigurationResponse);
+  rpc UpdateConfiguration(UpdateConfigurationRequest) returns (UpdateConfigurationResponse);
+  rpc ResetConfiguration(ResetConfigurationRequest) returns (ResetConfigurationResponse);
+  
+  // Metrics and monitoring
+  rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
+  rpc GetPerformanceMetrics(GetPerformanceMetricsRequest) returns (GetPerformanceMetricsResponse);
+  rpc GetResourceUsage(GetResourceUsageRequest) returns (GetResourceUsageResponse);
+  
+  // Data ingestion
+  rpc IngestData(IngestDataRequest) returns (IngestDataResponse);
+  rpc IngestBatchData(IngestBatchDataRequest) returns (IngestBatchDataResponse);
+  rpc GetDataIngestionStatus(GetDataIngestionStatusRequest) returns (GetDataIngestionStatusResponse);
+  
+  // Analytics and AI
+  rpc RunAnalysis(RunAnalysisRequest) returns (RunAnalysisResponse);
+  rpc GetAnalysisResults(GetAnalysisResultsRequest) returns (GetAnalysisResultsResponse);
+  rpc GenerateSignals(GenerateSignalsRequest) returns (GenerateSignalsResponse);
+  rpc GetSignals(GetSignalsRequest) returns (GetSignalsResponse);
+  
+  // Vector operations
+  rpc CreateVector(CreateVectorRequest) returns (CreateVectorResponse);
+  rpc SearchVectors(SearchVectorsRequest) returns (SearchVectorsResponse);
+  rpc UpdateVector(UpdateVectorRequest) returns (UpdateVectorResponse);
+  rpc DeleteVector(DeleteVectorRequest) returns (DeleteVectorResponse);
+  
+  // Cache operations
+  rpc GetFromCache(GetFromCacheRequest) returns (GetFromCacheResponse);
+  rpc SetInCache(SetInCacheRequest) returns (SetInCacheResponse);
+  rpc DeleteFromCache(DeleteFromCacheRequest) returns (DeleteFromCacheResponse);
+  rpc ClearCache(ClearCacheRequest) returns (ClearCacheResponse);
+  
+  // Event streaming
+  rpc SubscribeToEvents(SubscribeToEventsRequest) returns (stream EventMessage);
+  rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
+  rpc GetEventHistory(GetEventHistoryRequest) returns (GetEventHistoryResponse);
+  
+  // Task management
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
+  rpc CancelTask(CancelTaskRequest) returns (CancelTaskResponse);
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+  
+  // Pipeline management
+  rpc CreatePipeline(CreatePipelineRequest) returns (CreatePipelineResponse);
+  rpc GetPipeline(GetPipelineRequest) returns (GetPipelineResponse);
+  rpc UpdatePipeline(UpdatePipelineRequest) returns (UpdatePipelineResponse);
+  rpc DeletePipeline(DeletePipelineRequest) returns (DeletePipelineResponse);
+  rpc ListPipelines(ListPipelinesRequest) returns (ListPipelinesResponse);
+  rpc ExecutePipeline(ExecutePipelineRequest) returns (stream ExecutePipelineResponse);
+}
+
+// Process message request
+message ProcessMessageRequest {
+  string message_id = 1;
+  string message_type = 2;
+  google.protobuf.Any payload = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  string source = 5;
+  string correlation_id = 6;
+  map<string, string> headers = 7;
+  int32 priority = 8;
+  google.protobuf.Timestamp expires_at = 9;
+  map<string, google.protobuf.Value> metadata = 10;
+}
+
+// Process message response
+message ProcessMessageResponse {
+  bool success = 1;
+  string message = 2;
+  string message_id = 3;
+  string processing_id = 4;
+  google.protobuf.Timestamp processed_at = 5;
+  google.protobuf.Any result = 6;
+  map<string, google.protobuf.Value> metadata = 7;
+}
+
+// Process batch messages request
+message ProcessBatchMessagesRequest {
+  repeated ProcessMessageRequest messages = 1;
+  string batch_id = 2;
+  bool stop_on_error = 3;
+  int32 max_concurrency = 4;
+}
+
+// Process batch messages response
+message ProcessBatchMessagesResponse {
+  bool success = 1;
+  string message = 2;
+  string batch_id = 3;
+  repeated ProcessMessageResponse results = 4;
+  int32 processed_count = 5;
+  int32 failed_count = 6;
+  google.protobuf.Timestamp processed_at = 7;
+}
+
+// Process stream messages request
+message ProcessStreamMessagesRequest {
+  ProcessMessageRequest message = 1;
+}
+
+// Process stream messages response
+message ProcessStreamMessagesResponse {
+  ProcessMessageResponse response = 1;
+}
+
+// Create agent request
+message CreateAgentRequest {
+  string name = 1;
+  string description = 2;
+  string agent_type = 3;
+  map<string, google.protobuf.Value> configuration = 4;
+  repeated string capabilities = 5;
+  bool auto_start = 6;
+  map<string, google.protobuf.Value> metadata = 7;
+}
+
+// Create agent response
+message CreateAgentResponse {
+  bool success = 1;
+  string message = 2;
+  string agent_id = 3;
+  Agent agent = 4;
+}
+
+// Agent definition
+message Agent {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string agent_type = 4;
+  enum AgentStatus {
+    UNKNOWN = 0;
+    STOPPED = 1;
+    STARTING = 2;
+    RUNNING = 3;
+    STOPPING = 4;
+    ERROR = 5;
+  }
+  AgentStatus status = 5;
+  map<string, google.protobuf.Value> configuration = 6;
+  repeated string capabilities = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  google.protobuf.Timestamp started_at = 10;
+  google.protobuf.Timestamp stopped_at = 11;
+  string version = 12;
+  map<string, google.protobuf.Value> metadata = 13;
+}
+
+// Get agent request
+message GetAgentRequest {
+  string agent_id = 1;
+  string name = 2;
+}
+
+// Get agent response
+message GetAgentResponse {
+  bool success = 1;
+  string message = 2;
+  Agent agent = 3;
+}
+
+// Update agent request
+message UpdateAgentRequest {
+  string agent_id = 1;
+  string name = 2;
+  string description = 3;
+  map<string, google.protobuf.Value> configuration = 4;
+  repeated string capabilities = 5;
+  map<string, google.protobuf.Value> metadata = 6;
+}
+
+// Update agent response
+message UpdateAgentResponse {
+  bool success = 1;
+  string message = 2;
+  Agent agent = 3;
+}
+
+// Delete agent request
+message DeleteAgentRequest {
+  string agent_id = 1;
+  bool force = 2;
+}
+
+// Delete agent response
+message DeleteAgentResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// List agents request
+message ListAgentsRequest {
+  market_intel.common.v1.PaginationRequest pagination = 1;
+  string agent_type = 2;
+  Agent.AgentStatus status = 3;
+  string search = 4;
+  string sort_by = 5;
+  string sort_order = 6;
+}
+
+// List agents response
+message ListAgentsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Agent agents = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Start agent request
+message StartAgentRequest {
+  string agent_id = 1;
+  map<string, google.protobuf.Value> parameters = 2;
+}
+
+// Start agent response
+message StartAgentResponse {
+  bool success = 1;
+  string message = 2;
+  Agent agent = 3;
+}
+
+// Stop agent request
+message StopAgentRequest {
+  string agent_id = 1;
+  bool force = 2;
+}
+
+// Stop agent response
+message StopAgentResponse {
+  bool success = 1;
+  string message = 2;
+  Agent agent = 3;
+}
+
+// Restart agent request
+message RestartAgentRequest {
+  string agent_id = 1;
+  map<string, google.protobuf.Value> parameters = 2;
+}
+
+// Restart agent response
+message RestartAgentResponse {
+  bool success = 1;
+  string message = 2;
+  Agent agent = 3;
+}
+
+// Get configuration request
+message GetConfigurationRequest {
+  string component = 1;
+  repeated string keys = 2;
+}
+
+// Get configuration response
+message GetConfigurationResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, google.protobuf.Value> configuration = 3;
+}
+
+// Update configuration request
+message UpdateConfigurationRequest {
+  string component = 1;
+  map<string, google.protobuf.Value> configuration = 2;
+  bool validate_only = 3;
+}
+
+// Update configuration response
+message UpdateConfigurationResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, google.protobuf.Value> updated_configuration = 3;
+  repeated string validation_errors = 4;
+}
+
+// Reset configuration request
+message ResetConfigurationRequest {
+  string component = 1;
+  repeated string keys = 2;
+}
+
+// Reset configuration response
+message ResetConfigurationResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, google.protobuf.Value> reset_configuration = 3;
+}
+
+// Get metrics request
+message GetMetricsRequest {
+  string component = 1;
+  string metric_type = 2;
+  market_intel.common.v1.TimestampRange time_range = 3;
+  repeated string labels = 4;
+}
+
+// Get metrics response
+message GetMetricsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Metric metrics = 3;
+}
+
+// Metric definition
+message Metric {
+  string name = 1;
+  string type = 2;
+  double value = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  map<string, string> labels = 5;
+  string unit = 6;
+  string description = 7;
+}
+
+// Get performance metrics request
+message GetPerformanceMetricsRequest {
+  string component = 1;
+  market_intel.common.v1.TimestampRange time_range = 2;
+}
+
+// Get performance metrics response
+message GetPerformanceMetricsResponse {
+  bool success = 1;
+  string message = 2;
+  market_intel.common.v1.PerformanceMetrics performance_metrics = 3;
+}
+
+// Get resource usage request
+message GetResourceUsageRequest {
+  string component = 1;
+}
+
+// Get resource usage response
+message GetResourceUsageResponse {
+  bool success = 1;
+  string message = 2;
+  ResourceUsage resource_usage = 3;
+}
+
+// Resource usage definition
+message ResourceUsage {
+  double cpu_usage = 1;
+  double memory_usage = 2;
+  double disk_usage = 3;
+  double network_usage = 4;
+  int32 active_connections = 5;
+  int32 thread_count = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  map<string, google.protobuf.Value> additional_metrics = 8;
+}
+
+// Ingest data request
+message IngestDataRequest {
+  string data_source = 1;
+  string data_type = 2;
+  google.protobuf.Any data = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  map<string, string> headers = 5;
+  map<string, google.protobuf.Value> metadata = 6;
+}
+
+// Ingest data response
+message IngestDataResponse {
+  bool success = 1;
+  string message = 2;
+  string ingestion_id = 3;
+  google.protobuf.Timestamp ingested_at = 4;
+}
+
+// Ingest batch data request
+message IngestBatchDataRequest {
+  repeated IngestDataRequest data_items = 1;
+  string batch_id = 2;
+  bool stop_on_error = 3;
+}
+
+// Ingest batch data response
+message IngestBatchDataResponse {
+  bool success = 1;
+  string message = 2;
+  string batch_id = 3;
+  int32 processed_count = 4;
+  int32 failed_count = 5;
+  google.protobuf.Timestamp ingested_at = 6;
+}
+
+// Get data ingestion status request
+message GetDataIngestionStatusRequest {
+  string ingestion_id = 1;
+}
+
+// Get data ingestion status response
+message GetDataIngestionStatusResponse {
+  bool success = 1;
+  string message = 2;
+  DataIngestionStatus status = 3;
+}
+
+// Data ingestion status definition
+message DataIngestionStatus {
+  string ingestion_id = 1;
+  enum Status {
+    PENDING = 0;
+    PROCESSING = 1;
+    COMPLETED = 2;
+    FAILED = 3;
+    CANCELLED = 4;
+  }
+  Status status = 2;
+  int32 processed_count = 3;
+  int32 total_count = 4;
+  google.protobuf.Timestamp started_at = 5;
+  google.protobuf.Timestamp completed_at = 6;
+  string error_message = 7;
+  map<string, google.protobuf.Value> metadata = 8;
+}
+
+// Run analysis request
+message RunAnalysisRequest {
+  string analysis_type = 1;
+  repeated string symbols = 2;
+  market_intel.common.v1.TimestampRange time_range = 3;
+  map<string, google.protobuf.Value> parameters = 4;
+  bool async = 5;
+}
+
+// Run analysis response
+message RunAnalysisResponse {
+  bool success = 1;
+  string message = 2;
+  string analysis_id = 3;
+  google.protobuf.Any result = 4;
+  google.protobuf.Timestamp completed_at = 5;
+}
+
+// Get analysis results request
+message GetAnalysisResultsRequest {
+  string analysis_id = 1;
+}
+
+// Get analysis results response
+message GetAnalysisResultsResponse {
+  bool success = 1;
+  string message = 2;
+  string analysis_id = 3;
+  google.protobuf.Any result = 4;
+  AnalysisStatus status = 5;
+}
+
+// Analysis status definition
+message AnalysisStatus {
+  string analysis_id = 1;
+  enum Status {
+    PENDING = 0;
+    RUNNING = 1;
+    COMPLETED = 2;
+    FAILED = 3;
+    CANCELLED = 4;
+  }
+  Status status = 2;
+  google.protobuf.Timestamp started_at = 3;
+  google.protobuf.Timestamp completed_at = 4;
+  string error_message = 5;
+  double progress_percentage = 6;
+  map<string, google.protobuf.Value> metadata = 7;
+}
+
+// Generate signals request
+message GenerateSignalsRequest {
+  repeated string symbols = 1;
+  repeated string strategies = 2;
+  market_intel.common.v1.TimestampRange time_range = 3;
+  map<string, google.protobuf.Value> parameters = 4;
+}
+
+// Generate signals response
+message GenerateSignalsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated market_intel.common.v1.TradingSignal signals = 3;
+  google.protobuf.Timestamp generated_at = 4;
+}
+
+// Get signals request
+message GetSignalsRequest {
+  market_intel.common.v1.PaginationRequest pagination = 1;
+  repeated string symbols = 2;
+  repeated string strategies = 3;
+  market_intel.common.v1.TimestampRange time_range = 4;
+  market_intel.common.v1.TradingSignal.SignalType signal_type = 5;
+  double min_confidence = 6;
+}
+
+// Get signals response
+message GetSignalsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated market_intel.common.v1.TradingSignal signals = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Create vector request
+message CreateVectorRequest {
+  string vector_id = 1;
+  repeated float values = 2;
+  map<string, string> metadata = 3;
+  string namespace = 4;
+}
+
+// Create vector response
+message CreateVectorResponse {
+  bool success = 1;
+  string message = 2;
+  string vector_id = 3;
+}
+
+// Search vectors request
+message SearchVectorsRequest {
+  repeated float query_vector = 1;
+  string namespace = 2;
+  int32 top_k = 3;
+  float score_threshold = 4;
+  map<string, string> filter = 5;
+}
+
+// Search vectors response
+message SearchVectorsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated VectorSearchResult results = 3;
+}
+
+// Vector search result
+message VectorSearchResult {
+  string vector_id = 1;
+  repeated float values = 2;
+  float score = 3;
+  map<string, string> metadata = 4;
+}
+
+// Update vector request
+message UpdateVectorRequest {
+  string vector_id = 1;
+  repeated float values = 2;
+  map<string, string> metadata = 3;
+}
+
+// Update vector response
+message UpdateVectorResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Delete vector request
+message DeleteVectorRequest {
+  string vector_id = 1;
+  string namespace = 2;
+}
+
+// Delete vector response
+message DeleteVectorResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Get from cache request
+message GetFromCacheRequest {
+  string key = 1;
+  string namespace = 2;
+}
+
+// Get from cache response
+message GetFromCacheResponse {
+  bool success = 1;
+  string message = 2;
+  bool found = 3;
+  google.protobuf.Any value = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+// Set in cache request
+message SetInCacheRequest {
+  string key = 1;
+  google.protobuf.Any value = 2;
+  string namespace = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  map<string, string> tags = 5;
+}
+
+// Set in cache response
+message SetInCacheResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Delete from cache request
+message DeleteFromCacheRequest {
+  string key = 1;
+  string namespace = 2;
+}
+
+// Delete from cache response
+message DeleteFromCacheResponse {
+  bool success = 1;
+  string message = 2;
+  bool deleted = 3;
+}
+
+// Clear cache request
+message ClearCacheRequest {
+  string namespace = 1;
+  string pattern = 2;
+}
+
+// Clear cache response
+message ClearCacheResponse {
+  bool success = 1;
+  string message = 2;
+  int32 cleared_count = 3;
+}
+
+// Subscribe to events request
+message SubscribeToEventsRequest {
+  repeated string event_types = 1;
+  repeated string sources = 2;
+  map<string, string> filters = 3;
+}
+
+// Event message
+message EventMessage {
+  string event_id = 1;
+  string event_type = 2;
+  string source = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  google.protobuf.Any payload = 5;
+  map<string, string> headers = 6;
+  string correlation_id = 7;
+  map<string, google.protobuf.Value> metadata = 8;
+}
+
+// Publish event request
+message PublishEventRequest {
+  string event_type = 1;
+  string source = 2;
+  google.protobuf.Any payload = 3;
+  string correlation_id = 4;
+  map<string, string> headers = 5;
+  map<string, google.protobuf.Value> metadata = 6;
+}
+
+// Publish event response
+message PublishEventResponse {
+  bool success = 1;
+  string message = 2;
+  string event_id = 3;
+  google.protobuf.Timestamp published_at = 4;
+}
+
+// Get event history request
+message GetEventHistoryRequest {
+  market_intel.common.v1.PaginationRequest pagination = 1;
+  repeated string event_types = 2;
+  repeated string sources = 3;
+  market_intel.common.v1.TimestampRange time_range = 4;
+  string correlation_id = 5;
+}
+
+// Get event history response
+message GetEventHistoryResponse {
+  bool success = 1;
+  string message = 2;
+  repeated EventMessage events = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Create task request
+message CreateTaskRequest {
+  string name = 1;
+  string description = 2;
+  string task_type = 3;
+  map<string, google.protobuf.Value> parameters = 4;
+  google.protobuf.Timestamp scheduled_at = 5;
+  repeated string dependencies = 6;
+  int32 priority = 7;
+  map<string, google.protobuf.Value> metadata = 8;
+}
+
+// Create task response
+message CreateTaskResponse {
+  bool success = 1;
+  string message = 2;
+  string task_id = 3;
+  Task task = 4;
+}
+
+// Task definition
+message Task {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string task_type = 4;
+  enum TaskStatus {
+    PENDING = 0;
+    RUNNING = 1;
+    COMPLETED = 2;
+    FAILED = 3;
+    CANCELLED = 4;
+  }
+  TaskStatus status = 5;
+  map<string, google.protobuf.Value> parameters = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  google.protobuf.Timestamp scheduled_at = 9;
+  google.protobuf.Timestamp started_at = 10;
+  google.protobuf.Timestamp completed_at = 11;
+  repeated string dependencies = 12;
+  int32 priority = 13;
+  string error_message = 14;
+  google.protobuf.Any result = 15;
+  map<string, google.protobuf.Value> metadata = 16;
+}
+
+// Get task request
+message GetTaskRequest {
+  string task_id = 1;
+}
+
+// Get task response
+message GetTaskResponse {
+  bool success = 1;
+  string message = 2;
+  Task task = 3;
+}
+
+// Update task request
+message UpdateTaskRequest {
+  string task_id = 1;
+  string name = 2;
+  string description = 3;
+  map<string, google.protobuf.Value> parameters = 4;
+  google.protobuf.Timestamp scheduled_at = 5;
+  int32 priority = 6;
+  map<string, google.protobuf.Value> metadata = 7;
+}
+
+// Update task response
+message UpdateTaskResponse {
+  bool success = 1;
+  string message = 2;
+  Task task = 3;
+}
+
+// Cancel task request
+message CancelTaskRequest {
+  string task_id = 1;
+  string reason = 2;
+}
+
+// Cancel task response
+message CancelTaskResponse {
+  bool success = 1;
+  string message = 2;
+  Task task = 3;
+}
+
+// List tasks request
+message ListTasksRequest {
+  market_intel.common.v1.PaginationRequest pagination = 1;
+  string task_type = 2;
+  Task.TaskStatus status = 3;
+  string search = 4;
+  string sort_by = 5;
+  string sort_order = 6;
+}
+
+// List tasks response
+message ListTasksResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Task tasks = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Create pipeline request
+message CreatePipelineRequest {
+  string name = 1;
+  string description = 2;
+  repeated PipelineStep steps = 3;
+  map<string, google.protobuf.Value> configuration = 4;
+  bool auto_start = 5;
+  map<string, google.protobuf.Value> metadata = 6;
+}
+
+// Create pipeline response
+message CreatePipelineResponse {
+  bool success = 1;
+  string message = 2;
+  string pipeline_id = 3;
+  Pipeline pipeline = 4;
+}
+
+// Pipeline definition
+message Pipeline {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  enum PipelineStatus {
+    DRAFT = 0;
+    ACTIVE = 1;
+    PAUSED = 2;
+    COMPLETED = 3;
+    FAILED = 4;
+    CANCELLED = 5;
+  }
+  PipelineStatus status = 4;
+  repeated PipelineStep steps = 5;
+  map<string, google.protobuf.Value> configuration = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  google.protobuf.Timestamp started_at = 9;
+  google.protobuf.Timestamp completed_at = 10;
+  string version = 11;
+  map<string, google.protobuf.Value> metadata = 12;
+}
+
+// Pipeline step definition
+message PipelineStep {
+  string id = 1;
+  string name = 2;
+  string step_type = 3;
+  map<string, google.protobuf.Value> configuration = 4;
+  repeated string dependencies = 5;
+  int32 order = 6;
+  bool is_optional = 7;
+  enum StepStatus {
+    PENDING = 0;
+    RUNNING = 1;
+    COMPLETED = 2;
+    FAILED = 3;
+    SKIPPED = 4;
+  }
+  StepStatus status = 8;
+  google.protobuf.Timestamp started_at = 9;
+  google.protobuf.Timestamp completed_at = 10;
+  string error_message = 11;
+  google.protobuf.Any result = 12;
+  map<string, google.protobuf.Value> metadata = 13;
+}
+
+// Get pipeline request
+message GetPipelineRequest {
+  string pipeline_id = 1;
+}
+
+// Get pipeline response
+message GetPipelineResponse {
+  bool success = 1;
+  string message = 2;
+  Pipeline pipeline = 3;
+}
+
+// Update pipeline request
+message UpdatePipelineRequest {
+  string pipeline_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated PipelineStep steps = 4;
+  map<string, google.protobuf.Value> configuration = 5;
+  map<string, google.protobuf.Value> metadata = 6;
+}
+
+// Update pipeline response
+message UpdatePipelineResponse {
+  bool success = 1;
+  string message = 2;
+  Pipeline pipeline = 3;
+}
+
+// Delete pipeline request
+message DeletePipelineRequest {
+  string pipeline_id = 1;
+  bool force = 2;
+}
+
+// Delete pipeline response
+message DeletePipelineResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// List pipelines request
+message ListPipelinesRequest {
+  market_intel.common.v1.PaginationRequest pagination = 1;
+  Pipeline.PipelineStatus status = 2;
+  string search = 3;
+  string sort_by = 4;
+  string sort_order = 5;
+}
+
+// List pipelines response
+message ListPipelinesResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Pipeline pipelines = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Execute pipeline request
+message ExecutePipelineRequest {
+  string pipeline_id = 1;
+  map<string, google.protobuf.Value> input_data = 2;
+  bool async = 3;
+}
+
+// Execute pipeline response
+message ExecutePipelineResponse {
+  string execution_id = 1;
+  string pipeline_id = 2;
+  Pipeline.PipelineStatus status = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  google.protobuf.Any result = 5;
+  string error_message = 6;
+  map<string, google.protobuf.Value> metadata = 7;
+}

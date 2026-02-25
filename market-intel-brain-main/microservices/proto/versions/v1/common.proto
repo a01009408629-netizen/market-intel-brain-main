@@ -1,0 +1,361 @@
+// Copyright (c) 2024 Market Intel Brain Team
+// Version: v1.0.0
+// Common protobuf definitions for Market Intel Brain
+// This file contains shared types and utilities used across all services
+
+syntax = "proto3";
+
+package market_intel.common.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/any.proto";
+
+// Common message definitions
+option go_package = "github.com/a01009408629-netizen/market-intel-brain/microservices/proto/common/v1;commonv1";
+option rust_package = "market_intel.common.v1";
+
+// Standard response wrapper
+message Response {
+  bool success = 1;
+  string message = 2;
+  string code = 3;
+  google.protobuf.Any data = 4;
+  map<string, string> metadata = 5;
+}
+
+// Standard error response
+message ErrorResponse {
+  string error_code = 1;
+  string error_message = 2;
+  repeated string details = 3;
+  map<string, string> metadata = 4;
+}
+
+// Pagination request
+message PaginationRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string sort_by = 3;
+  string sort_order = 4;
+}
+
+// Pagination response
+message PaginationResponse {
+  int32 current_page = 1;
+  int32 page_size = 2;
+  int32 total_pages = 3;
+  int64 total_items = 4;
+  bool has_next = 5;
+  bool has_previous = 6;
+}
+
+// Health check request
+message HealthCheckRequest {
+  string service = 1;
+}
+
+// Health check response
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+    SERVICE_UNKNOWN = 3;
+  }
+  ServingStatus status = 1;
+  string message = 2;
+  map<string, string> details = 3;
+}
+
+// Timestamp range
+message TimestampRange {
+  google.protobuf.Timestamp start = 1;
+  google.protobuf.Timestamp end = 2;
+}
+
+// Geographic location
+message Location {
+  double latitude = 1;
+  double longitude = 2;
+  string country = 3;
+  string region = 4;
+  string city = 5;
+}
+
+// Market data point
+message MarketDataPoint {
+  string symbol = 1;
+  double price = 2;
+  double volume = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  map<string, google.protobuf.Value> metadata = 5;
+}
+
+// Market data series
+message MarketDataSeries {
+  string symbol = 1;
+  string interval = 2;
+  repeated MarketDataPoint points = 3;
+  map<string, string> metadata = 4;
+}
+
+// Trading signal
+message TradingSignal {
+  string id = 1;
+  string symbol = 2;
+  enum SignalType {
+    BUY = 0;
+    SELL = 1;
+    HOLD = 2;
+  }
+  SignalType signal_type = 3;
+  double confidence = 4;
+  double target_price = 5;
+  double stop_loss = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  string strategy = 8;
+  map<string, google.protobuf.Value> metadata = 9;
+}
+
+// Portfolio position
+message Position {
+  string id = 1;
+  string symbol = 2;
+  double quantity = 3;
+  double average_price = 4;
+  double current_price = 5;
+  double unrealized_pnl = 6;
+  double realized_pnl = 7;
+  google.protobuf.Timestamp opened_at = 8;
+  google.protobuf.Timestamp closed_at = 9;
+  string status = 10;
+  map<string, google.protobuf.Value> metadata = 11;
+}
+
+// Order
+message Order {
+  string id = 1;
+  string symbol = 2;
+  enum OrderType {
+    MARKET = 0;
+    LIMIT = 1;
+    STOP = 2;
+    STOP_LIMIT = 3;
+  }
+  OrderType order_type = 3;
+  enum OrderSide {
+    BUY = 0;
+    SELL = 1;
+  }
+  OrderSide order_side = 4;
+  double quantity = 5;
+  double price = 6;
+  double stop_price = 7;
+  enum OrderStatus {
+    PENDING = 0;
+    FILLED = 1;
+    CANCELLED = 2;
+    REJECTED = 3;
+    EXPIRED = 4;
+  }
+  OrderStatus status = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  google.protobuf.Timestamp filled_at = 11;
+  string client_order_id = 12;
+  map<string, google.protobuf.Value> metadata = 13;
+}
+
+// Risk metrics
+message RiskMetrics {
+  double var_95 = 1;  // Value at Risk 95%
+  double var_99 = 2;  // Value at Risk 99%
+  double sharpe_ratio = 3;
+  double max_drawdown = 4;
+  double volatility = 5;
+  double beta = 6;
+  double alpha = 7;
+  google.protobuf.Timestamp calculated_at = 8;
+  map<string, google.protobuf.Value> additional_metrics = 9;
+}
+
+// Performance metrics
+message PerformanceMetrics {
+  double total_return = 1;
+  double annualized_return = 2;
+  double win_rate = 3;
+  double profit_factor = 4;
+  double average_win = 5;
+  double average_loss = 6;
+  int32 total_trades = 7;
+  int32 winning_trades = 8;
+  int32 losing_trades = 9;
+  google.protobuf.Timestamp period_start = 10;
+  google.protobuf.Timestamp period_end = 11;
+  map<string, google.protobuf.Value> additional_metrics = 12;
+}
+
+// News article
+message NewsArticle {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string source = 4;
+  string author = 5;
+  google.protobuf.Timestamp published_at = 6;
+  repeated string tags = 7;
+  string url = 8;
+  double sentiment_score = 9;
+  repeated string related_symbols = 10;
+  map<string, google.protobuf.Value> metadata = 11;
+}
+
+// Social media post
+message SocialMediaPost {
+  string id = 1;
+  string platform = 2;
+  string author = 3;
+  string content = 4;
+  google.protobuf.Timestamp posted_at = 5;
+  int32 likes = 6;
+  int32 shares = 7;
+  int32 comments = 8;
+  double sentiment_score = 9;
+  repeated string hashtags = 10;
+  repeated string mentioned_symbols = 11;
+  map<string, google.protobuf.Value> metadata = 12;
+}
+
+// Economic indicator
+message EconomicIndicator {
+  string id = 1;
+  string name = 2;
+  string country = 3;
+  double value = 4;
+  double previous_value = 5;
+  double change = 6;
+  double change_percent = 7;
+  google.protobuf.Timestamp released_at = 8;
+  string unit = 9;
+  string frequency = 10;
+  map<string, google.protobuf.Value> metadata = 11;
+}
+
+// Company financials
+message CompanyFinancials {
+  string symbol = 1;
+  string period = 2;
+  google.protobuf.Timestamp period_end = 3;
+  double revenue = 4;
+  double net_income = 5;
+  double gross_profit = 6;
+  double operating_income = 7;
+  double ebitda = 8;
+  double total_assets = 9;
+  double total_liabilities = 10;
+  double shareholders_equity = 11;
+  double earnings_per_share = 12;
+  double price_to_earnings = 13;
+  double price_to_sales = 14;
+  double price_to_book = 15;
+  double debt_to_equity = 16;
+  double current_ratio = 17;
+  double quick_ratio = 18;
+  double return_on_equity = 19;
+  double return_on_assets = 20;
+  map<string, double> additional_metrics = 21;
+  map<string, string> metadata = 22;
+}
+
+// Technical indicator
+message TechnicalIndicator {
+  string symbol = 1;
+  string indicator_name = 2;
+  string timeframe = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  map<string, double> values = 5;
+  map<string, string> parameters = 6;
+  map<string, google.protobuf.Value> metadata = 7;
+}
+
+// Alert condition
+message AlertCondition {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string symbol = 4;
+  enum ConditionType {
+    PRICE_ABOVE = 0;
+    PRICE_BELOW = 1;
+    VOLUME_ABOVE = 2;
+    VOLUME_BELOW = 3;
+    PERCENTAGE_CHANGE = 4;
+    TECHNICAL_SIGNAL = 5;
+    NEWS_SENTIMENT = 6;
+  }
+  ConditionType condition_type = 5;
+  double threshold = 6;
+  string operator = 7;
+  bool is_active = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp triggered_at = 10;
+  map<string, google.protobuf.Value> parameters = 11;
+}
+
+// User profile
+message UserProfile {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string timezone = 6;
+  string currency = 7;
+  string risk_profile = 8;
+  repeated string preferences = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  map<string, google.protobuf.Value> metadata = 12;
+}
+
+// API key
+message ApiKey {
+  string id = 1;
+  string name = 2;
+  string key_hash = 3;
+  repeated string permissions = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  google.protobuf.Timestamp last_used_at = 7;
+  bool is_active = 8;
+  map<string, google.protobuf.Value> metadata = 9;
+}
+
+// Audit log entry
+message AuditLogEntry {
+  string id = 1;
+  string user_id = 2;
+  string action = 3;
+  string resource_type = 4;
+  string resource_id = 5;
+  google.protobuf.Timestamp timestamp = 6;
+  string ip_address = 7;
+  string user_agent = 8;
+  bool success = 9;
+  string error_message = 10;
+  map<string, google.protobuf.Value> details = 11;
+}
+
+// Configuration setting
+message ConfigurationSetting {
+  string key = 1;
+  string value = 2;
+  string description = 3;
+  string data_type = 4;
+  bool is_sensitive = 5;
+  string category = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  string updated_by = 8;
+  map<string, google.protobuf.Value> metadata = 9;
+}

@@ -1,0 +1,763 @@
+// Copyright (c) 2024 Market Intel Brain Team
+// Version: v1.0.0
+// API gateway service protobuf definitions
+// This file contains API gateway related messages and service definitions
+
+syntax = "proto3";
+
+package market_intel.api_gateway.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/any.proto";
+import "versions/v1/common.proto";
+import "versions/v1/auth_service.proto";
+import "versions/v1/core_engine.proto";
+
+option go_package = "github.com/a01009408629-netizen/market-intel-brain/microservices/proto/api_gateway/v1;gatewayv1";
+option rust_package = "market_intel.api_gateway.v1";
+
+// API gateway service definition
+service ApiGatewayService {
+  // Health check
+  rpc HealthCheck(market_intel.common.v1.HealthCheckRequest) returns (market_intel.common.v1.HealthCheckResponse);
+  
+  // HTTP request handling
+  rpc HandleHttpRequest(HttpRequest) returns (HttpResponse);
+  rpc HandleBatchHttpRequests(BatchHttpRequests) returns (BatchHttpResponses);
+  
+  // Request routing and forwarding
+  rpc RouteRequest(RouteRequest) returns (RouteResponse);
+  rpc ForwardRequest(ForwardRequest) returns (ForwardResponse);
+  
+  // Authentication and authorization
+  rpc AuthenticateRequest(AuthenticateRequest) returns (AuthenticateResponse);
+  rpc AuthorizeRequest(AuthorizeRequest) returns (AuthorizeResponse);
+  
+  // Rate limiting
+  rpc CheckRateLimit(CheckRateLimitRequest) returns (CheckRateLimitResponse);
+  rpc GetRateLimitStatus(GetRateLimitStatusRequest) returns (GetRateLimitStatusResponse);
+  
+  // Request/response transformation
+  rpc TransformRequest(TransformRequest) returns (TransformResponse);
+  rpc TransformResponse(TransformResponse) returns (TransformResponse);
+  
+  // API management
+  rpc RegisterApi(RegisterApiRequest) returns (RegisterApiResponse);
+  rpc GetApi(GetApiRequest) returns (GetApiResponse);
+  rpc UpdateApi(UpdateApiRequest) returns (UpdateApiResponse);
+  rpc DeleteApi(DeleteApiRequest) returns (DeleteApiResponse);
+  rpc ListApis(ListApisRequest) returns (ListApisResponse);
+  
+  // Service discovery
+  rpc DiscoverServices(DiscoverServicesRequest) returns (DiscoverServicesResponse);
+  rpc GetServiceHealth(GetServiceHealthRequest) returns (GetServiceHealthResponse);
+  
+  // Load balancing
+  rpc SelectEndpoint(SelectEndpointRequest) returns (SelectEndpointResponse);
+  rpc UpdateEndpointHealth(UpdateEndpointHealthRequest) returns (UpdateEndpointHealthResponse);
+  
+  // Caching
+  rpc GetFromCache(GetFromCacheRequest) returns (GetFromCacheResponse);
+  rpc SetInCache(SetInCacheRequest) returns (SetInCacheResponse);
+  rpc InvalidateCache(InvalidateCacheRequest) returns (InvalidateCacheResponse);
+  
+  // Logging and monitoring
+  rpc LogRequest(LogRequest) returns (LogResponse);
+  rpc GetRequestLogs(GetRequestLogsRequest) returns (GetRequestLogsResponse);
+  rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
+  
+  // Configuration management
+  rpc GetConfiguration(GetConfigurationRequest) returns (GetConfigurationResponse);
+  rpc UpdateConfiguration(UpdateConfigurationRequest) returns (UpdateConfigurationResponse);
+  
+  // Webhook management
+  rpc RegisterWebhook(RegisterWebhookRequest) returns (RegisterWebhookResponse);
+  rpc TriggerWebhook(TriggerWebhookRequest) returns (TriggerWebhookResponse);
+  rpc ListWebhooks(ListWebhooksRequest) returns (ListWebhooksResponse);
+}
+
+// HTTP request message
+message HttpRequest {
+  string method = 1;
+  string path = 2;
+  string query_string = 3;
+  string protocol = 4;
+  string host = 5;
+  map<string, string> headers = 6;
+  string body = 7;
+  google.protobuf.Timestamp timestamp = 8;
+  string client_ip = 9;
+  string user_agent = 10;
+  string request_id = 11;
+  map<string, string> query_params = 12;
+  repeated string cookies = 13;
+  map<string, google.protobuf.Value> metadata = 14;
+}
+
+// HTTP response message
+message HttpResponse {
+  int32 status_code = 1;
+  string status_text = 2;
+  map<string, string> headers = 3;
+  string body = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  string request_id = 6;
+  int64 response_time_ms = 7;
+  repeated string cookies = 8;
+  map<string, google.protobuf.Value> metadata = 9;
+}
+
+// Batch HTTP requests
+message BatchHttpRequests {
+  repeated HttpRequest requests = 1;
+  string batch_id = 2;
+  bool stop_on_error = 3;
+}
+
+// Batch HTTP responses
+message BatchHttpResponses {
+  repeated HttpResponse responses = 1;
+  string batch_id = 2;
+  int32 processed_count = 3;
+  int32 failed_count = 4;
+}
+
+// Route request
+message RouteRequest {
+  HttpRequest request = 1;
+  string service_name = 2;
+  string version = 3;
+  map<string, string> routing_rules = 4;
+}
+
+// Route response
+message RouteResponse {
+  bool success = 1;
+  string message = 2;
+  string target_service = 3;
+  string target_endpoint = 4;
+  map<string, string> transformed_headers = 5;
+  string transformed_body = 6;
+  map<string, google.protobuf.Value> routing_metadata = 7;
+}
+
+// Forward request
+message ForwardRequest {
+  HttpRequest request = 1;
+  string target_url = 2;
+  int32 timeout_ms = 3;
+  int32 retry_count = 4;
+  map<string, string> additional_headers = 5;
+}
+
+// Forward response
+message ForwardResponse {
+  bool success = 1;
+  string message = 2;
+  HttpResponse response = 3;
+  int32 attempt_count = 4;
+  string error_message = 5;
+}
+
+// Authenticate request
+message AuthenticateRequest {
+  HttpRequest request = 1;
+  string auth_type = 2;
+  map<string, string> auth_credentials = 3;
+}
+
+// Authenticate response
+message AuthenticateResponse {
+  bool success = 1;
+  string message = 2;
+  market_intel.auth.v1.UserProfile user = 3;
+  repeated string permissions = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  string token = 6;
+}
+
+// Authorize request
+message AuthorizeRequest {
+  HttpRequest request = 1;
+  market_intel.auth.v1.UserProfile user = 2;
+  repeated string required_permissions = 3;
+  string resource = 4;
+  string action = 5;
+}
+
+// Authorize response
+message AuthorizeResponse {
+  bool success = 1;
+  string message = 2;
+  bool authorized = 3;
+  string reason = 4;
+}
+
+// Check rate limit request
+message CheckRateLimitRequest {
+  string client_id = 1;
+  string endpoint = 2;
+  string method = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  map<string, string> identifiers = 5;
+}
+
+// Check rate limit response
+message CheckRateLimitResponse {
+  bool success = 1;
+  string message = 2;
+  bool allowed = 3;
+  int32 remaining_requests = 4;
+  google.protobuf.Timestamp reset_time = 5;
+  int32 limit = 6;
+  int32 current_usage = 7;
+}
+
+// Get rate limit status request
+message GetRateLimitStatusRequest {
+  string client_id = 1;
+  string endpoint = 2;
+}
+
+// Get rate limit status response
+message GetRateLimitStatusResponse {
+  bool success = 1;
+  string message = 2;
+  repeated RateLimitInfo limits = 3;
+}
+
+// Rate limit information
+message RateLimitInfo {
+  string endpoint = 1;
+  string method = 2;
+  int32 limit = 3;
+  int32 remaining = 4;
+  google.protobuf.Timestamp reset_time = 5;
+  int32 current_usage = 6;
+  string window_type = 7;
+}
+
+// Transform request
+message TransformRequest {
+  HttpRequest request = 1;
+  repeated TransformationRule rules = 2;
+}
+
+// Transform response
+message TransformResponse {
+  bool success = 1;
+  string message = 2;
+  HttpRequest transformed_request = 3;
+  HttpResponse transformed_response = 4;
+}
+
+// Transformation rule
+message TransformationRule {
+  string type = 1;
+  string target = 2;
+  string operation = 3;
+  google.protobuf.Value parameters = 4;
+  int32 priority = 5;
+  bool enabled = 6;
+}
+
+// Register API request
+message RegisterApiRequest {
+  string name = 1;
+  string version = 2;
+  string base_path = 3;
+  repeated ApiEndpoint endpoints = 4;
+  ApiConfiguration configuration = 5;
+  repeated string tags = 6;
+  map<string, google.protobuf.Value> metadata = 7;
+}
+
+// Register API response
+message RegisterApiResponse {
+  bool success = 1;
+  string message = 2;
+  string api_id = 3;
+  ApiDefinition api = 4;
+}
+
+// API endpoint definition
+message ApiEndpoint {
+  string path = 1;
+  string method = 2;
+  string description = 3;
+  repeated string parameters = 4;
+  map<string, string> headers = 5;
+  string target_service = 6;
+  string target_endpoint = 7;
+  int32 timeout_ms = 8;
+  int32 retry_count = 9;
+  bool authentication_required = 10;
+  repeated string required_permissions = 11;
+  RateLimitConfig rate_limit = 12;
+  CacheConfig cache_config = 13;
+  repeated TransformationRule transformations = 14;
+}
+
+// API configuration
+message ApiConfiguration {
+  string target_base_url = 1;
+  map<string, string> default_headers = 2;
+  int32 default_timeout_ms = 3;
+  int32 default_retry_count = 4;
+  bool load_balancing_enabled = 5;
+  string load_balancing_strategy = 6;
+  bool circuit_breaker_enabled = 7;
+  CircuitBreakerConfig circuit_breaker = 8;
+}
+
+// Rate limit configuration
+message RateLimitConfig {
+  int32 requests_per_minute = 1;
+  int32 requests_per_hour = 2;
+  int32 requests_per_day = 3;
+  string burst_size = 4;
+  string algorithm = 5;
+}
+
+// Cache configuration
+message CacheConfig {
+  bool enabled = 1;
+  int32 ttl_seconds = 2;
+  string cache_key_pattern = 3;
+  repeated string cacheable_methods = 4;
+  repeated string cache_headers = 5;
+}
+
+// Circuit breaker configuration
+message CircuitBreakerConfig {
+  int32 failure_threshold = 1;
+  int32 success_threshold = 2;
+  int32 timeout_seconds = 3;
+  int32 max_requests = 4;
+}
+
+// API definition
+message ApiDefinition {
+  string id = 1;
+  string name = 2;
+  string version = 3;
+  string base_path = 4;
+  repeated ApiEndpoint endpoints = 5;
+  ApiConfiguration configuration = 6;
+  repeated string tags = 7;
+  bool is_active = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  map<string, google.protobuf.Value> metadata = 11;
+}
+
+// Get API request
+message GetApiRequest {
+  string api_id = 1;
+  string name = 2;
+  string version = 3;
+}
+
+// Get API response
+message GetApiResponse {
+  bool success = 1;
+  string message = 2;
+  ApiDefinition api = 3;
+}
+
+// Update API request
+message UpdateApiRequest {
+  string api_id = 1;
+  string name = 2;
+  string version = 3;
+  string base_path = 4;
+  repeated ApiEndpoint endpoints = 5;
+  ApiConfiguration configuration = 6;
+  repeated string tags = 7;
+  bool is_active = 8;
+  map<string, google.protobuf.Value> metadata = 9;
+}
+
+// Update API response
+message UpdateApiResponse {
+  bool success = 1;
+  string message = 2;
+  ApiDefinition api = 3;
+}
+
+// Delete API request
+message DeleteApiRequest {
+  string api_id = 1;
+  bool force = 2;
+}
+
+// Delete API response
+message DeleteApiResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// List APIs request
+message ListApisRequest {
+  market_intel.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+  repeated string tags = 3;
+  bool is_active = 4;
+  string sort_by = 5;
+  string sort_order = 6;
+}
+
+// List APIs response
+message ListApisResponse {
+  bool success = 1;
+  string message = 2;
+  repeated ApiDefinition apis = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Discover services request
+message DiscoverServicesRequest {
+  string service_name = 1;
+  string version = 2;
+  repeated string tags = 3;
+}
+
+// Discover services response
+message DiscoverServicesResponse {
+  bool success = 1;
+  string message = 2;
+  repeated ServiceInfo services = 3;
+}
+
+// Service information
+message ServiceInfo {
+  string name = 1;
+  string version = 2;
+  repeated EndpointInfo endpoints = 3;
+  repeated string tags = 4;
+  ServiceHealth health = 5;
+  google.protobuf.Timestamp last_updated = 6;
+  map<string, google.protobuf.Value> metadata = 7;
+}
+
+// Endpoint information
+message EndpointInfo {
+  string url = 1;
+  string protocol = 2;
+  int32 port = 3;
+  string path = 4;
+  repeated string methods = 5;
+  bool is_healthy = 6;
+  google.protobuf.Timestamp last_health_check = 7;
+  map<string, google.protobuf.Value> metadata = 8;
+}
+
+// Service health
+message ServiceHealth {
+  enum HealthStatus {
+    UNKNOWN = 0;
+    HEALTHY = 1;
+    UNHEALTHY = 2;
+    DEGRADED = 3;
+  }
+  HealthStatus status = 1;
+  string message = 2;
+  google.protobuf.Timestamp last_check = 3;
+  int32 consecutive_failures = 4;
+  double response_time_ms = 5;
+  map<string, google.protobuf.Value> details = 6;
+}
+
+// Get service health request
+message GetServiceHealthRequest {
+  string service_name = 1;
+  string version = 2;
+}
+
+// Get service health response
+message GetServiceHealthResponse {
+  bool success = 1;
+  string message = 2;
+  ServiceHealth health = 3;
+}
+
+// Select endpoint request
+message SelectEndpointRequest {
+  string service_name = 1;
+  string version = 2;
+  LoadBalancingStrategy strategy = 3;
+  map<string, google.protobuf.Value> criteria = 4;
+}
+
+// Select endpoint response
+message SelectEndpointResponse {
+  bool success = 1;
+  string message = 2;
+  EndpointInfo endpoint = 3;
+  string selection_reason = 4;
+}
+
+// Load balancing strategy
+message LoadBalancingStrategy {
+  enum Strategy {
+    ROUND_ROBIN = 0;
+    LEAST_CONNECTIONS = 1;
+    WEIGHTED_ROUND_ROBIN = 2;
+    RANDOM = 3;
+    IP_HASH = 4;
+    LEAST_RESPONSE_TIME = 5;
+  }
+  Strategy type = 1;
+  map<string, google.protobuf.Value> parameters = 2;
+}
+
+// Update endpoint health request
+message UpdateEndpointHealthRequest {
+  string service_name = 1;
+  string endpoint_url = 2;
+  ServiceHealth health = 3;
+}
+
+// Update endpoint health response
+message UpdateEndpointHealthResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Get from cache request
+message GetFromCacheRequest {
+  string key = 1;
+  string namespace = 2;
+  map<string, string> headers = 3;
+}
+
+// Get from cache response
+message GetFromCacheResponse {
+  bool success = 1;
+  string message = 2;
+  bool found = 3;
+  HttpResponse cached_response = 4;
+  google.protobuf.Timestamp cached_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+// Set in cache request
+message SetInCacheRequest {
+  string key = 1;
+  HttpResponse response = 2;
+  string namespace = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  repeated string tags = 5;
+  map<string, string> headers = 6;
+}
+
+// Set in cache response
+message SetInCacheResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Invalidate cache request
+message InvalidateCacheRequest {
+  string pattern = 1;
+  string namespace = 2;
+  repeated string keys = 3;
+  repeated string tags = 4;
+}
+
+// Invalidate cache response
+message InvalidateCacheResponse {
+  bool success = 1;
+  string message = 2;
+  int32 invalidated_count = 3;
+}
+
+// Log request
+message LogRequest {
+  HttpRequest request = 1;
+  HttpResponse response = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  int64 response_time_ms = 4;
+  string client_id = 5;
+  string user_id = 6;
+  LogLevel level = 7;
+  repeated string tags = 8;
+  map<string, google.protobuf.Value> additional_data = 9;
+}
+
+// Log response
+message LogResponse {
+  bool success = 1;
+  string message = 2;
+  string log_id = 3;
+}
+
+// Log level
+enum LogLevel {
+  DEBUG = 0;
+  INFO = 1;
+  WARN = 2;
+  ERROR = 3;
+  FATAL = 4;
+}
+
+// Get request logs request
+message GetRequestLogsRequest {
+  market_intel.common.v1.PaginationRequest pagination = 1;
+  string client_id = 2;
+  string user_id = 3;
+  string endpoint = 4;
+  string method = 5;
+  LogLevel min_level = 6;
+  market_intel.common.v1.TimestampRange time_range = 7;
+  repeated string tags = 8;
+  string search = 9;
+}
+
+// Get request logs response
+message GetRequestLogsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated RequestLogEntry logs = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}
+
+// Request log entry
+message RequestLogEntry {
+  string id = 1;
+  HttpRequest request = 2;
+  HttpResponse response = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  int64 response_time_ms = 5;
+  string client_id = 6;
+  string user_id = 7;
+  LogLevel level = 8;
+  repeated string tags = 9;
+  map<string, google.protobuf.Value> additional_data = 10;
+}
+
+// Get metrics request
+message GetMetricsRequest {
+  string component = 1;
+  string metric_type = 2;
+  market_intel.common.v1.TimestampRange time_range = 3;
+  repeated string labels = 4;
+}
+
+// Get metrics response
+message GetMetricsResponse {
+  bool success = 1;
+  string message = 2;
+  repeated GatewayMetric metrics = 3;
+}
+
+// Gateway metric
+message GatewayMetric {
+  string name = 1;
+  string type = 2;
+  double value = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  map<string, string> labels = 5;
+  string unit = 6;
+  string description = 7;
+}
+
+// Get configuration request
+message GetConfigurationRequest {
+  string component = 1;
+  repeated string keys = 2;
+}
+
+// Get configuration response
+message GetConfigurationResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, google.protobuf.Value> configuration = 3;
+}
+
+// Update configuration request
+message UpdateConfigurationRequest {
+  string component = 1;
+  map<string, google.protobuf.Value> configuration = 2;
+  bool validate_only = 3;
+}
+
+// Update configuration response
+message UpdateConfigurationResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, google.protobuf.Value> updated_configuration = 3;
+  repeated string validation_errors = 4;
+}
+
+// Register webhook request
+message RegisterWebhookRequest {
+  string name = 1;
+  string url = 2;
+  repeated string events = 3;
+  string secret = 4;
+  bool active = 5;
+  map<string, google.protobuf.Value> headers = 6;
+  int32 timeout_seconds = 7;
+  int32 retry_count = 8;
+  map<string, google.protobuf.Value> metadata = 9;
+}
+
+// Register webhook response
+message RegisterWebhookResponse {
+  bool success = 1;
+  string message = 2;
+  string webhook_id = 3;
+  Webhook webhook = 4;
+}
+
+// Webhook definition
+message Webhook {
+  string id = 1;
+  string name = 2;
+  string url = 3;
+  repeated string events = 4;
+  bool active = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  google.protobuf.Timestamp last_triggered = 8;
+  int32 trigger_count = 9;
+  int32 failure_count = 10;
+  map<string, google.protobuf.Value> headers = 11;
+  int32 timeout_seconds = 12;
+  int32 retry_count = 13;
+  map<string, google.protobuf.Value> metadata = 14;
+}
+
+// Trigger webhook request
+message TriggerWebhookRequest {
+  string webhook_id = 1;
+  string event_type = 2;
+  google.protobuf.Any payload = 3;
+  string correlation_id = 4;
+}
+
+// Trigger webhook response
+message TriggerWebhookResponse {
+  bool success = 1;
+  string message = 2;
+  string trigger_id = 3;
+  google.protobuf.Timestamp triggered_at = 4;
+}
+
+// List webhooks request
+message ListWebhooksRequest {
+  market_intel.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+  bool active = 3;
+  repeated string events = 4;
+}
+
+// List webhooks response
+message ListWebhooksResponse {
+  bool success = 1;
+  string message = 2;
+  repeated Webhook webhooks = 3;
+  market_intel.common.v1.PaginationResponse pagination = 4;
+}

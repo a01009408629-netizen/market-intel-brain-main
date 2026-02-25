@@ -1,0 +1,521 @@
+# Clippy configuration for Market Intel Brain
+# Strict linting rules to ensure code quality and safety
+
+# General configuration
+cognitive-complexity-threshold = 15
+too-many-arguments-threshold = 7
+type-complexity-threshold = 250
+single-char-binding-names-threshold = 4
+trivial-copy-size-limit = 1024
+pass-by-value-size-limit = 256
+too-many-lines-threshold = 100
+array-size-threshold = 512_000
+vec-box-size-threshold = 4096
+max-trait-bounds = 3
+max_include_file_size = 1_000_000
+avoid-breaking-exported-api = true
+allow-expect-in-tests = true
+allow-dbg-in-tests = true
+allow-unwrap-in-tests = true
+allow-mixed-uninlined-format-args = true
+allowed-scripts = ["cargo", "rustc", "clippy"]
+
+# Disallowed methods and types
+disallowed-methods = [
+    "core::iter::traits::iterator::Iterator::sum",
+    "core::iter::traits::iterator::Iterator::product",
+    "std::iter::Iterator::sum",
+    "std::iter::Iterator::product",
+]
+
+disallowed-types = [
+    "std::collections::HashMap",
+    "std::collections::HashSet",
+]
+
+# Documentation requirements
+missing-docs-in-crate-items = true
+missing-docs-in-crate-items = true
+doc-valid-idents = [
+    "MarketIntel",
+    "gRPC",
+    "HTTP",
+    "HTTPS",
+    "URL",
+    "URI",
+    "JSON",
+    "YAML",
+    "TOML",
+    "SQL",
+    "NoSQL",
+    "API",
+    "REST",
+    "GraphQL",
+    "OAuth",
+    "JWT",
+    "TLS",
+    "SSL",
+    "TCP",
+    "UDP",
+    "IP",
+    "DNS",
+    "CDN",
+    "CI",
+    "CD",
+    "IDE",
+    "SDK",
+    "CPU",
+    "GPU",
+    "RAM",
+    "SSD",
+    "HDD",
+    "OS",
+    "FS",
+    "DB",
+    "ACID",
+    "BASE",
+    "CAP",
+    "SOLID",
+    "DRY",
+    "KISS",
+    "YAGNI",
+    "POC",
+    "MVP",
+    "A/B",
+    "QA",
+    "QC",
+    "UX",
+    "UI",
+    "HTML",
+    "CSS",
+    "JS",
+    "TS",
+    "DOM",
+    "XML",
+    "CSV",
+    "PDF",
+    "PNG",
+    "JPG",
+    "SVG",
+    "GIF",
+    "MP4",
+    "MP3",
+    "ZIP",
+    "TAR",
+    "GZIP",
+    "SHA",
+    "MD5",
+    "RSA",
+    "AES",
+    "ECDSA",
+    "UUID",
+    "GUID",
+    "ID",
+    "OK",
+    "TODO",
+    "FIXME",
+    "NOTE",
+    "XXX",
+    "HACK",
+    "BUG",
+    "WARN",
+    "ERROR",
+    "INFO",
+    "DEBUG",
+    "TRACE",
+]
+
+# Lint configuration
+[lints.rust]
+# Rust built-in lints - deny for strictness
+absolute_paths_not_starting_with_crate = "deny"
+dead_code = "deny"
+deprecated_in_future = "deny"
+elided_lifetimes_in_paths = "deny"
+explicit_outlives_requirements = "deny"
+ffi_unwind_calls = "deny"
+keyword_idents_2018 = "deny"
+keyword_idents_2021 = "deny"
+macro_use_extern_crate = "deny"
+meta_variable_misuse = "deny"
+missing_abi = "deny"
+missing_copy_implementations = "deny"
+missing_debug_implementations = "deny"
+missing_docs = "deny"
+non_ascii_idents = "deny"
+non_camel_case_types = "deny"
+non_fmt_panic = "deny"
+non_upper_case_globals = "deny"
+noop_method_call = "deny"
+pointer_structural_match = "deny"
+private_interning_fns = "deny"
+semicolon_in_expressions_from_macros = "deny"
+trivial_numeric_casts = "deny"
+unreachable_pub = "deny"
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+unstable_features = "deny"
+unused_crate_dependencies = "deny"
+unused_extern_crates = "deny"
+unused_import_braces = "deny"
+unused_lifetimes = "deny"
+unused_macro_rules = "deny"
+unused_qualifications = "deny"
+unused_results = "deny"
+variant_size_differences = "deny"
+
+[lints.clippy]
+# Clippy lints - deny for strictness
+# Pedantic
+pedantic = "deny"
+nursery = "deny"
+cargo = "deny"
+
+# Restriction lints
+as_conversions = "deny"
+as_ptr_cast_mut = "deny"
+assertions_on_result_states = "deny"
+cast_lossless = "deny"
+cast_possible_truncation = "deny"
+cast_possible_wrap = "deny"
+cast_precision_loss = "deny"
+cast_ptr_as_ptr = "deny"
+cast_sign_loss = "deny"
+checked_conversions = "deny"
+clone_on_ref_ptr = "deny"
+cloned_instead_of_copied = "deny"
+create_dir = "deny"
+dbg_macro = "deny"
+decimal_literal_representation = "deny"
+default_numeric_fallback = "deny"
+default_union_representation = "deny"
+deref_by_slicing = "deny"
+disallowed_names = "deny"
+else_if_without_else = "deny"
+empty_drop = "deny"
+empty_enum_variants_with_brackets = "deny"
+empty_structs_with_brackets = "deny"
+error_impl_error = "deny"
+exhaustive_enums = "deny"
+exhaustive_structs = "deny"
+exit = "deny"
+expect_used = "deny"
+filetype_is_file = "deny"
+float_arithmetic = "deny"
+float_cmp = "deny"
+float_cmp_const = "deny"
+fn_to_numeric_cast = "deny"
+fn_to_numeric_cast_any = "deny"
+for_loops_over_fallibles = "deny"
+format_push_string = "deny"
+get_unwrap = "deny"
+if_not_else = "deny"
+if_then_some_else_none = "deny"
+implicit_clone = "deny"
+implicit_hasher = "deny"
+indexing_slicing = "deny"
+inline_asm_x86_att_syntax = "deny"
+inline_asm_x86_intel_syntax = "deny"
+integer_division = "deny"
+iter_not_returning_iterator = "deny"
+large_include_file = "deny"
+lossy_float_literal = "deny"
+map_err_ignore = "deny"
+mem_forget = "deny"
+missing_errors_doc = "deny"
+missing_panics_doc = "deny"
+mod_module_files = "deny"
+module_inception = "deny"
+module_name_repetitions = "deny"
+must_use_candidate = "deny"
+mutex_atomic = "deny"
+mutex_integer = "deny"
+naive_bytecount = "deny"
+needless_bitwise_bool = "deny"
+needless_continue = "deny"
+needless_for_each = "deny"
+needless_pass_by_value = "deny"
+no_effect_underscore_binding = "deny"
+no_mangle_with_rust_abi = "deny"
+option_as_ref_deref = "deny"
+option_option = "deny"
+panic_in_result_fn = "deny"
+path_buf_push_overwrite = "deny"
+pattern_type_mismatch = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+print_literal = "deny"
+rc_buffer = "deny"
+rc_mutex = "deny"
+rest_pat_in_fully_bound_structs = "deny"
+same_name_method = "deny"
+self_named_module_files = "deny"
+semicolon_outside_block = "deny"
+shadow_same = "deny"
+single_char_pattern = "deny"
+str_to_string = "deny"
+string_add = "deny"
+string_add_assign = "deny"
+string_lit_as_bytes = "deny"
+string_to_string = "deny"
+struct_excessive_bools = "deny"
+struct_field_names = "deny"
+todo = "deny"
+trivial_regex = "deny"
+try_err = "deny"
+undocumented_unsafe_blocks = "deny"
+unimplemented = "deny"
+unnecessary_self_imports = "deny"
+unnecessary_wraps = "deny"
+unneeded_field_pattern = "deny"
+unnested_or_patterns = "deny"
+unreachable = "deny"
+unwrap_in_result = "deny"
+unwrap_used = "deny"
+use_debug = "deny"
+verbose_file_reads = "deny"
+wildcard_dependencies = "deny"
+wildcard_enum_match_arm = "deny"
+wildcard_imports = "deny"
+zero_sized_map_values = "deny"
+
+# Allow some specific pedantic lints in tests
+[lints.clippy]
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+# Specific configuration for certain lints
+[lints.clippy]
+# Cargo lints
+multiple_crate_versions = "warn"
+wildcard_dependencies = "deny"
+
+# Complexity lints
+cognitive_complexity = "deny"
+too_many_arguments = "deny"
+too_many_lines = "deny"
+type_complexity = "deny"
+
+# Correctness lints
+cast_possible_truncation = "deny"
+cast_possible_wrap = "deny"
+cast_precision_loss = "deny"
+cast_sign_loss = "deny"
+clone_on_ref_ptr = "deny"
+derivable_impls = "deny"
+float_cmp = "deny"
+float_cmp_const = "deny"
+format_push_string = "deny"
+from_iter_instead_of_collect = "deny"
+get_unwrap = "deny"
+if_not_else = "deny"
+indexing_slicing = "deny"
+infinite_loop = "deny"
+into_iter_on_ref = "deny"
+iter_not_returning_iterator = "deny"
+iter_next_loop = "deny"
+iter_nth_zero = "deny"
+iter_over_into_iter = "deny"
+iterator_step_by_zero = "deny"
+large_digit_groups = "deny"
+manual_swap = "deny"
+map_entry = "deny"
+match_same_arms = "deny"
+mem_replace_option_with_none = "deny"
+missing_safety_doc = "deny"
+mut_mut = "deny"
+mutex_atomic = "deny"
+needless_borrow = "deny"
+needless_collect = "deny"
+needless_pass_by_value = "deny"
+non_ascii_literal = "deny"
+option_map_unit_fn = "deny"
+or_fun_call = "deny"
+panic = "deny"
+panicking_unwrap = "deny"
+partial_pub_fields = "deny"
+print_literal = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+range_zip_with_any = "deny"
+redundant_clone = "deny"
+redundant_closure = "deny"
+redundant_pattern = "deny"
+redundant_pattern_matching = "deny"
+repeat_once = "deny"
+rest_pat_in_fully_bound_structs = "deny"
+result_map_or_into_option = "deny"
+same_functions_in_if_condition = "deny"
+shadow_same = "deny"
+string_add = "deny"
+string_add_assign = "deny"
+suspicious_arithmetic_impl = "deny"
+suspicious_assignment_formatting = "deny"
+suspicious_else_formatting = "deny"
+suspicious_op_assign_impl = "deny"
+suspicious_unary_op_formatting = "deny"
+trivial_regex = "deny"
+undocumented_unsafe_blocks = "deny"
+unicode_not_nfc = "deny"
+unimplemented = "deny"
+uninlined_format_args = "deny"
+unnecessary_fold = "deny"
+unnecessary_mut_passed = "deny"
+unnecessary_unwrap = "deny"
+unnecessary_wraps = "deny"
+unneeded_field_pattern = "deny"
+unreachable = "deny"
+unreachable_pub = "deny"
+unsafe_derive_deserialize = "deny"
+unseparated_literal_suffix = "deny"
+unused_async = "deny"
+unused_self = "deny"
+unwrap_in_result = "deny"
+unwrap_used = "deny"
+use_debug = "deny"
+verbose_bit_mask = "deny"
+wildcard_enum_match_arm = "deny"
+wildcard_imports = "deny"
+zero_sized_map_values = "deny"
+
+# Style lints
+assertions_on_result_states = "deny"
+bool_to_int_with_if = "deny"
+borrow_as_ptr = "deny"
+cast_lossless = "deny"
+cast_ptr_as_ptr = "deny"
+checked_conversions = "deny"
+cloned_instead_of_copied = "deny"
+copy_iterator = "deny"
+default_trait_access = "deny"
+doc_link_with_quotes = "deny"
+double_neg = "deny"
+double_must_use = "deny"
+empty_enum = "deny"
+empty_line_after_outer_attr = "deny"
+empty_structs_with_brackets = "deny"
+enum_glob_use = "deny"
+error_impl_error = "deny"
+expect_fun_call = "deny"
+expl_impl_clone_on_copy = "deny"
+explicit_into_iter_loop = "deny"
+explicit_iter_loop = "deny"
+filter_map_next = "deny"
+flat_map_option = "deny"
+float_equality_without_abs = "deny"
+for_loops_over_fallibles = "deny"
+from_over_into = "deny"
+function_name_as_string = "deny"
+implicit_clone = "deny"
+implicit_hasher = "deny"
+inconsistent_struct_constructor = "deny"
+inefficient_to_string = "deny"
+inline_always = "deny"
+into_iter_without_iter = "deny"
+invalid_upcast_comparisons = "deny"
+items_after_statements = "deny"
+iter_not_returning_iterator = "deny"
+large_digit_groups = "deny"
+large_stack_arrays = "deny"
+large_types_passed_by_value = "deny"
+let_unit_value = "deny"
+linkedlist = "deny"
+macro_use_imports = "deny"
+manual_assert = "deny"
+manual_instant_elapsed = "deny"
+manual_let_else = "deny"
+manual_ok_or = "deny"
+manual_string_new = "deny"
+many_single_char_names = "deny"
+map_unwrap_or = "deny"
+match_bool = "deny"
+match_on_vec_items = "deny"
+match_same_arms = "deny"
+match_wild_err_arm = "deny"
+maybe_infinite_iter = "deny"
+mem_forget = "deny"
+mem_replace_option_with_none = "deny"
+min_ident_chars = "deny"
+missing_docs_in_private_items = "deny"
+missing_enforced_import_renames = "deny"
+missing_spin_loop = "deny"
+mixed_case_hex_literals = "deny"
+module_name_repetitions = "deny"
+modulo_one = "deny"
+must_use_candidate = "deny"
+mut_range_lock = "deny"
+mutex_atomic = "deny"
+naive_bytecount = "deny"
+needless_bitwise_bool = "deny"
+needless_continue = "deny"
+needless_for_each = "deny"
+needless_pass_by_ref = "deny"
+needless_pass_by_value = "deny"
+no_effect_underscore_binding = "deny"
+no_mangle_with_rust_abi = "deny"
+non_ascii_literals = "deny"
+option_as_ref_deref = "deny"
+option_option = "deny"
+path_buf_push_overwrite = "deny"
+print_literal = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+ptr_as_ptr = "deny"
+ptr_eq_with_ptr_eq_compat = "deny"
+question_mark = "deny"
+range_minus_one = "deny"
+range_plus_one = "deny"
+redundant_clone = "deny"
+redundant_closure_call = "deny"
+redundant_else = "deny"
+redundant_feature_names = "deny"
+redundant_pub_crate = "deny"
+ref_binding_to_reference = "deny"
+ref_option_ref = "deny"
+repeat_once = "deny"
+return_self_not_must_use = "deny"
+same_functions_in_if_condition = "deny"
+same_name_method = "deny"
+self_named_constructors = "deny"
+semicolon_if_nothing_returned = "deny"
+shadow_same = "deny"
+single_char_pattern = "deny"
+single_match_else = "deny"
+stable_sort_primitive = "deny"
+str_to_string = "deny"
+string_add = "deny"
+string_add_assign = "deny"
+string_lit_as_bytes = "deny"
+struct_excessive_bools = "deny"
+struct_field_names = "deny"
+to_string_in_format_args = "deny"
+todo = "deny"
+trivial_regex = "deny"
+try_err = "deny"
+type_complexity = "deny"
+undocumented_unsafe_blocks = "deny"
+unimplemented = "deny"
+unnecessary_cast = "deny"
+unnecessary_mut_passed = "deny"
+unnecessary_wraps = "deny"
+unneeded_field_pattern = "deny"
+unnested_or_patterns = "deny"
+unreachable = "deny"
+unused_async = "deny"
+unused_self = "deny"
+unwrap_in_result = "deny"
+unwrap_used = "deny"
+use_debug = "deny"
+use_self = "deny"
+used_underscore_binding = "deny"
+useless_asref = "deny"
+useless_conversion = "deny"
+useless_format = "deny"
+verbose_bit_mask = "deny"
+verbose_file_reads = "deny"
+wildcard_dependencies = "deny"
+wildcard_enum_match_arm = "deny"
+wildcard_imports = "deny"
+zero_sized_map_values = "deny"
