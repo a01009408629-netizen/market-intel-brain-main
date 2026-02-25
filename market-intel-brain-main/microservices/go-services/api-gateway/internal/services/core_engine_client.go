@@ -6,12 +6,14 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
 	pb "github.com/market-intel/api-gateway/proto"
 	"github.com/market-intel/api-gateway/pkg/logger"
 	"github.com/market-intel/api-gateway/pkg/otel"
+	"github.com/market-intel/api-gateway/pkg/tls"
 )
 
 type CoreEngineClient struct {
@@ -20,20 +22,51 @@ type CoreEngineClient struct {
 }
 
 func NewCoreEngineClient(address string) (*CoreEngineClient, error) {
-	// Create connection with timeout
+	// Load TLS configuration
+	tlsConfig := tls.NewTLSConfigFromEnv()
+	
+	// Validate TLS configuration
+	if err := tlsConfig.Validate(); err != nil {
+		return nil, logger.Errorf("TLS configuration validation failed: %w", err)
+	}
+	
+	// Create gRPC credentials with TLS
+	grpcCreds, err := tlsConfig.CreateGRPCCredentials()
+	if err != nil {
+		return nil, logger.Errorf("failed to create gRPC credentials: %w", err)
+	}
+	
+	// Get certificate info for logging
+	if certInfo, err := tlsConfig.GetCertificateInfo(); err == nil {
+		logger.Infof("Using client certificate: %s issued by %s", certInfo.Subject, certInfo.Issuer)
+		logger.Infof("Certificate expires: %s", certInfo.NotAfter)
+		if certInfo.IsExpired() {
+			return nil, logger.Errorf("client certificate has expired")
+		}
+	}
+	
+	// Create connection with timeout and TLS
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	
+	conn, err := grpc.DialContext(ctx, address, 
+		grpc.WithTransportCredentials(grpcCreds),
+		grpc.WithBlock(),
+		grpc.WithTimeout(5*time.Second),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                10 * time.Second,
+			Timeout:              3 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	)
 	if err != nil {
-		logger.Errorf("Failed to connect to Core Engine: %v", err)
-		return nil, fmt.Errorf("failed to connect to Core Engine: %w", err)
+		return nil, logger.Errorf("failed to connect to core engine: %w", err)
 	}
 
 	client := pb.NewCoreEngineServiceClient(conn)
-
-	logger.Infof("Connected to Core Engine at %s", address)
-
+	
+	logger.Infof("Connected to core engine at %s with mTLS", address)
+	
 	return &CoreEngineClient{
 		conn:   conn,
 		client: client,

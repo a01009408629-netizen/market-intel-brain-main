@@ -1,21 +1,30 @@
 //! Core Engine Main Entry Point
 //! 
 //! This is the main entry point for the Core Engine service.
-//! It initializes the gRPC server and starts the LMAX Disruptor engine.
+//! It initializes the gRPC server with TLS/mTLS support and starts the LMAX Disruptor engine.
 
 use std::net::SocketAddr;
-use tonic::transport::Server;
+use std::sync::Arc;
+use tonic::transport::{Server, ServerTlsConfig};
+use tonic::transport::Identity;
+use tonic::transport::Certificate;
 use tracing::{info, error, warn};
 use tracing_subscriber;
 use tokio::signal;
+use tower::ServiceBuilder;
 
 mod core_engine_service;
 mod config;
 mod data_ingestion;
+mod proto;
+mod otel;
+mod metrics;
+mod tls;
 
 use core_engine_service::CoreEngineServiceImpl;
 use config::CoreEngineConfig;
 use crate::otel;
+use crate::tls::TlsConfig;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -28,52 +37,92 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting Market Intel Brain Core Engine v{}", env!("CARGO_PKG_VERSION"));
 
     // Load configuration
-    let config = CoreEngineConfig::from_env()?;
-    info!("Loaded configuration: {:?}", config);
-
-    // Create core engine service
-    let core_engine_service = CoreEngineServiceImpl::new(config.clone())?;
-
-    // Start background data collection
-    if let Err(e) = core_engine_service.data_ingestion.start_background_collection() {
-        warn!("Failed to start background collection: {}", e);
+    let config = CoreEngineConfig::from_env()
+        .map_err(|e| format!("Failed to load configuration: {}", e))?;
+    
+    // Initialize TLS configuration
+    let tls_config = TlsConfig::from_env();
+    
+    // Validate TLS configuration
+    if let Err(e) = tls_config.validate() {
+        error!("TLS configuration validation failed: {}", e);
+        return Err(e);
     }
+    
+    // Create TLS server configuration
+    let server_tls_config = tls_config.create_server_tls_config()
+        .map_err(|e| format!("Failed to create TLS configuration: {}", e))?;
+    
+    // Create gRPC service
+    let core_engine_service = CoreEngineServiceImpl::new(config.clone());
+    let core_engine_service = market_intel::core_engine::core_engine_service_server::CoreEngineServiceServer::new(core_engine_service);
 
-    // Create gRPC server
+    // Create server address
     let addr = SocketAddr::from(([0, 0, 0, 0], config.grpc_port));
-    info!("Core Engine gRPC server listening on {}", addr);
-
-    // Start server with graceful shutdown
+    
+    info!("Starting gRPC server on {} with TLS", addr);
+    
+    // Create server with TLS
     let server = Server::builder()
-        .add_service(
-            market_intel::core_engine::core_engine_service_server::CoreEngineServiceServer::new(
-                core_engine_service
-            )
-        )
-        .serve_with_shutdown(addr, async {
-            shutdown_rx.await.ok();
-            info!("Received shutdown signal");
-        });
-
-    // Wait for Ctrl+C signal
-    tokio::select! {
-        result = server => {
-            if let Err(e) = result {
-                error!("Failed to start gRPC server: {}", e);
-                return Err(e.into());
-            }
+        .add_service(core_engine_service)
+        .add_optional_service(
+            tonic_health::server::health_server::HealthServer::default(),
+            Some("health".to_string()),
+        );
+    
+    // Start server with or without TLS based on configuration
+    let server_handle = if let Some(tls_config) = server_tls_config {
+        info!("Starting gRPC server with mTLS enabled");
+        server
+            .tls_config(tls_config)
+            .serve_with_shutdown(addr, shutdown_signal())
+    } else {
+        warn!("Starting gRPC server without TLS - NOT RECOMMENDED FOR PRODUCTION");
+        server
+            .serve_with_shutdown(addr, shutdown_signal())
+    };
+    
+    // Wait for server to complete
+    match server_handle.await {
+        Ok(_) => {
+            info!("gRPC server shutdown completed successfully");
         }
-        _ = signal::ctrl_c() => {
-            info!("Received Ctrl+C signal");
+        Err(e) => {
+            error!("gRPC server error: {}", e);
+            return Err(e.into());
         }
     }
-
-    // Graceful shutdown
-    info!("Shutting down Core Engine...");
     
     // Shutdown OpenTelemetry
     otel::shutdown_telemetry();
-
-    info!("Core Engine shutdown complete");
+    
+    info!("Core Engine service shutdown complete");
     Ok(())
+}
+
+/// Signal handler for graceful shutdown
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{signal, SignalKind};
+        
+        let mut sigterm = signal(SignalKind::terminate()).unwrap();
+        let mut sigint = signal(SignalKind::interrupt()).unwrap();
+        
+        tokio::select! {
+            _ = sigterm.recv() => info!("Received SIGTERM signal"),
+            _ = sigint.recv() => info!("Received SIGINT signal"),
+        }
+    }
+    
+    #[cfg(not(unix))]
+    {
+        use tokio::signal;
+        
+        let ctrl_c = signal::ctrl_c();
+        match ctrl_c.await {
+            Ok(()) => info!("Received Ctrl-C signal"),
+            Err(err) => error!("Failed to listen for Ctrl-C: {}", err),
+        }
+    }
 }
