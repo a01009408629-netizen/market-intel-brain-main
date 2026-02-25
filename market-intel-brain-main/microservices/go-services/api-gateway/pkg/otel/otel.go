@@ -18,7 +18,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/semconv/v1.13.1/semconv"
-	"go.opentelemetry.io/otel/trace"
 )
 
 const (
