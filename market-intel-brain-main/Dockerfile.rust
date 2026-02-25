@@ -1,0 +1,80 @@
+# Multi-stage Dockerfile for Market Intel Brain (Rust Edition)
+# Optimized for cloud-native CI/CD with GitHub Actions
+
+# ===== BUILDER STAGE =====
+FROM rust:1.75-slim as builder
+
+# Set environment variables
+ENV CARGO_TERM_COLOR=always
+ENV RUST_BACKTRACE=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    libpq-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy Cargo files
+COPY Cargo.toml Cargo.lock ./
+COPY core/Cargo.toml ./core/
+COPY api/Cargo.toml ./api/
+
+# Create dummy source files to cache dependencies
+RUN mkdir -p core/src api/src
+RUN echo "fn main() {}" > core/src/main.rs
+RUN echo "fn main() {}" > api/src/main.rs
+
+# Build dependencies (this gets cached)
+RUN cargo build --release
+RUN rm -rf core/src/main.rs api/src/main.rs
+
+# Copy source code
+COPY core ./core
+COPY api ./api
+
+# Build the application
+RUN cargo build --release
+
+# ===== RUNNER STAGE =====
+FROM debian:bookworm-slim as runner
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1000 rustuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/target/release/market-intel-api /app/market-intel-api
+
+# Copy configuration files
+COPY --from=builder /app/api/config ./config
+COPY --from=builder /app/.env.example ./.env.example
+
+# Change ownership to non-root user
+RUN chown -R rustuser:rustuser /app
+
+# Switch to non-root user
+USER rustuser
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Run the application
+CMD ["./market-intel-api"]

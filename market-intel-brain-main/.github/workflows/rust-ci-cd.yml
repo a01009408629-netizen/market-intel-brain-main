@@ -1,0 +1,291 @@
+name: 🦀 Rust CI/CD Pipeline for Market Intel Brain
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+# Environment variables
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+# Concurrency control
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ===== BUILD AND TEST JOB =====
+  build-and-test:
+    name: 🏗️ Build & Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🦀 Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+          targets: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu
+
+      - name: 📦 Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: 🔧 Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libssl-dev \
+            libpq-dev \
+            build-essential
+
+      - name: 📋 Format Check
+        run: cargo fmt --all -- --check
+
+      - name: 🔍 Clippy Check
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: 🏗️ Build Debug
+        run: cargo build --verbose
+
+      - name: 🧪 Run Tests
+        run: cargo test --verbose
+
+      - name: 🏗️ Build Release
+        run: cargo build --release --verbose
+
+      - name: 📊 Generate Documentation
+        run: cargo doc --no-deps --document-private-items
+
+      - name: 📤 Upload Documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-docs
+          path: target/doc/
+          retention-days: 30
+
+  # ===== SECURITY SCAN JOB =====
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🦀 Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: 📦 Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: 🔍 Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: 🔍 Security Audit
+        run: cargo audit
+
+      - name: 🔍 Install cargo-deny
+        run: cargo install cargo-deny
+
+      - name: 🔍 Dependency Check
+        run: cargo deny check
+
+      - name: 📤 Upload Security Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            cargo-audit-report.json
+            cargo-deny-report.json
+          retention-days: 90
+
+  # ===== BENCHMARK JOB =====
+  benchmark:
+    name: 📈 Benchmark
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🦀 Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: 📦 Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: 🏗️ Build Release
+        run: cargo build --release
+
+      - name: 📈 Run Benchmarks
+        run: |
+          if [ -d "benches" ]; then
+            cargo bench --all-targets
+          else
+            echo "No benchmarks found"
+          fi
+
+      - name: 📤 Upload Benchmark Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            target/criterion/
+          retention-days: 30
+
+  # ===== DOCKER BUILD JOB =====
+  docker-build:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name != 'pull_request'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔑 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🏷️ Extract Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🐳 Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          load: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===== DEPLOYMENT JOBS =====
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan]
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    environment: staging
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy to Staging
+        run: |
+          echo "🚀 Deploying to staging environment..."
+          echo "Build: ${{ needs.build-and-test.result }}"
+          echo "Security: ${{ needs.security-scan.result }}"
+          
+          # Add your staging deployment commands here
+          # Example: kubectl apply -f k8s/staging/
+          # Example: docker-compose -f docker-compose.staging.yml up -d
+
+      - name: 🧪 Run Staging Tests
+        run: |
+          echo "🧪 Running staging tests..."
+          # Add staging test commands here
+
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan, benchmark]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy to Production
+        run: |
+          echo "🚀 Deploying to production environment..."
+          echo "Build: ${{ needs.build-and-test.result }}"
+          echo "Security: ${{ needs.security-scan.result }}"
+          echo "Benchmark: ${{ needs.benchmark.result }}"
+          
+          # Add your production deployment commands here
+          # Example: kubectl apply -f k8s/production/
+          # Example: docker-compose -f docker-compose.prod.yml up -d
+
+      - name: 🧪 Run Production Tests
+        run: |
+          echo "🧪 Running production tests..."
+          # Add production test commands here
+
+  # ===== NOTIFICATION JOB =====
+  notify:
+    name: 📢 Notify
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan]
+    if: always()
+    
+    steps:
+      - name: 📢 Send Notification
+        run: |
+          echo "📢 Pipeline completed!"
+          echo "Build: ${{ needs.build-and-test.result }}"
+          echo "Security: ${{ needs.security-scan.result }}"
+          
+          # Add notification logic here
+          # Example: Slack webhook, email, etc.
