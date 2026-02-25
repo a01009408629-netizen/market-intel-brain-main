@@ -23,9 +23,6 @@ prost = "0.12"
 prost-types = "0.12"
 tonic-health = "0.10"
 
-# Core engine dependencies
-market-intel-core = { path = "../../../core" }
-
 # Async utilities
 async-trait = "0.1"
 tokio-util = { version = "0.7", features = ["codec"] }
