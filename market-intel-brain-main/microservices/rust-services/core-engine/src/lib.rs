@@ -12,6 +12,7 @@ pub mod metrics;
 pub mod analytics;
 pub mod vector_store;
 pub mod execution_safety;
+pub mod agent_config;
 
 // Re-export commonly used items
 pub use config::*;
@@ -22,6 +23,7 @@ pub use metrics::*;
 pub use analytics::*;
 pub use vector_store::*;
 pub use execution_safety::*;
+pub use agent_config::*;
 
 /// Core Engine version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

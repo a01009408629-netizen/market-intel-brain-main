@@ -1,0 +1,287 @@
+# Market Intel Brain - Agent Configuration
+# تكوين الوكلاء - Market Intel Brain
+
+# Global agent configuration settings
+# إعدادات تكوين الوكلاء العالمية
+[global]
+# Default interval for agents in milliseconds
+# الفاصل الزمني الافتراضي للوكلاء بالمللي ثانية
+default_interval_ms = 1000
+
+# Maximum number of concurrent agents
+# الحد الأقصى لعدد الوكلاء المتزامنين
+max_concurrent_agents = 100
+
+# Global timeout for agent operations in seconds
+# المهلة العالمية لعمليات الوكلاء بالثواني
+operation_timeout_seconds = 30
+
+# Enable hot-reload configuration
+# تمكين إعادة التحميل السريع للتكوين
+enable_hot_reload = true
+
+# Configuration validation level
+# مستوى التحقق من التكوين
+validation_level = "strict"
+
+# Agent definitions
+# تعريفات الوكلاء
+
+[[agents]]
+name = "VolatilityScalper"
+enabled = true
+interval_ms = 100
+description = "High-frequency volatility-based scalping agent"
+version = "1.0.0"
+author = "Market Intel Brain Team"
+
+[agents.params]
+threshold = 2.5
+max_position_size = 10000
+stop_loss_percentage = 0.02
+take_profit_percentage = 0.04
+volatility_window = 20
+min_volume = 1000000
+
+[agents.risk]
+max_drawdown = 0.05
+max_position_value = 50000
+leverage_limit = 2.0
+
+[agents.monitoring]
+enable_metrics = true
+log_level = "info"
+performance_tracking = true
+
+[[agents]]
+name = "MeanReversionArbitrage"
+enabled = true
+interval_ms = 500
+description = "Statistical arbitrage agent based on mean reversion"
+version = "1.2.0"
+author = "Market Intel Brain Team"
+
+[agents.params]
+lookback_period = 252
+z_score_threshold = 2.0
+min_correlation = 0.7
+max_pairs = 50
+entry_threshold = 0.02
+exit_threshold = 0.01
+
+[agents.risk]
+max_drawdown = 0.08
+max_position_value = 100000
+leverage_limit = 3.0
+
+[agents.monitoring]
+enable_metrics = true
+log_level = "debug"
+performance_tracking = true
+
+[[agents]]
+name = "TrendFollowingMomentum"
+enabled = false
+interval_ms = 1000
+description = "Trend-following momentum trading agent"
+version = "2.0.0"
+author = "Market Intel Brain Team"
+
+[agents.params]
+fast_ema_period = 12
+slow_ema_period = 26
+signal_period = 9
+rsi_period = 14
+rsi_overbought = 70
+rsi_oversold = 30
+volume_threshold = 1.5
+
+[agents.risk]
+max_drawdown = 0.10
+max_position_value = 200000
+leverage_limit = 4.0
+
+[agents.monitoring]
+enable_metrics = true
+log_level = "info"
+performance_tracking = true
+
+[[agents]]
+name = "NewsSentimentTrader"
+enabled = true
+interval_ms = 2000
+description = "News sentiment-based trading agent"
+version = "1.5.0"
+author = "Market Intel Brain Team"
+
+[agents.params]
+sentiment_threshold = 0.6
+news_sources = ["reuters", "bloomberg", "marketwatch"]
+impact_weight = 0.7
+confidence_threshold = 0.8
+max_news_age_hours = 24
+
+[agents.risk]
+max_drawdown = 0.06
+max_position_value = 75000
+leverage_limit = 2.5
+
+[agents.monitoring]
+enable_metrics = true
+log_level = "info"
+performance_tracking = true
+
+[[agents]]
+name = "LiquidityProvider"
+enabled = true
+interval_ms = 50
+description = "Market-making liquidity provision agent"
+version = "3.0.0"
+author = "Market Intel Brain Team"
+
+[agents.params]
+spread_bps = 5
+max_order_size = 1000
+inventory_target = 0.0
+inventory_limit = 50000
+quote_depth = 5
+refresh_rate_ms = 100
+
+[agents.risk]
+max_drawdown = 0.03
+max_position_value = 150000
+leverage_limit = 1.5
+
+[agents.monitoring]
+enable_metrics = true
+log_level = "debug"
+performance_tracking = true
+
+[[agents]]
+name = "StatisticalArbitrage"
+enabled = false
+interval_ms = 1500
+description = "Multi-asset statistical arbitrage agent"
+version = "1.8.0"
+author = "Market Intel Brain Team"
+
+[agents.params]
+cointegration_period = 252
+half_life_threshold = 20
+min_half_life = 5
+max_half_life = 60
+entry_zscore = 2.0
+exit_zscore = 0.5
+
+[agents.risk]
+max_drawdown = 0.12
+max_position_value = 300000
+leverage_limit = 5.0
+
+[agents.monitoring]
+enable_metrics = true
+log_level = "info"
+performance_tracking = true
+
+[[agents]]
+name = "OptionsVolatilityTrader"
+enabled = false
+interval_ms = 5000
+description = "Options volatility trading agent"
+version = "2.2.0"
+author = "Market Intel Brain Team"
+
+[agents.params]
+volatility_surface_model = "sabr"
+delta_threshold = 0.3
+gamma_threshold = 0.1
+vega_threshold = 0.2
+theta_threshold = 0.05
+min_dte = 7
+max_dte = 90
+
+[agents.risk]
+max_drawdown = 0.15
+max_position_value = 500000
+leverage_limit = 10.0
+
+[agents.monitoring]
+enable_metrics = true
+log_level = "info"
+performance_tracking = true
+
+[[agents]]
+name = "CrossAssetArbitrage"
+enabled = true
+interval_ms = 3000
+description = "Cross-asset arbitrage trading agent"
+version = "1.3.0"
+author = "Market Intel Brain Team"
+
+[agents.params]
+correlation_threshold = 0.8
+arbitrage_threshold = 0.01
+max_positions_per_pair = 2
+lookback_hours = 24
+min_spread = 0.001
+
+[agents.risk]
+max_drawdown = 0.07
+max_position_value = 125000
+leverage_limit = 3.5
+
+[agents.monitoring]
+enable_metrics = true
+log_level = "info"
+performance_tracking = true
+
+[[agents]]
+name = "HighFrequencyMarketMaker"
+enabled = false
+interval_ms = 10
+description = "Ultra-high frequency market making agent"
+version = "4.0.0"
+author = "Market Intel Brain Team"
+
+[agents.params]
+latency_target_us = 100
+order_cancellation_rate = 0.95
+inventory_skew_threshold = 0.1
+adaptive_spread = true
+volume_prediction_window = 60
+
+[agents.risk]
+max_drawdown = 0.02
+max_position_value = 250000
+leverage_limit = 2.0
+
+[agents.monitoring]
+enable_metrics = true
+log_level = "debug"
+performance_tracking = true
+
+# Template for new agents (commented out)
+# قالب للوكلاء الجدد (معطل)
+
+# [[agents]]
+# name = "NewAgentTemplate"
+# enabled = false
+# interval_ms = 1000
+# description = "Template for new agent implementation"
+# version = "1.0.0"
+# author = "Market Intel Brain Team"
+# 
+# [agents.params]
+# param1 = "value1"
+# param2 = 42
+# param3 = true
+# 
+# [agents.risk]
+# max_drawdown = 0.05
+# max_position_value = 100000
+# leverage_limit = 2.0
+# 
+# [agents.monitoring]
+# enable_metrics = true
+# log_level = "info"
+# performance_tracking = true
