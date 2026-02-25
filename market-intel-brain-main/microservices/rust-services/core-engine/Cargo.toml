@@ -9,7 +9,7 @@ description = "Core Engine with LMAX Disruptor for Market Intel Brain"
 [dependencies]
 # Workspace dependencies
 tokio = { workspace = true }
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
@@ -64,7 +64,6 @@ redis = { version = "0.24", features = ["tokio-comp"] }
 rdkafka = { version = "0.36", features = ["cmake-build", "ssl", "sasl", "zstd"] }
 
 # Analytics dependencies
-serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 
 # Vector database dependencies
