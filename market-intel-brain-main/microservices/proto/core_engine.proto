@@ -1,0 +1,288 @@
+syntax = "proto3";
+
+package market_intel.core_engine;
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// Core Engine gRPC Service Definition
+// This service handles the core business logic and high-performance processing
+
+service CoreEngineService {
+  // Health and status
+  rpc HealthCheck(common.HealthCheckRequest) returns (common.HealthCheckResponse);
+  rpc GetStatus(google.protobuf.Empty) returns (EngineStatusResponse);
+  
+  // Message processing
+  rpc ProcessMessage(ProcessMessageRequest) returns (common.StandardResponse);
+  rpc ProcessMessageStream(stream ProcessMessageRequest) returns (stream ProcessMessageResponse);
+  rpc BatchProcessMessages(BatchProcessMessagesRequest) returns (BatchProcessMessagesResponse);
+  
+  // Agent management
+  rpc RegisterAgent(RegisterAgentRequest) returns (common.StandardResponse);
+  rpc UnregisterAgent(UnregisterAgentRequest) returns (common.StandardResponse);
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+  rpc GetAgentStatus(GetAgentStatusRequest) returns (GetAgentStatusResponse);
+  
+  // Configuration
+  rpc GetConfiguration(GetConfigurationRequest) returns (GetConfigurationResponse);
+  rpc UpdateConfiguration(UpdateConfigurationRequest) returns (common.StandardResponse);
+  
+  // Metrics and monitoring
+  rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
+  rpc GetPerformanceStats(google.protobuf.Empty) returns (PerformanceStatsResponse);
+}
+
+// Message processing request
+message ProcessMessageRequest {
+  string message_id = 1;
+  MessageType message_type = 2;
+  bytes payload = 3;
+  string source = 4;
+  string destination = 5;
+  string correlation_id = 6;
+  string causation_id = 7;
+  common.MessagePriority priority = 8;
+  map<string, string> metadata = 9;
+  google.protobuf.Timestamp timestamp = 10;
+}
+
+// Message processing response
+message ProcessMessageResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  string processed_message_id = 3;
+  google.protobuf.Timestamp processed_timestamp = 4;
+  int64 processing_time_us = 5;
+  bytes result_payload = 6;
+  map<string, string> metadata = 7;
+}
+
+// Batch message processing request
+message BatchProcessMessagesRequest {
+  repeated ProcessMessageRequest messages = 1;
+  BatchProcessingOptions options = 2;
+}
+
+// Batch processing options
+message BatchProcessingOptions {
+  bool parallel = 1;
+  int32 max_concurrency = 2;
+  int32 timeout_ms = 3;
+  bool continue_on_error = 4;
+}
+
+// Batch message processing response
+message BatchProcessMessagesResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated ProcessMessageResponse results = 3;
+  int32 processed_count = 4;
+  int32 failed_count = 5;
+  int64 total_processing_time_us = 6;
+}
+
+// Message types
+enum MessageType {
+  MESSAGE_TYPE_MARKET_DATA = 0;
+  MESSAGE_TYPE_ORDER = 1;
+  MESSAGE_TYPE_TRADE = 2;
+  MESSAGE_TYPE_EVENT = 3;
+  MESSAGE_TYPE_CONTROL = 4;
+  MESSAGE_TYPE_HEALTH_CHECK = 5;
+  MESSAGE_TYPE_CONFIGURATION = 6;
+  MESSAGE_TYPE_SECURITY = 7;
+  MESSAGE_TYPE_ANALYTICS = 8;
+  MESSAGE_TYPE_STORAGE = 9;
+  MESSAGE_TYPE_NETWORK = 10;
+  MESSAGE_TYPE_RISK_MANAGEMENT = 11;
+  MESSAGE_TYPE_CUSTOM = 12;
+}
+
+// Agent registration request
+message RegisterAgentRequest {
+  string agent_id = 1;
+  string agent_name = 2;
+  AgentType agent_type = 3;
+  repeated MessageType handled_types = 4;
+  map<string, string> configuration = 5;
+  int32 thread_affinity = 6; // Optional CPU core binding
+}
+
+// Agent type
+enum AgentType {
+  AGENT_TYPE_DATA_INGESTION = 0;
+  AGENT_TYPE_TRADING_ENGINE = 1;
+  AGENT_TYPE_RISK_MANAGEMENT = 2;
+  AGENT_TYPE_ANALYTICS = 3;
+  AGENT_TYPE_STORAGE = 4;
+  AGENT_TYPE_NETWORK = 5;
+  AGENT_TYPE_SECURITY = 6;
+  AGENT_TYPE_CUSTOM = 7;
+}
+
+// Agent unregistration request
+message UnregisterAgentRequest {
+  string agent_id = 1;
+  bool graceful_shutdown = 2;
+  int32 timeout_ms = 3;
+}
+
+// List agents request
+message ListAgentsRequest {
+  common.PaginationRequest pagination = 1;
+  AgentType filter_type = 2;
+  common.AgentStatus filter_status = 3;
+}
+
+// List agents response
+message ListAgentsResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated AgentInfo agents = 3;
+  common.PaginationResponse pagination = 4;
+}
+
+// Agent information
+message AgentInfo {
+  string agent_id = 1;
+  string agent_name = 2;
+  AgentType agent_type = 3;
+  common.AgentStatus status = 4;
+  repeated MessageType handled_types = 5;
+  AgentStats stats = 6;
+  google.protobuf.Timestamp last_heartbeat = 7;
+  map<string, string> configuration = 8;
+  int32 thread_affinity = 9;
+}
+
+// Agent statistics
+message AgentStats {
+  int64 messages_processed = 1;
+  int64 messages_failed = 2;
+  double avg_processing_time_us = 3;
+  int64 memory_usage_bytes = 4;
+  double cpu_usage_percent = 5;
+  google.protobuf.Timestamp last_activity = 6;
+  google.protobuf.Timestamp start_time = 7;
+}
+
+// Get agent status request
+message GetAgentStatusRequest {
+  string agent_id = 1;
+  bool include_stats = 2;
+}
+
+// Get agent status response
+message GetAgentStatusResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  AgentInfo agent_info = 3;
+}
+
+// Engine status response
+message EngineStatusResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  EngineStatus engine_status = 3;
+  EngineInfo engine_info = 4;
+  repeated AgentInfo active_agents = 5;
+}
+
+// Engine status
+enum EngineStatus {
+  ENGINE_STATUS_STOPPED = 0;
+  ENGINE_STATUS_STARTING = 1;
+  ENGINE_STATUS_RUNNING = 2;
+  ENGINE_STATUS_STOPPING = 3;
+  ENGINE_STATUS_ERROR = 4;
+}
+
+// Engine information
+message EngineInfo {
+  string version = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp uptime = 3;
+  int32 num_processors = 4;
+  int32 buffer_size = 5;
+  int64 total_messages_processed = 6;
+  double messages_per_second = 7;
+  double avg_latency_us = 8;
+  double p99_latency_us = 9;
+  int64 memory_usage_bytes = 10;
+  double cpu_usage_percent = 11;
+}
+
+// Get configuration request
+message GetConfigurationRequest {
+  repeated string keys = 1; // Empty to get all
+  string scope = 2; // "global", "system", "component", "user"
+}
+
+// Get configuration response
+message GetConfigurationResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  map<string, string> configuration = 3;
+  google.protobuf.Timestamp last_updated = 4;
+}
+
+// Update configuration request
+message UpdateConfigurationRequest {
+  map<string, string> configuration = 1;
+  string scope = 2;
+  bool validate_only = 3;
+}
+
+// Get metrics request
+message GetMetricsRequest {
+  common.TimeRange time_range = 1;
+  repeated string metric_names = 2;
+  string aggregation = 3; // "avg", "sum", "min", "max", "p50", "p95", "p99"
+  int32 interval_seconds = 4;
+}
+
+// Get metrics response
+message GetMetricsResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated MetricData metrics = 3;
+}
+
+// Metric data point
+message MetricData {
+  string name = 1;
+  string unit = 2;
+  repeated DataPoint points = 3;
+  map<string, string> labels = 4;
+}
+
+// Data point
+message DataPoint {
+  google.protobuf.Timestamp timestamp = 1;
+  double value = 2;
+  map<string, string> labels = 3;
+}
+
+// Performance statistics response
+message PerformanceStatsResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  PerformanceStats stats = 3;
+}
+
+// Performance statistics
+message PerformanceStats {
+  int64 total_messages_processed = 1;
+  double messages_per_second = 2;
+  double avg_latency_us = 3;
+  double p50_latency_us = 4;
+  double p95_latency_us = 5;
+  double p99_latency_us = 6;
+  int64 memory_usage_bytes = 7;
+  double cpu_usage_percent = 8;
+  int64 buffer_utilization = 9;
+  int64 active_threads = 10;
+  google.protobuf.Timestamp collection_time = 11;
+}

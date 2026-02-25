@@ -1,0 +1,560 @@
+syntax = "proto3";
+
+package market_intel.auth_service;
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// Authentication Service gRPC Service Definition
+// This service handles authentication, authorization, and user management
+
+service AuthService {
+  // Health and status
+  rpc HealthCheck(common.HealthCheckRequest) returns (common.HealthCheckResponse);
+  rpc GetStatus(google.protobuf.Empty) returns (AuthServiceStatusResponse);
+  
+  // Authentication
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  rpc RevokeToken(RevokeTokenRequest) returns (common.StandardResponse);
+  rpc Logout(LogoutRequest) returns (common.StandardResponse);
+  
+  // User management
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc DeleteUser(DeleteUserRequest) returns (common.StandardResponse);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  
+  // Role and permission management
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  rpc GetRole(GetRoleRequest) returns (GetRoleResponse);
+  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
+  rpc DeleteRole(DeleteRoleRequest) returns (common.StandardResponse);
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+  
+  // API key management
+  rpc CreateApiKey(CreateApiKeyRequest) returns (CreateApiKeyResponse);
+  rpc GetApiKeys(GetApiKeysRequest) returns (GetApiKeysResponse);
+  rpc RevokeApiKey(RevokeApiKeyRequest) returns (common.StandardResponse);
+  rpc RegenerateApiKey(RegenerateApiKeyRequest) returns (RegenerateApiKeyResponse);
+  
+  // Session management
+  rpc GetSessions(GetSessionsRequest) returns (GetSessionsResponse);
+  rpc RevokeSession(RevokeSessionRequest) returns (common.StandardResponse);
+  rpc RevokeAllSessions(RevokeAllSessionsRequest) returns (common.StandardResponse);
+  
+  // Security
+  rpc ChangePassword(ChangePasswordRequest) returns (common.StandardResponse);
+  rpc EnableMFA(EnableMFARequest) returns (EnableMFAResponse);
+  rpc DisableMFA(DisableMFARequest) returns (common.StandardResponse);
+  rpc VerifyMFA(VerifyMFARequest) returns (VerifyMFAResponse);
+}
+
+// Authentication request
+message AuthenticateRequest {
+  oneof credentials {
+    PasswordCredentials password = 1;
+    ApiKeyCredentials api_key = 2;
+    OAuthCredentials oauth = 3;
+    MfaCredentials mfa = 4;
+  }
+  string client_id = 5;
+  string device_id = 6;
+  string ip_address = 7;
+  string user_agent = 8;
+  map<string, string> metadata = 9;
+}
+
+// Password credentials
+message PasswordCredentials {
+  string username = 1;
+  string password = 2;
+}
+
+// API key credentials
+message ApiKeyCredentials {
+  string api_key = 1;
+  string api_secret = 2;
+}
+
+// OAuth credentials
+message OAuthCredentials {
+  string provider = 1; // "google", "github", "microsoft", etc.
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
+// MFA credentials
+message MfaCredentials {
+  string username = 1;
+  string password = 2;
+  string mfa_code = 3;
+  string mfa_token = 4;
+}
+
+// Authentication response
+message AuthenticateResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  string mfa_token = 5; // Required for MFA verification
+  bool mfa_required = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  UserInfo user_info = 8;
+  repeated string permissions = 9;
+  repeated string roles = 10;
+  SessionInfo session_info = 11;
+}
+
+// User information
+message UserInfo {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  string full_name = 4;
+  string phone = 5;
+  bool email_verified = 6;
+  bool phone_verified = 7;
+  bool mfa_enabled = 8;
+  common.UserStatus status = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  google.protobuf.Timestamp last_login = 12;
+  repeated string roles = 13;
+  repeated string permissions = 14;
+  map<string, string> profile = 15;
+}
+
+// User status
+enum UserStatus {
+  USER_STATUS_ACTIVE = 0;
+  USER_STATUS_INACTIVE = 1;
+  USER_STATUS_SUSPENDED = 2;
+  USER_STATUS_LOCKED = 3;
+  USER_STATUS_PENDING_VERIFICATION = 4;
+}
+
+// Session information
+message SessionInfo {
+  string session_id = 1;
+  string device_id = 2;
+  string ip_address = 3;
+  string user_agent = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  bool persistent = 7;
+  map<string, string> metadata = 8;
+}
+
+// Validate token request
+message ValidateTokenRequest {
+  string token = 1;
+  string required_permission = 2;
+  string resource = 3;
+  string action = 4;
+}
+
+// Validate token response
+message ValidateTokenResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  UserInfo user_info = 3;
+  repeated string permissions = 4;
+  repeated string roles = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  SessionInfo session_info = 7;
+}
+
+// Refresh token request
+message RefreshTokenRequest {
+  string refresh_token = 1;
+  string client_id = 2;
+}
+
+// Refresh token response
+message RefreshTokenResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+// Revoke token request
+message RevokeTokenRequest {
+  string token = 1;
+  string reason = 2;
+}
+
+// Logout request
+message LogoutRequest {
+  string token = 1;
+  bool revoke_all = 2;
+  string device_id = 3;
+}
+
+// Auth service status response
+message AuthServiceStatusResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  AuthServiceInfo service_info = 3;
+}
+
+// Auth service information
+message AuthServiceInfo {
+  string version = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp uptime = 3;
+  int64 total_users = 4;
+  int64 active_sessions = 5;
+  int64 total_api_keys = 6;
+  map<string, int64> auth_method_stats = 7;
+  repeated SecurityPolicy security_policies = 8;
+}
+
+// Security policy
+message SecurityPolicy {
+  string policy_id = 1;
+  string name = 2;
+  string description = 3;
+  bool enabled = 4;
+  repeated PolicyRule rules = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// Policy rule
+message PolicyRule {
+  string rule_id = 1;
+  string condition = 2;
+  string action = 3;
+  int32 priority = 4;
+  map<string, string> parameters = 5;
+}
+
+// Create user request
+message CreateUserRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+  string full_name = 4;
+  string phone = 5;
+  repeated string roles = 6;
+  map<string, string> profile = 7;
+  bool send_verification_email = 8;
+  bool require_password_change = 9;
+}
+
+// Create user response
+message CreateUserResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  UserInfo user_info = 3;
+  string verification_token = 4;
+  repeated common.ErrorDetails errors = 5;
+}
+
+// Get user request
+message GetUserRequest {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  bool include_permissions = 4;
+  bool include_roles = 5;
+  bool include_sessions = 6;
+}
+
+// Get user response
+message GetUserResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  UserInfo user_info = 3;
+  repeated SessionInfo sessions = 4;
+}
+
+// Update user request
+message UpdateUserRequest {
+  string user_id = 1;
+  string email = 2;
+  string full_name = 3;
+  string phone = 4;
+  common.UserStatus status = 5;
+  map<string, string> profile = 6;
+  repeated string roles_to_add = 7;
+  repeated string roles_to_remove = 8;
+}
+
+// Update user response
+message UpdateUserResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  UserInfo user_info = 3;
+  repeated common.ErrorDetails errors = 4;
+}
+
+// Delete user request
+message DeleteUserRequest {
+  string user_id = 1;
+  bool soft_delete = 2;
+  string reason = 3;
+}
+
+// List users request
+message ListUsersRequest {
+  common.PaginationRequest pagination = 1;
+  string search = 2;
+  common.UserStatus filter_status = 3;
+  repeated string filter_roles = 4;
+  string sort_by = 5;
+  string sort_order = 6;
+}
+
+// List users response
+message ListUsersResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated UserInfo users = 3;
+  common.PaginationResponse pagination = 4;
+}
+
+// Create role request
+message CreateRoleRequest {
+  string name = 1;
+  string description = 2;
+  repeated string permissions = 3;
+  repeated string inherits_from = 4;
+  bool is_system_role = 5;
+}
+
+// Create role response
+message CreateRoleResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  RoleInfo role_info = 3;
+}
+
+// Role information
+message RoleInfo {
+  string role_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string permissions = 4;
+  repeated string inherits_from = 5;
+  bool is_system_role = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// Get role request
+message GetRoleRequest {
+  string role_id = 1;
+  string name = 2;
+}
+
+// Get role response
+message GetRoleResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  RoleInfo role_info = 3;
+}
+
+// Update role request
+message UpdateRoleRequest {
+  string role_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string permissions = 4;
+  repeated string inherits_from = 5;
+}
+
+// Update role response
+message UpdateRoleResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  RoleInfo role_info = 3;
+}
+
+// Delete role request
+message DeleteRoleRequest {
+  string role_id = 1;
+  bool force = 2;
+}
+
+// List roles request
+message ListRolesRequest {
+  common.PaginationRequest pagination = 1;
+  string search = 2;
+  bool include_system_roles = 3;
+  string sort_by = 4;
+  string sort_order = 5;
+}
+
+// List roles response
+message ListRolesResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated RoleInfo roles = 3;
+  common.PaginationResponse pagination = 4;
+}
+
+// Create API key request
+message CreateApiKeyRequest {
+  string user_id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string permissions = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  repeated string allowed_ips = 6;
+  map<string, string> metadata = 7;
+}
+
+// Create API key response
+message CreateApiKeyResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  ApiKeyInfo api_key_info = 3;
+  string api_key = 4; // Only returned once during creation
+}
+
+// API key information
+message ApiKeyInfo {
+  string key_id = 1;
+  string name = 2;
+  string description = 3;
+  string user_id = 4;
+  repeated string permissions = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp expires_at = 7;
+  google.protobuf.Timestamp last_used = 8;
+  bool active = 9;
+  repeated string allowed_ips = 10;
+  map<string, string> metadata = 11;
+}
+
+// Get API keys request
+message GetApiKeysRequest {
+  string user_id = 1;
+  bool include_inactive = 2;
+  common.PaginationRequest pagination = 3;
+}
+
+// Get API keys response
+message GetApiKeysResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated ApiKeyInfo api_keys = 3;
+  common.PaginationResponse pagination = 4;
+}
+
+// Revoke API key request
+message RevokeApiKeyRequest {
+  string key_id = 1;
+  string reason = 2;
+}
+
+// Regenerate API key request
+message RegenerateApiKeyRequest {
+  string key_id = 1;
+  bool revoke_old = 2;
+}
+
+// Regenerate API key response
+message RegenerateApiKeyResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  ApiKeyInfo api_key_info = 3;
+  string new_api_key = 4;
+}
+
+// Get sessions request
+message GetSessionsRequest {
+  string user_id = 1;
+  bool active_only = 2;
+  common.PaginationRequest pagination = 3;
+}
+
+// Get sessions response
+message GetSessionsResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated SessionInfo sessions = 3;
+  common.PaginationResponse pagination = 4;
+}
+
+// Revoke session request
+message RevokeSessionRequest {
+  string session_id = 1;
+  string reason = 2;
+}
+
+// Revoke all sessions request
+message RevokeAllSessionsRequest {
+  string user_id = 1;
+  string reason = 2;
+  bool exclude_current = 3;
+}
+
+// Change password request
+message ChangePasswordRequest {
+  string user_id = 1;
+  string current_password = 2;
+  string new_password = 3;
+  bool force_change = 4;
+}
+
+// Enable MFA request
+message EnableMFARequest {
+  string user_id = 1;
+  string password = 2;
+  MFAMethod mfa_method = 3;
+}
+
+// MFA methods
+enum MFAMethod {
+  MFA_METHOD_TOTP = 0;
+  MFA_METHOD_SMS = 1;
+  MFA_METHOD_EMAIL = 2;
+  MFA_METHOD_HARDWARE_TOKEN = 3;
+}
+
+// Enable MFA response
+message EnableMFAResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  string mfa_secret = 3; // Only for TOTP
+  string backup_codes = 4; // Only for TOTP
+  string qr_code = 5; // Only for TOTP
+}
+
+// Disable MFA request
+message DisableMFARequest {
+  string user_id = 1;
+  string password = 2;
+  string mfa_code = 3;
+}
+
+// Disable MFA response
+message DisableMFAResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+}
+
+// Verify MFA request
+message VerifyMFARequest {
+  string user_id = 1;
+  string mfa_token = 4;
+  string mfa_code = 5;
+}
+
+// Verify MFA response
+message VerifyMFAResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}

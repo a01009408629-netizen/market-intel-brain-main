@@ -1,0 +1,641 @@
+syntax = "proto3";
+
+package market_intel.api_gateway;
+
+import "common.proto";
+import "core_engine.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// API Gateway gRPC Service Definition
+// This service handles REST API, WebSocket, and external integrations
+
+service APIGatewayService {
+  // Health and status
+  rpc HealthCheck(common.HealthCheckRequest) returns (common.HealthCheckResponse);
+  rpc GetStatus(google.protobuf.Empty) returns (GatewayStatusResponse);
+  
+  // Authentication
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  rpc Logout(LogoutRequest) returns (common.StandardResponse);
+  
+  // Market data
+  rpc GetMarketData(GetMarketDataRequest) returns (GetMarketDataResponse);
+  rpc StreamMarketData(StreamMarketDataRequest) returns (stream MarketDataResponse);
+  rpc GetMarketDataHistory(GetMarketDataHistoryRequest) returns (GetMarketDataHistoryResponse);
+  
+  // Orders
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  rpc UpdateOrder(UpdateOrderRequest) returns (UpdateOrderResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+  rpc StreamOrders(StreamOrdersRequest) returns (stream OrderResponse);
+  
+  // Trades
+  rpc GetTrades(GetTradesRequest) returns (GetTradesResponse);
+  rpc StreamTrades(StreamTradesRequest) returns (stream TradeResponse);
+  
+  // Portfolio
+  rpc GetPortfolio(GetPortfolioRequest) returns (GetPortfolioResponse);
+  rpc GetPositions(GetPositionsRequest) returns (GetPositionsResponse);
+  rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+  
+  // Analytics
+  rpc GetAnalytics(GetAnalyticsRequest) returns (GetAnalyticsResponse);
+  rpc RunAnalyticsQuery(RunAnalyticsQueryRequest) returns (RunAnalyticsQueryResponse);
+  
+  // Risk management
+  rpc GetRiskMetrics(GetRiskMetricsRequest) returns (GetRiskMetricsResponse);
+  rpc GetRiskLimits(GetRiskLimitsRequest) returns (GetRiskLimitsResponse);
+  rpc UpdateRiskLimits(UpdateRiskLimitsRequest) returns (common.StandardResponse);
+  
+  // Notifications
+  rpc GetNotifications(GetNotificationsRequest) returns (GetNotificationsResponse);
+  rpc MarkNotificationRead(MarkNotificationReadRequest) returns (common.StandardResponse);
+  rpc SubscribeNotifications(SubscribeNotificationsRequest) returns (stream NotificationResponse);
+  
+  // Configuration
+  rpc GetUserConfig(GetUserConfigRequest) returns (GetUserConfigResponse);
+  rpc UpdateUserConfig(UpdateUserConfigRequest) returns (common.StandardResponse);
+}
+
+// Authentication request
+message AuthenticateRequest {
+  string username = 1;
+  string password = 2;
+  string api_key = 3;
+  string client_id = 4;
+  string client_secret = 5;
+  string device_id = 6;
+  map<string, string> metadata = 7;
+}
+
+// Authentication response
+message AuthenticateResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  UserInfo user_info = 6;
+  repeated string permissions = 7;
+  repeated string roles = 8;
+}
+
+// User information
+message UserInfo {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  string full_name = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp last_login = 6;
+  bool active = 7;
+  map<string, string> profile = 8;
+}
+
+// Validate token request
+message ValidateTokenRequest {
+  string token = 1;
+  string required_permission = 2;
+}
+
+// Validate token response
+message ValidateTokenResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  UserInfo user_info = 3;
+  repeated string permissions = 4;
+  repeated string roles = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+// Refresh token request
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+// Refresh token response
+message RefreshTokenResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+// Logout request
+message LogoutRequest {
+  string token = 1;
+  bool invalidate_all = 2;
+}
+
+// Gateway status response
+message GatewayStatusResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  GatewayInfo gateway_info = 3;
+  repeated ServiceStatus services = 4;
+}
+
+// Gateway information
+message GatewayInfo {
+  string version = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp uptime = 3;
+  int64 total_requests = 4;
+  double requests_per_second = 5;
+  int64 active_connections = 6;
+  map<string, int64> endpoint_stats = 7;
+}
+
+// Service status
+message ServiceStatus {
+  string service_name = 1;
+  string url = 2;
+  bool healthy = 3;
+  int64 response_time_ms = 4;
+  string last_error = 5;
+  google.protobuf.Timestamp last_check = 6;
+}
+
+// Get market data request
+message GetMarketDataRequest {
+  repeated common.Symbol symbols = 1;
+  common.MarketDataType data_type = 2;
+  common.TimeRange time_range = 3;
+  int32 limit = 4;
+  map<string, string> filters = 5;
+}
+
+// Stream market data request
+message StreamMarketDataRequest {
+  repeated common.Symbol symbols = 1;
+  repeated common.MarketDataType data_types = 2;
+  bool real_time = 3;
+  map<string, string> filters = 4;
+}
+
+// Market data response
+message MarketDataResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  MarketData market_data = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// Market data
+message MarketData {
+  common.Symbol symbol = 1;
+  common.MarketDataType data_type = 2;
+  double last_price = 3;
+  double bid_price = 4;
+  double ask_price = 5;
+  int64 bid_size = 6;
+  int64 ask_size = 7;
+  int64 volume = 8;
+  double high_price = 9;
+  double low_price = 10;
+  double open_price = 11;
+  double close_price = 12;
+  google.protobuf.Timestamp timestamp = 13;
+  string source = 14;
+  map<string, string> fields = 15;
+}
+
+// Get market data history request
+message GetMarketDataHistoryRequest {
+  common.Symbol symbol = 1;
+  common.MarketDataType data_type = 2;
+  common.TimeRange time_range = 3;
+  string interval = 4; // "1m", "5m", "1h", "1d", etc.
+  int32 limit = 5;
+}
+
+// Get market data history response
+message GetMarketDataHistoryResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated MarketData market_data = 3;
+  common.PaginationResponse pagination = 4;
+}
+
+// Create order request
+message CreateOrderRequest {
+  common.Symbol symbol = 1;
+  common.OrderSide side = 2;
+  common.OrderType order_type = 3;
+  double quantity = 4;
+  double price = 5; // For limit orders
+  double stop_price = 6; // For stop orders
+  string time_in_force = 7; // "GTC", "IOC", "FOK", "DAY"
+  string client_order_id = 8;
+  map<string, string> metadata = 9;
+}
+
+// Create order response
+message CreateOrderResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  Order order = 3;
+  repeated common.ErrorDetails errors = 4;
+}
+
+// Order
+message Order {
+  string order_id = 1;
+  string client_order_id = 2;
+  common.Symbol symbol = 3;
+  common.OrderSide side = 4;
+  common.OrderType order_type = 5;
+  double quantity = 6;
+  double price = 7;
+  double stop_price = 8;
+  common.OrderStatus status = 9;
+  double filled_quantity = 10;
+  double remaining_quantity = 11;
+  double avg_fill_price = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  map<string, string> metadata = 15;
+}
+
+// Get order request
+message GetOrderRequest {
+  string order_id = 1;
+  string client_order_id = 2;
+  bool include_trades = 3;
+}
+
+// Get order response
+message GetOrderResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  Order order = 3;
+  repeated Trade trades = 4;
+}
+
+// List orders request
+message ListOrdersRequest {
+  common.PaginationRequest pagination = 1;
+  repeated common.Symbol symbols = 2;
+  repeated common.OrderStatus statuses = 3;
+  common.TimeRange time_range = 4;
+  string sort_by = 5;
+  string sort_order = 6;
+}
+
+// List orders response
+message ListOrdersResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated Order orders = 3;
+  common.PaginationResponse pagination = 4;
+}
+
+// Update order request
+message UpdateOrderRequest {
+  string order_id = 1;
+  double quantity = 2;
+  double price = 3;
+  map<string, string> metadata = 4;
+}
+
+// Update order response
+message UpdateOrderResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  Order order = 3;
+}
+
+// Cancel order request
+message CancelOrderRequest {
+  string order_id = 1;
+  string client_order_id = 2;
+  string reason = 3;
+}
+
+// Cancel order response
+message CancelOrderResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  Order order = 3;
+}
+
+// Stream orders request
+message StreamOrdersRequest {
+  repeated common.Symbol symbols = 1;
+  repeated common.OrderStatus statuses = 2;
+  bool include_user_orders_only = 3;
+}
+
+// Order response (for streaming)
+message OrderResponse {
+  Order order = 1;
+  string event_type = 2; // "created", "updated", "cancelled", "filled"
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+// Get trades request
+message GetTradesRequest {
+  common.PaginationRequest pagination = 1;
+  repeated common.Symbol symbols = 2;
+  common.TimeRange time_range = 3;
+  string sort_by = 4;
+  string sort_order = 5;
+}
+
+// Get trades response
+message GetTradesResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated Trade trades = 3;
+  common.PaginationResponse pagination = 4;
+}
+
+// Stream trades request
+message StreamTradesRequest {
+  repeated common.Symbol symbols = 1;
+  bool real_time = 2;
+}
+
+// Trade
+message Trade {
+  string trade_id = 1;
+  string order_id = 2;
+  common.Symbol symbol = 3;
+  common.OrderSide side = 4;
+  double quantity = 5;
+  double price = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  string venue = 8;
+  double fee = 9;
+  string fee_currency = 10;
+  map<string, string> metadata = 11;
+}
+
+// Trade response (for streaming)
+message TradeResponse {
+  Trade trade = 1;
+  google.protobuf.Timestamp timestamp = 2;
+}
+
+// Get portfolio request
+message GetPortfolioRequest {
+  string account_id = 1;
+  bool include_positions = 2;
+  bool include_trades = 3;
+}
+
+// Get portfolio response
+message GetPortfolioResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  Portfolio portfolio = 3;
+}
+
+// Portfolio
+message Portfolio {
+  string account_id = 1;
+  double total_value = 2;
+  double cash_balance = 3;
+  double available_cash = 4;
+  double total_pnl = 5;
+  double today_pnl = 6;
+  repeated Position positions = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// Get positions request
+message GetPositionsRequest {
+  string account_id = 1;
+  repeated common.Symbol symbols = 2;
+}
+
+// Get positions response
+message GetPositionsResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated Position positions = 3;
+}
+
+// Position
+message Position {
+  string position_id = 1;
+  string account_id = 2;
+  common.Symbol symbol = 3;
+  common.OrderSide side = 4;
+  double quantity = 5;
+  double avg_price = 6;
+  double current_price = 7;
+  double market_value = 8;
+  double unrealized_pnl = 9;
+  double realized_pnl = 10;
+  google.protobuf.Timestamp opened_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// Get account request
+message GetAccountRequest {
+  string account_id = 1;
+}
+
+// Get account response
+message GetAccountResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  Account account = 3;
+}
+
+// Account
+message Account {
+  string account_id = 1;
+  string account_name = 2;
+  string account_type = 3;
+  string base_currency = 4;
+  double total_balance = 5;
+  double available_balance = 6;
+  double margin_used = 7;
+  double margin_available = 8;
+  double total_pnl = 9;
+  repeated Position positions = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// Get analytics request
+message GetAnalyticsRequest {
+  string query_type = 1; // "performance", "risk", "correlation", etc.
+  map<string, string> parameters = 2;
+  common.TimeRange time_range = 3;
+}
+
+// Get analytics response
+message GetAnalyticsResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  AnalyticsResult result = 3;
+}
+
+// Analytics result
+message AnalyticsResult {
+  string query_type = 1;
+  map<string, string> parameters = 2;
+  google.protobuf.Value data = 3;
+  google.protobuf.Timestamp generated_at = 4;
+  int64 processing_time_ms = 5;
+}
+
+// Run analytics query request
+message RunAnalyticsQueryRequest {
+  string query = 1;
+  map<string, string> parameters = 2;
+}
+
+// Run analytics query response
+message RunAnalyticsQueryResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  AnalyticsResult result = 3;
+}
+
+// Get risk metrics request
+message GetRiskMetricsRequest {
+  string account_id = 1;
+  repeated common.Symbol symbols = 2;
+  common.RiskLevel min_risk_level = 3;
+}
+
+// Get risk metrics response
+message GetRiskMetricsResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  RiskMetrics risk_metrics = 3;
+}
+
+// Risk metrics
+message RiskMetrics {
+  string account_id = 1;
+  double portfolio_var = 2;
+  double portfolio_beta = 3;
+  double max_drawdown = 4;
+  double sharpe_ratio = 5;
+  double total_exposure = 6;
+  map<string, double> symbol_exposure = 7;
+  repeated RiskAlert alerts = 8;
+  google.protobuf.Timestamp calculated_at = 9;
+}
+
+// Risk alert
+message RiskAlert {
+  string alert_id = 1;
+  common.RiskLevel risk_level = 2;
+  string message = 3;
+  string metric_name = 4;
+  double current_value = 5;
+  double threshold_value = 6;
+  google.protobuf.Timestamp triggered_at = 7;
+}
+
+// Get risk limits request
+message GetRiskLimitsRequest {
+  string account_id = 1;
+}
+
+// Get risk limits response
+message GetRiskLimitsResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  RiskLimits risk_limits = 3;
+}
+
+// Risk limits
+message RiskLimits {
+  string account_id = 1;
+  double max_position_size = 2;
+  double max_portfolio_exposure = 3;
+  double max_daily_loss = 4;
+  double max_leverage = 5;
+  repeated string restricted_symbols = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// Update risk limits request
+message UpdateRiskLimitsRequest {
+  string account_id = 1;
+  RiskLimits risk_limits = 2;
+}
+
+// Get notifications request
+message GetNotificationsRequest {
+  common.PaginationRequest pagination = 1;
+  bool unread_only = 2;
+  repeated common.EventSeverity severities = 3;
+  common.TimeRange time_range = 4;
+}
+
+// Get notifications response
+message GetNotificationsResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated Notification notifications = 3;
+  common.PaginationResponse pagination = 4;
+}
+
+// Notification
+message Notification {
+  string notification_id = 1;
+  string user_id = 2;
+  string title = 3;
+  string message = 4;
+  common.EventSeverity severity = 5;
+  string category = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp read_at = 8;
+  bool read = 9;
+  map<string, string> data = 10;
+  repeated common.NotificationChannel channels = 11;
+}
+
+// Mark notification read request
+message MarkNotificationReadRequest {
+  string notification_id = 1;
+  bool mark_all = 2;
+}
+
+// Subscribe notifications request
+message SubscribeNotificationsRequest {
+  string user_id = 1;
+  repeated common.EventSeverity severities = 2;
+  repeated string categories = 3;
+}
+
+// Notification response (for streaming)
+message NotificationResponse {
+  Notification notification = 1;
+  string event_type = 2; // "created", "updated", "read"
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+// Get user config request
+message GetUserConfigRequest {
+  string user_id = 1;
+  repeated string keys = 2;
+}
+
+// Get user config response
+message GetUserConfigResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  map<string, string> configuration = 3;
+  google.protobuf.Timestamp last_updated = 4;
+}
+
+// Update user config request
+message UpdateUserConfigRequest {
+  string user_id = 1;
+  map<string, string> configuration = 2;
+}
