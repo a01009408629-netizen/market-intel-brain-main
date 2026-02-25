@@ -1,9 +1,12 @@
-//! Market Intel Brain - Core Library
+//! Market Intel Brain - Core Engine
 //! 
-//! This crate contains the core types, traits, and utilities that form the foundation
-//! of the Market Intel Brain enterprise financial intelligence platform.
+//! This crate provides the central processing engine with LMAX Disruptor architecture
+//! for ultra-low latency, lock-free message processing.
 
+pub mod disruptor;
+pub mod core_engine;
 pub mod types;
+pub mod config;
 pub mod traits;
 pub mod errors;
 pub mod utils;
@@ -11,13 +14,19 @@ pub mod events;
 
 // Re-export commonly used items
 pub use types::*;
+pub use config::*;
+pub use core_engine::*;
+pub use disruptor::*;
 pub use traits::*;
 pub use errors::*;
 pub use utils::*;
 pub use events::*;
 
-/// Core version information
+/// Core engine version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Default configuration
+pub const DEFAULT_CONFIG: &str = include_str!("../config/default.toml");
 
 /// Default configuration constants
 pub mod constants {
