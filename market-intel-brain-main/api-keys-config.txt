@@ -1,0 +1,57 @@
+# 🚀 Market Intel Brain - API Keys Configuration
+# Copy these values to your environment variables
+
+# ===== FRED (Federal Reserve Economic Data) =====
+FRED_API_KEY=de12fc03551d156cfef5d1b4951f7230
+
+# ===== Alpha Vantage =====
+ALPHAVANTAGE_API_KEY=FFHVBOQKF18L5QUQ
+
+# ===== Finnhub =====
+FINNHUB_API_KEY=d5ja8chr01qh37ujahq0d5ja8chr01qh37ujahqg
+
+# ===== Twitter Data =====
+TWITTER_DATA_API_KEY=b0095cdbb3e04aa99eb7ce20e83b2b33
+
+# ===== MarketStack =====
+MARKETSTACK_API_KEY=FNKXK3ugdRU9zXDH6kbnGK1jRlHGZ21Q
+
+# ===== Financial Modeling Prep =====
+FINANCIALMODELING_API_KEY=79fb7b5cec055b4a7f72ad89a24bdfc6
+
+# ===== Redis Configuration =====
+REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=redis123
+
+# ===== Application Settings =====
+APP_NAME=market-intel-brain
+ENVIRONMENT=production
+DEBUG=false
+
+# ===== Security Settings =====
+ENABLE_ENCRYPTION=true
+ENABLE_AUDIT_LOGGING=true
+ENABLE_ZERO_TRUST=true
+
+# ===== Database Settings =====
+DATABASE_URL=postgresql://postgres:postgres123@localhost:5432/market_intel
+
+# ===== Logging =====
+LOG_LEVEL=INFO
+LOG_FILE=logs/market_intel.log
+
+# ===== Rate Limiting =====
+API_RATE_LIMIT=100
+API_RATE_WINDOW=3600
+
+# ===== Cache Settings =====
+CACHE_TTL=300
+CACHE_MAX_SIZE=1000
+
+# ===== Monitoring =====
+ENABLE_METRICS=true
+METRICS_PORT=9090
+
+# ===== Development Settings =====
+PYTHONPATH=/app
+PORT=8000

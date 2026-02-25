@@ -4,7 +4,7 @@ Government sources for American economic data
 """
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -74,11 +74,11 @@ class BLSProvider(TradFiBaseProvider):
         date_str = raw_data.get('date', '')
         if date_str:
             try:
-                dt = datetime.strptime(date_str, '%Y-%m').replace(tzinfo=UTC)
+                dt = datetime.strptime(date_str, '%Y-%m').replace(tzinfo=timezone.utc)
             except:
-                dt = datetime.now(UTC)
+                dt = datetime.now(timezone.utc)
         else:
-            dt = datetime.now(UTC)
+            dt = datetime.now(timezone.utc)
         
         return UnifiedInternalSchema(
             data_type=DataType.MACRO,
@@ -155,11 +155,11 @@ class BEAProvider(TradFiBaseProvider):
         date_str = raw_data.get('date', '')
         if date_str:
             try:
-                dt = datetime.strptime(date_str, '%Y').replace(tzinfo=UTC)
+                dt = datetime.strptime(date_str, '%Y').replace(tzinfo=timezone.utc)
             except:
-                dt = datetime.now(UTC)
+                dt = datetime.now(timezone.utc)
         else:
-            dt = datetime.now(UTC)
+            dt = datetime.now(timezone.utc)
         
         return UnifiedInternalSchema(
             data_type=DataType.MACRO,
@@ -228,11 +228,11 @@ class TreasuryProvider(TradFiBaseProvider):
         date_str = raw_data.get('date', '')
         if date_str:
             try:
-                dt = datetime.strptime(date_str, '%Y-%m-%d').replace(tzinfo=UTC)
+                dt = datetime.strptime(date_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
             except:
-                dt = datetime.now(UTC)
+                dt = datetime.now(timezone.utc)
         else:
-            dt = datetime.now(UTC)
+            dt = datetime.now(timezone.utc)
         
         return UnifiedInternalSchema(
             data_type=DataType.MACRO,
@@ -302,11 +302,11 @@ class ReutersEconomicsProvider(TradFiBaseProvider):
                         if date_elem is not None:
                             date_str = date_elem.text
                             try:
-                                dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z').replace(tzinfo=UTC)
+                                dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z').replace(tzinfo=timezone.utc)
                             except:
-                                dt = datetime.now(UTC)
+                                dt = datetime.now(timezone.utc)
                         else:
-                            dt = datetime.now(UTC)
+                            dt = datetime.now(timezone.utc)
                         
                         news_item = UnifiedInternalSchema(
                             data_type=DataType.NEWS,
@@ -389,11 +389,11 @@ class APNewsEconomicsProvider(TradFiBaseProvider):
                         if date_elem is not None:
                             date_str = date_elem.text
                             try:
-                                dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z').replace(tzinfo=UTC)
+                                dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z').replace(tzinfo=timezone.utc)
                             except:
-                                dt = datetime.now(UTC)
+                                dt = datetime.now(timezone.utc)
                         else:
-                            dt = datetime.now(UTC)
+                            dt = datetime.now(timezone.utc)
                         
                         news_item = UnifiedInternalSchema(
                             data_type=DataType.NEWS,
