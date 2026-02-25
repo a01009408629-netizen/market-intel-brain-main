@@ -1,4 +1,4 @@
-name: CI Pipeline - Final (Rust & Go Only)
+name: CI Pipeline - Clean (Rust & Go Only)
 
 on:
   push:
@@ -281,7 +281,7 @@ jobs:
           ./microservices/integration-test-logs.txt
           ./microservices/observability-logs.txt
 
-  # Security Scanning (Rust & Go Only)
+  # Security Scanning
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
