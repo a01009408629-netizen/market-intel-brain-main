@@ -1,0 +1,375 @@
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: rust-engine-scaledobject
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: rust-engine
+    autoscaling: keda
+  annotations:
+    scaledobject.keda.sh/transfer-hpa-owner: "true"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+spec:
+  scaleTargetRef:
+    name: rust-engine-deployment
+    service: rust-engine-service
+  pollingInterval: 10         # Default: 30 seconds
+  cooldownPeriod: 60          # Default: 300 seconds
+  idleReplicaCount: 1         # Minimum replicas when idle
+  minReplicaCount: 1          # Minimum replicas
+  maxReplicaCount: 30         # Maximum replicas for burst traffic
+  fallback:                   # Fallback configuration
+    failureThreshold: 3       # Number of consecutive failed scalings before fallback
+    replicas: 1               # Fallback replica count
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0      # Immediate scale-up for burst traffic
+          policies:
+            - type: Pods
+              value: 8                       # Scale up by 8 pods at once
+              periodSeconds: 10              # Every 10 seconds
+            - type: Percent
+              value: 300                     # Scale up by 300% at once
+              periodSeconds: 15              # Every 15 seconds
+          selectPolicy: Max                  # Use the maximum change
+        scaleDown:
+          stabilizationWindowSeconds: 300    # Conservative scale-down (5 minutes)
+          policies:
+            - type: Pods
+              value: 1                       # Scale down by 1 pod at once
+              periodSeconds: 60              # Every 1 minute
+            - type: Percent
+              value: 20                      # Scale down by 20% at once
+              periodSeconds: 120             # Every 2 minutes
+          selectPolicy: Min                  # Use the minimum change
+  triggers:
+    # Active gRPC Connections Trigger (Primary)
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          sum(
+            grpc_server_started_total{
+              service="rust-engine",
+              namespace="market-intel-brain"
+            }
+          ) - sum(
+            grpc_server_handled_total{
+              service="rust-engine",
+              namespace="market-intel-brain"
+            }
+          )
+        threshold: "200"                    # Scale when active gRPC connections > 200
+        activationThreshold: "50"            # Activate when active gRPC connections > 50
+        metricName: "active_grpc_connections"
+    # Kafka Consumer Lag Trigger (if applicable from Phase 16)
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          sum(
+            kafka_consumer_lag{
+              consumer_group="core-engine",
+              namespace="market-intel-brain"
+            }
+          )
+        threshold: "1000"                   # Scale when Kafka consumer lag > 1000
+        activationThreshold: "200"            # Activate when Kafka consumer lag > 200
+        metricName: "kafka_consumer_lag"
+    # gRPC Request Rate Trigger
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          sum(
+            rate(
+              grpc_server_started_total{
+                service="rust-engine",
+                namespace="market-intel-brain"
+              }[2m]
+            )
+          )
+        threshold: "500"                    # Scale when gRPC requests per second > 500
+        activationThreshold: "100"            # Activate when gRPC requests per second > 100
+        metricName: "grpc_requests_per_second"
+    # gRPC Response Time Trigger
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          histogram_quantile(0.95,
+            sum(
+              rate(
+                grpc_server_handling_seconds_bucket{
+                  service="rust-engine",
+                  namespace="market-intel-brain"
+                }[2m]
+              )
+            ) by (le)
+          )
+        threshold: "0.2"                     # Scale when P95 gRPC response time > 200ms
+        activationThreshold: "0.1"            # Activate when P95 gRPC response time > 100ms
+        metricName: "grpc_response_time_p95"
+    # CPU Usage Trigger (Secondary)
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          sum(
+            rate(
+              container_cpu_usage_seconds_total{
+                pod=~"rust-engine-.*",
+                namespace="market-intel-brain",
+                container!="POD",
+                container!=""
+              }[2m]
+            )
+          ) / sum(
+            kube_pod_container_resource_requests{
+                pod=~"rust-engine-.*",
+                namespace="market-intel-brain",
+                resource="cpu"
+              }
+          ) * 100
+        threshold: "75"                     # Scale when CPU usage > 75%
+        activationThreshold: "50"            # Activate when CPU usage > 50%
+        metricName: "cpu_usage_percent"
+    # Memory Usage Trigger (Secondary)
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          sum(
+            container_memory_working_set_bytes{
+              pod=~"rust-engine-.*",
+              namespace="market-intel-brain",
+              container!="POD",
+              container!=""
+            }
+          ) / sum(
+            kube_pod_container_resource_requests{
+                pod=~"rust-engine-.*",
+                namespace="market-intel-brain",
+                resource="memory"
+              }
+          ) * 100
+        threshold: "85"                     # Scale when memory usage > 85%
+        activationThreshold: "60"            # Activate when memory usage > 60%
+        metricName: "memory_usage_percent"
+    # Vector Store Operations Trigger (from Phase 17)
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          sum(
+            rate(
+              vector_store_operations_total{
+                service="rust-engine",
+                namespace="market-intel-brain",
+                operation_type="search"
+              }[2m]
+            )
+          )
+        threshold: "100"                    # Scale when vector store searches per second > 100
+        activationThreshold: "20"            # Activate when vector store searches per second > 20
+        metricName: "vector_store_searches_per_second"
+    # Analytics Events Trigger (from Phase 16)
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          sum(
+            rate(
+              analytics_events_published_total{
+                service="rust-engine",
+                namespace="market-intel-brain"
+              }[2m]
+            )
+          )
+        threshold: "1000"                   # Scale when analytics events per second > 1000
+        activationThreshold: "200"            # Activate when analytics events per second > 200
+        metricName: "analytics_events_per_second"
+---
+# KEDA Authentication for Prometheus
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keda-rust-engine-prometheus-secret
+  namespace: market-intel-brain
+type: Opaque
+data:
+  # Base64 encoded empty string (no auth needed for internal Prometheus)
+  bearerToken: ""
+---
+# ServiceMonitor for Rust Engine Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rust-engine-servicemonitor
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: rust-engine
+    monitoring: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: rust-engine
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true
+---
+# PrometheusRule for Rust Engine Autoscaling Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rust-engine-autoscaling-rules
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: rust-engine
+    autoscaling: keda
+spec:
+  groups:
+    - name: rust-engine-autoscaling
+      rules:
+        # Active gRPC Connections
+        - record: rust_engine:active_grpc_connections
+          expr: |
+            sum(
+              grpc_server_started_total{
+                service="rust-engine",
+                namespace="market-intel-brain"
+              }
+            ) - sum(
+              grpc_server_handled_total{
+                service="rust-engine",
+                namespace="market-intel-brain"
+              }
+            )
+          labels:
+            component: rust-engine
+            autoscaling_metric: "active_connections"
+        # Kafka Consumer Lag
+        - record: rust_engine:kafka_consumer_lag:sum
+          expr: |
+            sum(
+              kafka_consumer_lag{
+                consumer_group="core-engine",
+                namespace="market-intel-brain"
+              }
+            )
+          labels:
+            component: rust-engine
+            autoscaling_metric: "kafka_lag"
+        # gRPC Requests Per Second
+        - record: rust_engine:grpc_requests_per_second:rate2m
+          expr: |
+            sum(
+              rate(
+                grpc_server_started_total{
+                  service="rust-engine",
+                  namespace="market-intel-brain"
+                }[2m]
+              )
+            )
+          labels:
+            component: rust-engine
+            autoscaling_metric: "grpc_rps"
+        # P95 gRPC Response Time
+        - record: rust_engine:grpc_response_time_p95:quantile
+          expr: |
+            histogram_quantile(0.95,
+              sum(
+                rate(
+                  grpc_server_handling_seconds_bucket{
+                    service="rust-engine",
+                    namespace="market-intel-brain"
+                  }[2m]
+                )
+              ) by (le)
+            )
+          labels:
+            component: rust-engine
+            autoscaling_metric: "grpc_response_time_p95"
+        # CPU Usage Percentage
+        - record: rust_engine:cpu_usage_percent:rate2m
+          expr: |
+            sum(
+              rate(
+                container_cpu_usage_seconds_total{
+                  pod=~"rust-engine-.*",
+                  namespace="market-intel-brain",
+                  container!="POD",
+                  container!=""
+                }[2m]
+              )
+            ) / sum(
+              kube_pod_container_resource_requests{
+                  pod=~"rust-engine-.*",
+                  namespace="market-intel-brain",
+                  resource="cpu"
+                }
+            ) * 100
+          labels:
+            component: rust-engine
+            autoscaling_metric: "cpu_usage"
+        # Memory Usage Percentage
+        - record: rust_engine:memory_usage_percent
+          expr: |
+            sum(
+              container_memory_working_set_bytes{
+                pod=~"rust-engine-.*",
+                namespace="market-intel-brain",
+                container!="POD",
+                container!=""
+              }
+            ) / sum(
+              kube_pod_container_resource_requests{
+                  pod=~"rust-engine-.*",
+                  namespace="market-intel-brain",
+                  resource="memory"
+                }
+            ) * 100
+          labels:
+            component: rust-engine
+            autoscaling_metric: "memory_usage"
+        # Vector Store Searches Per Second
+        - record: rust_engine:vector_store_searches_per_second:rate2m
+          expr: |
+            sum(
+              rate(
+                vector_store_operations_total{
+                  service="rust-engine",
+                  namespace="market-intel-brain",
+                  operation_type="search"
+                }[2m]
+              )
+            )
+          labels:
+            component: rust-engine
+            autoscaling_metric: "vector_searches"
+        # Analytics Events Per Second
+        - record: rust_engine:analytics_events_per_second:rate2m
+          expr: |
+            sum(
+              rate(
+                analytics_events_published_total{
+                  service="rust-engine",
+                  namespace="market-intel-brain"
+                }[2m]
+              )
+            )
+          labels:
+            component: rust-engine
+            autoscaling_metric: "analytics_events"

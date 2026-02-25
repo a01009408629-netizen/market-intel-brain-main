@@ -1,0 +1,222 @@
+---
+# KEDA Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keda
+  labels:
+    name: keda
+    app.kubernetes.io/name: keda
+    app.kubernetes.io/component: autoscaling
+  annotations:
+    description: "KEDA - Kubernetes Event-Driven Autoscaling namespace"
+---
+# KEDA ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keda-operator
+  namespace: keda
+  labels:
+    app.kubernetes.io/name: keda
+    app.kubernetes.io/component: operator
+---
+# KEDA ClusterRole for Prometheus Access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: keda-prometheus-reader
+  labels:
+    app.kubernetes.io/name: keda
+    app.kubernetes.io/component: autoscaling
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "endpoints"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "replicationcontrollers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list"]
+  - apiGroups: ["custom.metrics.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list"]
+  - apiGroups: ["external.metrics.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list"]
+---
+# KEDA ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: keda-prometheus-reader-binding
+  labels:
+    app.kubernetes.io/name: keda
+    app.kubernetes.io/component: autoscaling
+subjects:
+  - kind: ServiceAccount
+    name: keda-operator
+    namespace: keda
+roleRef:
+  kind: ClusterRole
+  name: keda-prometheus-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# KEDA Role for Market Intel Brain Namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: keda-scaler
+  namespace: market-intel-brain
+  labels:
+    app.kubernetes.io/name: keda
+    app.kubernetes.io/component: autoscaling
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["keda.sh"]
+    resources: ["scaledobjects", "scaledjobs", "triggerauthentications"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["keda.sh"]
+    resources: ["scaledobjects/status", "scaledjobs/status", "triggerauthentications/status"]
+    verbs: ["get", "update", "patch"]
+---
+# KEDA RoleBinding for Market Intel Brain Namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: keda-scaler-binding
+  namespace: market-intel-brain
+  labels:
+    app.kubernetes.io/name: keda
+    app.kubernetes.io/component: autoscaling
+subjects:
+  - kind: ServiceAccount
+    name: keda-operator
+    namespace: keda
+roleRef:
+  kind: Role
+  name: keda-scaler
+  apiGroup: rbac.authorization.k8s.io
+---
+# KEDA ConfigMap for Global Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keda-config
+  namespace: keda
+  labels:
+    app.kubernetes.io/name: keda
+    app.kubernetes.io/component: config
+data:
+  config.yaml: |
+    # KEDA Global Configuration
+    metrics:
+      address: ":8080"
+      aggregator: prometheus
+      port: 8080
+    
+    # Prometheus Configuration
+    prometheus:
+      address: "http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090"
+      port: 9090
+      path: "/api/v1/query"
+    
+    # Default Scaling Policies
+    default_scale_behavior:
+      scale_up:
+        stabilization_window_seconds: 0
+        policies:
+          - type: "Pods"
+            value: 2
+            period_seconds: 10
+          - type: "Percent"
+            value: 100
+            period_seconds: 15
+        select_policy: "Max"
+      scale_down:
+        stabilization_window_seconds: 300
+        policies:
+          - type: "Pods"
+            value: 1
+            period_seconds: 60
+          - type: "Percent"
+            value: 10
+            period_seconds: 120
+        select_policy: "Min"
+    
+    # Default Triggers Configuration
+    default_triggers:
+      prometheus:
+        server_address: "http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090"
+        query_timeout: "30s"
+        unsafe_ssl: "false"
+      
+      kafka:
+        bootstrap_servers: "redpanda-0.redpanda.market-intel-brain.svc.cluster.local:9092,redpanda-1.redpanda.market-intel-brain.svc.cluster.local:9092,redpanda-2.redpanda.market-intel-brain.svc.cluster.local:9092"
+        allow_idle_consumers: "false"
+        offset_reset_policy: "latest"
+        session_timeout_ms: "10000"
+        heartbeat_interval_ms: "3000"
+        max_poll_records: "500"
+        consumer_fetch_max_bytes: "1048576"
+        tls: "false"
+        sasl: "plain"
+    
+    # Logging Configuration
+    logging:
+      level: "info"
+      format: "json"
+      enable_request_log: "true"
+    
+    # Health Check Configuration
+    health:
+      address: ":8081"
+      port: 8081
+      timeout: "5s"
+---
+# KEDA LimitRange for Resource Management
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: keda-limits
+  namespace: keda
+  labels:
+    app.kubernetes.io/name: keda
+    app.kubernetes.io/component: limits
+spec:
+  limits:
+  - default:
+      cpu: "100m"
+      memory: "128Mi"
+    defaultRequest:
+      cpu: "50m"
+      memory: "64Mi"
+    type: Container
+---
+# KEDA ResourceQuota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: keda-quota
+  namespace: keda
+  labels:
+    app.kubernetes.io/name: keda
+    app.kubernetes.io/component: quota
+spec:
+  hard:
+    pods: "10"
+    services: "5"
+    configmaps: "10"
+    secrets: "10"
+    count/services.loadbalancers: "0"
+    count/services.nodeports: "0"
+    requests.cpu: "1"
+    requests.memory: "1Gi"
+    limits.cpu: "2"
+    limits.memory: "2Gi"

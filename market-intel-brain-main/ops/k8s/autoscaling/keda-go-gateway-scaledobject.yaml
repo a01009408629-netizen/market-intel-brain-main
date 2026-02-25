@@ -1,0 +1,289 @@
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: go-gateway-scaledobject
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: go-gateway
+    autoscaling: keda
+  annotations:
+    scaledobject.keda.sh/transfer-hpa-owner: "true"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/path: "/metrics"
+spec:
+  scaleTargetRef:
+    name: go-gateway-deployment
+    service: go-gateway-service
+  pollingInterval: 10         # Default: 30 seconds
+  cooldownPeriod: 60          # Default: 300 seconds
+  idleReplicaCount: 2         # Minimum replicas when idle
+  minReplicaCount: 2          # Minimum replicas
+  maxReplicaCount: 50         # Maximum replicas for burst traffic
+  fallback:                   # Fallback configuration
+    failureThreshold: 3       # Number of consecutive failed scalings before fallback
+    replicas: 2               # Fallback replica count
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0      # Immediate scale-up for burst traffic
+          policies:
+            - type: Pods
+              value: 10                      # Scale up by 10 pods at once
+              periodSeconds: 10              # Every 10 seconds
+            - type: Percent
+              value: 200                     # Scale up by 200% at once
+              periodSeconds: 15              # Every 15 seconds
+          selectPolicy: Max                  # Use the maximum change
+        scaleDown:
+          stabilizationWindowSeconds: 300    # Conservative scale-down (5 minutes)
+          policies:
+            - type: Pods
+              value: 2                       # Scale down by 2 pods at once
+              periodSeconds: 60              # Every 1 minute
+            - type: Percent
+              value: 25                      # Scale down by 25% at once
+              periodSeconds: 120             # Every 2 minutes
+          selectPolicy: Min                  # Use the minimum change
+  triggers:
+    # HTTP Requests Per Second Trigger
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          sum(
+            rate(
+              http_requests_total{
+                service="go-gateway",
+                namespace="market-intel-brain",
+                code!~"5.."
+              }[2m]
+            )
+          )
+        threshold: "100"                    # Scale when HTTP requests per second > 100
+        activationThreshold: "50"            # Activate when HTTP requests per second > 50
+        metricName: "http_requests_per_second"
+    # Response Time Trigger
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          histogram_quantile(0.95,
+            sum(
+              rate(
+                http_request_duration_seconds_bucket{
+                  service="go-gateway",
+                  namespace="market-intel-brain"
+                }[2m]
+              )
+            ) by (le)
+          )
+        threshold: "0.5"                     # Scale when P95 response time > 500ms
+        activationThreshold: "0.3"            # Activate when P95 response time > 300ms
+        metricName: "http_response_time_p95"
+    # CPU Usage Trigger (Secondary)
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          sum(
+            rate(
+              container_cpu_usage_seconds_total{
+                pod=~"go-gateway-.*",
+                namespace="market-intel-brain",
+                container!="POD",
+                container!=""
+              }[2m]
+            )
+          ) / sum(
+            kube_pod_container_resource_requests{
+                pod=~"go-gateway-.*",
+                namespace="market-intel-brain",
+                resource="cpu"
+              }
+          ) * 100
+        threshold: "70"                     # Scale when CPU usage > 70%
+        activationThreshold: "50"            # Activate when CPU usage > 50%
+        metricName: "cpu_usage_percent"
+    # Memory Usage Trigger (Secondary)
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          sum(
+            container_memory_working_set_bytes{
+              pod=~"go-gateway-.*",
+              namespace="market-intel-brain",
+              container!="POD",
+              container!=""
+            }
+          ) / sum(
+            kube_pod_container_resource_requests{
+                pod=~"go-gateway-.*",
+                namespace="market-intel-brain",
+                resource="memory"
+              }
+          ) * 100
+        threshold: "80"                     # Scale when memory usage > 80%
+        activationThreshold: "60"            # Activate when memory usage > 60%
+        metricName: "memory_usage_percent"
+    # Active Connections Trigger
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-service.market-intel-brain-observability.svc.cluster.local:9090
+        query: |
+          sum(
+            grpc_server_started_total{
+                service="go-gateway",
+                namespace="market-intel-brain"
+              }
+          ) - sum(
+            grpc_server_handled_total{
+                service="go-gateway",
+                namespace="market-intel-brain"
+              }
+          )
+        threshold: "500"                    # Scale when active connections > 500
+        activationThreshold: "200"            # Activate when active connections > 200
+        metricName: "active_grpc_connections"
+---
+# KEDA Authentication for Prometheus
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keda-prometheus-secret
+  namespace: market-intel-brain
+type: Opaque
+data:
+  # Base64 encoded empty string (no auth needed for internal Prometheus)
+  bearerToken: ""
+---
+# ServiceMonitor for Go Gateway Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: go-gateway-servicemonitor
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: go-gateway
+    monitoring: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: go-gateway
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true
+---
+# PrometheusRule for Go Gateway Autoscaling Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: go-gateway-autoscaling-rules
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: go-gateway
+    autoscaling: keda
+spec:
+  groups:
+    - name: go-gateway-autoscaling
+      rules:
+        # HTTP Requests Per Second
+        - record: go_gateway:http_requests_per_second:rate2m
+          expr: |
+            sum(
+              rate(
+                http_requests_total{
+                  service="go-gateway",
+                  namespace="market-intel-brain",
+                  code!~"5.."
+                }[2m]
+              )
+            )
+          labels:
+            component: go-gateway
+            autoscaling_metric: "http_rps"
+        # P95 Response Time
+        - record: go_gateway:http_response_time_p95:quantile
+          expr: |
+            histogram_quantile(0.95,
+              sum(
+                rate(
+                  http_request_duration_seconds_bucket{
+                    service="go-gateway",
+                    namespace="market-intel-brain"
+                  }[2m]
+                )
+              ) by (le)
+            )
+          labels:
+            component: go-gateway
+            autoscaling_metric: "response_time_p95"
+        # CPU Usage Percentage
+        - record: go_gateway:cpu_usage_percent:rate2m
+          expr: |
+            sum(
+              rate(
+                container_cpu_usage_seconds_total{
+                  pod=~"go-gateway-.*",
+                  namespace="market-intel-brain",
+                  container!="POD",
+                  container!=""
+                }[2m]
+              )
+            ) / sum(
+              kube_pod_container_resource_requests{
+                  pod=~"go-gateway-.*",
+                  namespace="market-intel-brain",
+                  resource="cpu"
+                }
+            ) * 100
+          labels:
+            component: go-gateway
+            autoscaling_metric: "cpu_usage"
+        # Memory Usage Percentage
+        - record: go_gateway:memory_usage_percent
+          expr: |
+            sum(
+              container_memory_working_set_bytes{
+                pod=~"go-gateway-.*",
+                namespace="market-intel-brain",
+                container!="POD",
+                container!=""
+              }
+            ) / sum(
+              kube_pod_container_resource_requests{
+                  pod=~"go-gateway-.*",
+                  namespace="market-intel-brain",
+                  resource="memory"
+                }
+            ) * 100
+          labels:
+            component: go-gateway
+            autoscaling_metric: "memory_usage"
+        # Active gRPC Connections
+        - record: go_gateway:active_grpc_connections
+          expr: |
+            sum(
+              grpc_server_started_total{
+                service="go-gateway",
+                namespace="market-intel-brain"
+              }
+            ) - sum(
+              grpc_server_handled_total{
+                service="go-gateway",
+                namespace="market-intel-brain"
+              }
+            )
+          labels:
+            component: go-gateway
+            autoscaling_metric: "active_connections"
