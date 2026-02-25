@@ -32,6 +32,111 @@ service CoreEngineService {
   // Metrics and monitoring
   rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
   rpc GetPerformanceStats(google.protobuf.Empty) returns (PerformanceStatsResponse);
+  
+  // Data Ingestion Services
+  rpc FetchMarketData(FetchMarketDataRequest) returns (FetchMarketDataResponse);
+  rpc FetchNewsData(FetchNewsDataRequest) returns (FetchNewsDataResponse);
+  rpc GetMarketDataBuffer(GetMarketDataBufferRequest) returns (GetMarketDataBufferResponse);
+  rpc GetNewsBuffer(GetNewsBufferRequest) returns (GetNewsBufferResponse);
+  rpc GetIngestionStats(google.protobuf.Empty) returns (GetIngestionStatsResponse);
+  rpc ConnectDataSource(ConnectDataSourceRequest) returns (ConnectDataSourceResponse);
+}
+
+// Data ingestion request/response messages
+message FetchMarketDataRequest {
+  repeated string symbols = 1;
+  string source_id = 2;
+}
+
+message FetchMarketDataResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated MarketData market_data = 3;
+}
+
+message FetchNewsDataRequest {
+  repeated string keywords = 1;
+  string source_id = 2;
+  int32 hours_back = 3;
+}
+
+message FetchNewsDataResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated NewsItem news_items = 3;
+}
+
+message GetMarketDataBufferRequest {
+  string symbol = 1;
+  int32 limit = 2;
+}
+
+message GetMarketDataBufferResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated MarketData market_data = 3;
+}
+
+message GetNewsBufferRequest {
+  repeated string keywords = 1;
+  int32 limit = 2;
+}
+
+message GetNewsBufferResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  repeated NewsItem news_items = 3;
+}
+
+message GetIngestionStatsResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  IngestionStats stats = 3;
+}
+
+message ConnectDataSourceRequest {
+  string source_id = 1;
+  string api_key = 2;
+}
+
+message ConnectDataSourceResponse {
+  common.ResponseStatus status = 1;
+  string message = 2;
+  bool connected = 3;
+}
+
+// Data structures
+message MarketData {
+  string symbol = 1;
+  double price = 2;
+  int64 volume = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  string source = 5;
+  map<string, string> additional_data = 6;
+}
+
+message NewsItem {
+  string title = 1;
+  string content = 2;
+  string source = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  double sentiment_score = 5;
+  double relevance_score = 6;
+}
+
+message IngestionStats {
+  int32 active_connections = 1;
+  int32 configured_sources = 2;
+  int32 market_data_buffer_size = 3;
+  int32 news_buffer_size = 4;
+  int32 max_buffer_size = 5;
+  map<string, DataSourceInfo> data_sources = 6;
+}
+
+message DataSourceInfo {
+  string type = 1;
+  bool enabled = 2;
+  bool connected = 3;
 }
 
 // Message processing request

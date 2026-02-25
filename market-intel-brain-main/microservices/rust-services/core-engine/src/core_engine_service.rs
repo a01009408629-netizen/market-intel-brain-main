@@ -4,16 +4,24 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::{Request, Response, Status};
 
 use crate::config::CoreEngineConfig;
+use crate::data_ingestion::DataIngestionService;
 use crate::proto::common::*;
 use crate::proto::core_engine::*;
 
 pub struct CoreEngineServiceImpl {
     config: CoreEngineConfig,
+    data_ingestion: DataIngestionService,
 }
 
 impl CoreEngineServiceImpl {
-    pub fn new(config: CoreEngineConfig) -> Self {
-        Self { config }
+    pub fn new(config: CoreEngineConfig) -> Result<Self, Box<dyn std::error::Error>> {
+        let data_ingestion = DataIngestionService::new()
+            .map_err(|e| format!("Failed to create data ingestion service: {}", e))?;
+
+        Ok(Self { 
+            config,
+            data_ingestion,
+        })
     }
 }
 
@@ -131,6 +139,259 @@ impl core_engine_service_server::CoreEngineService for CoreEngineServiceImpl {
         };
 
         Ok(Response::new(response))
+    }
+
+    // Data Ingestion Services
+    async fn fetch_market_data(
+        &self,
+        request: Request<FetchMarketDataRequest>,
+    ) -> Result<Response<FetchMarketDataResponse>, Status> {
+        let req = request.into_inner();
+        
+        match self.data_ingestion.fetch_market_data(req.symbols, &req.source_id).await {
+            Ok(market_data) => {
+                let proto_market_data: Vec<MarketData> = market_data
+                    .into_iter()
+                    .map(|data| MarketData {
+                        symbol: data.symbol,
+                        price: data.price,
+                        volume: data.volume,
+                        timestamp: Some(prost_types::Timestamp {
+                            seconds: data.timestamp.timestamp(),
+                            nanos: data.timestamp.timestamp_nanos() as i32,
+                        }),
+                        source: data.source,
+                        additional_data: data.additional_data,
+                    })
+                    .collect();
+
+                let response = FetchMarketDataResponse {
+                    status: ResponseStatus::ResponseStatusSuccess as i32,
+                    message: format!("Fetched {} market data items", proto_market_data.len()),
+                    market_data: proto_market_data,
+                };
+
+                Ok(Response::new(response))
+            }
+            Err(e) => {
+                let response = FetchMarketDataResponse {
+                    status: ResponseStatus::ResponseStatusError as i32,
+                    message: format!("Failed to fetch market data: {}", e),
+                    market_data: vec![],
+                };
+                Ok(Response::new(response))
+            }
+        }
+    }
+
+    async fn fetch_news_data(
+        &self,
+        request: Request<FetchNewsDataRequest>,
+    ) -> Result<Response<FetchNewsDataResponse>, Status> {
+        let req = request.into_inner();
+        
+        match self.data_ingestion.fetch_news_data(req.keywords, &req.source_id, req.hours_back).await {
+            Ok(news_items) => {
+                let proto_news_items: Vec<NewsItem> = news_items
+                    .into_iter()
+                    .map(|news| NewsItem {
+                        title: news.title,
+                        content: news.content,
+                        source: news.source,
+                        timestamp: Some(prost_types::Timestamp {
+                            seconds: news.timestamp.timestamp(),
+                            nanos: news.timestamp.timestamp_nanos() as i32,
+                        }),
+                        sentiment_score: news.sentiment_score,
+                        relevance_score: news.relevance_score,
+                    })
+                    .collect();
+
+                let response = FetchNewsDataResponse {
+                    status: ResponseStatus::ResponseStatusSuccess as i32,
+                    message: format!("Fetched {} news items", proto_news_items.len()),
+                    news_items: proto_news_items,
+                };
+
+                Ok(Response::new(response))
+            }
+            Err(e) => {
+                let response = FetchNewsDataResponse {
+                    status: ResponseStatus::ResponseStatusError as i32,
+                    message: format!("Failed to fetch news data: {}", e),
+                    news_items: vec![],
+                };
+                Ok(Response::new(response))
+            }
+        }
+    }
+
+    async fn get_market_data_buffer(
+        &self,
+        request: Request<GetMarketDataBufferRequest>,
+    ) -> Result<Response<GetMarketDataBufferResponse>, Status> {
+        let req = request.into_inner();
+        
+        let symbol = if req.symbol.is_empty() { None } else { Some(req.symbol) };
+        let limit = if req.limit == 0 { 100 } else { req.limit as usize };
+        
+        match self.data_ingestion.get_market_data(symbol, limit).await {
+            Ok(market_data) => {
+                let proto_market_data: Vec<MarketData> = market_data
+                    .into_iter()
+                    .map(|data| MarketData {
+                        symbol: data.symbol,
+                        price: data.price,
+                        volume: data.volume,
+                        timestamp: Some(prost_types::Timestamp {
+                            seconds: data.timestamp.timestamp(),
+                            nanos: data.timestamp.timestamp_nanos() as i32,
+                        }),
+                        source: data.source,
+                        additional_data: data.additional_data,
+                    })
+                    .collect();
+
+                let response = GetMarketDataBufferResponse {
+                    status: ResponseStatus::ResponseStatusSuccess as i32,
+                    message: format!("Retrieved {} market data items from buffer", proto_market_data.len()),
+                    market_data: proto_market_data,
+                };
+
+                Ok(Response::new(response))
+            }
+            Err(e) => {
+                let response = GetMarketDataBufferResponse {
+                    status: ResponseStatus::ResponseStatusError as i32,
+                    message: format!("Failed to get market data buffer: {}", e),
+                    market_data: vec![],
+                };
+                Ok(Response::new(response))
+            }
+        }
+    }
+
+    async fn get_news_buffer(
+        &self,
+        request: Request<GetNewsBufferRequest>,
+    ) -> Result<Response<GetNewsBufferResponse>, Status> {
+        let req = request.into_inner();
+        
+        let keywords = if req.keywords.is_empty() { None } else { Some(req.keywords) };
+        let limit = if req.limit == 0 { 100 } else { req.limit as usize };
+        
+        match self.data_ingestion.get_news_data(keywords, limit).await {
+            Ok(news_items) => {
+                let proto_news_items: Vec<NewsItem> = news_items
+                    .into_iter()
+                    .map(|news| NewsItem {
+                        title: news.title,
+                        content: news.content,
+                        source: news.source,
+                        timestamp: Some(prost_types::Timestamp {
+                            seconds: news.timestamp.timestamp(),
+                            nanos: news.timestamp.timestamp_nanos() as i32,
+                        }),
+                        sentiment_score: news.sentiment_score,
+                        relevance_score: news.relevance_score,
+                    })
+                    .collect();
+
+                let response = GetNewsBufferResponse {
+                    status: ResponseStatus::ResponseStatusSuccess as i32,
+                    message: format!("Retrieved {} news items from buffer", proto_news_items.len()),
+                    news_items: proto_news_items,
+                };
+
+                Ok(Response::new(response))
+            }
+            Err(e) => {
+                let response = GetNewsBufferResponse {
+                    status: ResponseStatus::ResponseStatusError as i32,
+                    message: format!("Failed to get news buffer: {}", e),
+                    news_items: vec![],
+                };
+                Ok(Response::new(response))
+            }
+        }
+    }
+
+    async fn get_ingestion_stats(
+        &self,
+        _request: Request<prost_types::Empty>,
+    ) -> Result<Response<GetIngestionStatsResponse>, Status> {
+        match self.data_ingestion.get_ingestion_stats().await {
+            Ok(stats) => {
+                let proto_data_sources: std::collections::HashMap<String, DataSourceInfo> = stats
+                    .data_sources
+                    .into_iter()
+                    .map(|(id, info)| {
+                        (id, DataSourceInfo {
+                            r#type: info.r#type,
+                            enabled: info.enabled,
+                            connected: info.connected,
+                        })
+                    })
+                    .collect();
+
+                let proto_stats = IngestionStats {
+                    active_connections: stats.active_connections,
+                    configured_sources: stats.configured_sources,
+                    market_data_buffer_size: stats.market_data_buffer_size,
+                    news_buffer_size: stats.news_buffer_size,
+                    max_buffer_size: stats.max_buffer_size,
+                    data_sources: proto_data_sources,
+                };
+
+                let response = GetIngestionStatsResponse {
+                    status: ResponseStatus::ResponseStatusSuccess as i32,
+                    message: "Retrieved ingestion statistics".to_string(),
+                    stats: Some(proto_stats),
+                };
+
+                Ok(Response::new(response))
+            }
+            Err(e) => {
+                let response = GetIngestionStatsResponse {
+                    status: ResponseStatus::ResponseStatusError as i32,
+                    message: format!("Failed to get ingestion stats: {}", e),
+                    stats: None,
+                };
+                Ok(Response::new(response))
+            }
+        }
+    }
+
+    async fn connect_data_source(
+        &self,
+        request: Request<ConnectDataSourceRequest>,
+    ) -> Result<Response<ConnectDataSourceResponse>, Status> {
+        let req = request.into_inner();
+        
+        let api_key = if req.api_key.is_empty() { None } else { Some(req.api_key) };
+        
+        match self.data_ingestion.connect_data_source(&req.source_id, api_key).await {
+            Ok(connected) => {
+                let response = ConnectDataSourceResponse {
+                    status: ResponseStatus::ResponseStatusSuccess as i32,
+                    message: if connected {
+                        format!("Successfully connected to data source: {}", req.source_id)
+                    } else {
+                        format!("Failed to connect to data source: {}", req.source_id)
+                    },
+                    connected,
+                };
+                Ok(Response::new(response))
+            }
+            Err(e) => {
+                let response = ConnectDataSourceResponse {
+                    status: ResponseStatus::ResponseStatusError as i32,
+                    message: format!("Failed to connect to data source: {}", e),
+                    connected: false,
+                };
+                Ok(Response::new(response))
+            }
+        }
     }
 
     async fn process_message(

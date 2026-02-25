@@ -10,6 +10,7 @@ use tracing_subscriber;
 
 mod core_engine_service;
 mod config;
+mod data_ingestion;
 
 use core_engine_service::CoreEngineServiceImpl;
 use config::CoreEngineConfig;
@@ -28,7 +29,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Loaded configuration: {:?}", config);
 
     // Create core engine service
-    let core_engine_service = CoreEngineServiceImpl::new(config.clone());
+    let core_engine_service = CoreEngineServiceImpl::new(config.clone())?;
+
+    // Start background data collection
+    if let Err(e) = core_engine_service.data_ingestion.start_background_collection() {
+        warn!("Failed to start background collection: {}", e);
+    }
 
     // Create gRPC server
     let addr = SocketAddr::from(([0, 0, 0, 0], config.grpc_port));
