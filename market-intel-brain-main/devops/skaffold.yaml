@@ -1,0 +1,456 @@
+# Skaffold Configuration for Market Intel Brain
+# Provides local development experience with hot-reloading and automatic deployment
+
+apiVersion: skaffold/v2beta28
+kind: Config
+
+metadata:
+  name: market-intel-brain
+
+# Build configurations for different services
+build:
+  # Go API Gateway build configuration
+  artifacts:
+  - image: api-gateway
+    context:
+      dir: microservices/go-services/api-gateway
+      docker:
+        dockerfile: Dockerfile
+        buildArgs:
+          - "--platform=linux/amd64"
+          - "--build-arg=GO_VERSION=1.21"
+          - "--build-arg=ENVIRONMENT=development"
+        cacheFrom:
+          - host:
+            paths:
+              - /var/run/docker.sock:/var/run/docker.sock
+    sync:
+      manual:
+        # Exclude generated files
+        exclude:
+          - "vendor/**"
+          - "*.pb.go"
+          - "*_test.go"
+          - "mocks/**"
+          - "*.log"
+          - "tmp/**"
+          - ".git/**"
+          - ".idea/**"
+          - ".vscode/**"
+          - "node_modules/**"
+    
+  # Rust Core Engine build configuration
+  artifacts:
+  - image: core-engine
+    context:
+      dir: microservices/rust-services/core-engine
+      docker:
+        dockerfile: Dockerfile
+        buildArgs:
+          - "--platform=linux/amd64"
+          - "--build-arg=RUST_VERSION=1.75"
+          - "--build-arg=ENVIRONMENT=development"
+        cacheFrom:
+          - host:
+            paths:
+              - /var/run/docker.sock:/var/run/docker.sock
+    sync:
+      manual:
+        # Exclude generated files
+        exclude:
+          - "target/**"
+          - "Cargo.lock"
+          - "*.pb.rs"
+          - "*_test.rs"
+          - "mocks/**"
+          - "*.log"
+          - "tmp/**"
+          - ".git/**"
+          - ".idea/**"
+          - ".vscode/**"
+          - "node_modules/**"
+
+# Deploy configurations for different environments
+deploy:
+  # Local development deployment
+  - name: dev
+    kustomize:
+      paths:
+        - deploy/k8s/overlays/dev
+    helm:
+      releases:
+        - name: api-gateway
+          chartPath: deploy/helm/api-gateway
+          valuesFiles:
+            - deploy/helm/api-gateway/values-dev.yaml
+          setValues:
+            - image.tag: "latest"
+            - service.type: "LoadBalancer"
+        - name: core-engine
+          chartPath: deploy/helm/core-engine
+          valuesFiles:
+            - deploy/helm/core-engine/values-dev.yaml
+          setValues:
+            - image.tag: "latest"
+            - service.type: "ClusterIP"
+    
+  # Staging deployment
+  - name: staging
+    kustomize:
+      paths:
+        - deploy/k8s/overlays/staging
+    helm:
+      releases:
+        - name: api-gateway
+          chartPath: deploy/helm/api-gateway
+          valuesFiles:
+            - deploy/helm/api-gateway/values-staging.yaml
+          setValues:
+            - image.tag: "staging"
+            - service.type: "LoadBalancer"
+            - ingress.enabled: true
+        - name: core-engine
+          chartPath: deploy/helm/core-engine
+          valuesFiles:
+            - deploy/helm/core-engine/values-staging.yaml
+          setValues:
+            - image.tag: "staging"
+            - service.type: "ClusterIP"
+            - tls.enabled: true
+    
+  # Production deployment
+  - name: prod
+    kustomize:
+      paths:
+        - deploy/k8s/overlays/prod
+    helm:
+      releases:
+        - name: api-gateway
+          chartPath: deploy/helm/api-gateway
+          valuesFiles:
+            - deploy/helm/api-gateway/values-prod.yaml
+          setValues:
+            - image.tag: "v1.0.0"
+            - service.type: "LoadBalancer"
+            - ingress.enabled: true
+            - resources.requests.cpu: "500m"
+            - resources.requests.memory: "512Mi"
+            - resources.limits.cpu: "2000m"
+            - resources.limits.memory: "2Gi"
+            - autoscaling.enabled: true
+            - autoscaling.minReplicas: 2
+            - autoscaling.maxReplicas: 10
+        - name: core-engine
+          chartPath: deploy/helm/core-engine
+          valuesFiles:
+            - deploy/helm/core-engine/values-prod.yaml
+          setValues:
+            - image.tag: "v1.0.0"
+            - service.type: "ClusterIP"
+            - tls.enabled: true
+            - resources.requests.cpu: "200m"
+            - resources.requests.memory: "1Gi"
+            - resources.limits.cpu: "1000m"
+            - resources.limits.memory: "2Gi"
+            - autoscaling.enabled: true
+            - autoscaling.minReplicas: 2
+            - autoscaling.maxReplicas: 5
+
+# Port forwarding configuration
+portForward:
+  # Forward commonly used ports
+  - resourceType: deployment
+    name: api-gateway
+    port: 8080
+    localPort: 8080
+  - resourceType: deployment
+    name: core-engine
+    port: 50052
+    localPort: 50052
+  - resourceType: service
+    name: prometheus
+    port: 9090
+    localPort: 9090
+  - resourceType: service
+    name: grafana
+    port: 3000
+    localPort: 3000
+  - resourceType: service
+    name: jaeger
+    port: 16686
+    localPort: 16686
+
+# Profiles for different development scenarios
+profiles:
+  # Development profile with hot reloading
+  - name: dev
+    patches:
+      - op: replace
+        path: deploy/k8s/overlays/dev/dev-patches.yaml
+      - op: replace
+        path: deploy/k8s/overlays/dev/tls-patches.yaml
+    build:
+      artifacts:
+        - image: api-gateway
+          docker:
+            buildArgs:
+              - "--build-arg=ENVIRONMENT=development"
+              - "--build-arg=DEBUG=true"
+              - "--build-arg=ENABLE_PPROF=true"
+        - image: core-engine
+          docker:
+            buildArgs:
+              - "--build-arg=ENVIRONMENT=development"
+              - "--build-arg=DEBUG=true"
+              - "--build-arg=ENABLE_PPROF=true"
+    deploy:
+      kustomize:
+        paths:
+          - deploy/k8s/overlays/dev
+      helm:
+        releases:
+          - name: api-gateway
+            valuesFiles:
+              - deploy/helm/api-gateway/values-dev.yaml
+            setValues:
+              - image.tag: "dev-latest"
+              - debug.enabled: true
+              - pprof.enabled: true
+              - resources.requests.cpu: "100m"
+              - resources.requests.memory: "128Mi"
+              - resources.limits.cpu: "500m"
+              - resources.limits.memory: "512Mi"
+          - name: core-engine
+            valuesFiles:
+              - deploy/helm/core-engine/values-dev.yaml
+            setValues:
+              - image.tag: "dev-latest"
+              - debug.enabled: true
+              - pprof.enabled: true
+              - resources.requests.cpu: "100m"
+              - resources.requests.memory: "256Mi"
+              - resources.limits.cpu: "500m"
+              - resources.limits.memory: "1Gi"
+  
+  # Testing profile with minimal resources
+  - name: test
+    patches:
+      - op: replace
+        path: deploy/k8s/overlays/test/resource-patches.yaml
+    build:
+      artifacts:
+        - image: api-gateway
+          docker:
+            buildArgs:
+              - "--build-arg=ENVIRONMENT=testing"
+              - "--build-arg=ENABLE_TESTS=true"
+        - image: core-engine
+          docker:
+            buildArgs:
+              - "--build-arg=ENVIRONMENT=testing"
+              - "--build-arg=ENABLE_TESTS=true"
+    deploy:
+      kustomize:
+        paths:
+          - deploy/k8s/overlays/test
+      helm:
+        releases:
+          - name: api-gateway
+            valuesFiles:
+              - deploy/helm/api-gateway/values-test.yaml
+            setValues:
+              - image.tag: "test-latest"
+              - resources.requests.cpu: "50m"
+              - resources.requests.memory: "64Mi"
+              - resources.limits.cpu: "200m"
+              - resources.limits.memory: "256Mi"
+          - name: core-engine
+            valuesFiles:
+              - deploy/helm/core-engine/values-test.yaml
+            setValues:
+              - image.tag: "test-latest"
+              - resources.requests.cpu: "50m"
+              - resources.requests.memory: "128Mi"
+              - resources.limits.cpu: "200m"
+              - resources.limits.memory: "512Mi"
+
+# Local registry configuration
+localRegistry:
+  # Use local registry for development
+  disable: false
+  # If enabled, configure local registry
+  # host: localhost:5000
+  # skipPush: true
+  # insecure: true
+
+# Custom hooks for development workflow
+customHooks:
+  # Pre-build hooks
+  preBuild:
+    - command: ["./scripts/pre-build.sh"]
+      args: ["--profile", "${SKAFFOLD_PROFILE:-dev}"]
+  
+  # Post-build hooks
+  postBuild:
+    - command: ["./scripts/post-build.sh"]
+      args: ["--profile", "${SKAFFOLD_PROFILE:-dev}"]
+  
+  # Pre-deploy hooks
+  preDeploy:
+    - command: ["./scripts/pre-deploy.sh"]
+      args: ["--profile", "${SKAFFOLD_PROFILE:-dev}"]
+  
+  # Post-deploy hooks
+  postDeploy:
+    - command: ["./scripts/post-deploy.sh"]
+      args: ["--profile", "${SKAFFOLD_PROFILE:-dev}"]
+
+# Logging configuration
+logging:
+  # Enable verbose logging
+  verbose: true
+  
+  # Log level
+  level: info
+  
+  # Log format
+  format: json
+  
+  # Log to file
+  logToFile: true
+  
+  # Log file path
+  logFilePath: "./logs/skaffold.log"
+
+# Environment variables
+env:
+  # Development environment variables
+  dev:
+    - name: ENVIRONMENT
+      value: "development"
+    - name: DEBUG
+      value: "true"
+    - name: LOG_LEVEL
+      value: "debug"
+    - name: ENABLE_PPROF
+      value: "true"
+    - name: ENABLE_HOT_RELOAD
+      value: "true"
+    - name: SKIP_TLS_VERIFY
+      value: "true"  # For local development
+    - name: DATABASE_URL
+      value: "postgresql://postgres:postgres@localhost:5432/market_intel_dev"
+    - name: REDIS_URL
+      value: "redis://localhost:6379/0"
+    - name: CORE_ENGINE_URL
+      value: "core-engine:50052"
+    - name: JAEGER_ENDPOINT
+      value: "http://localhost:14268/api/traces"
+    - name: PROMETHEUS_ENDPOINT
+      value: "http://localhost:9090"
+  
+  # Testing environment variables
+  test:
+    - name: ENVIRONMENT
+      value: "testing"
+    - name: DEBUG
+      value: "true"
+    - name: LOG_LEVEL
+      value: "info"
+    - name: ENABLE_TESTS
+      value: "true"
+    - name: DATABASE_URL
+      value: "postgresql://postgres:postgres@localhost:5432/market_intel_test"
+    - name: REDIS_URL
+      value: "redis://localhost:6379/1"
+    - name: CORE_ENGINE_URL
+      value: "core-engine:50052"
+    - name: JAEGER_ENDPOINT
+      value: "http://localhost:14268/api/traces"
+    - name: PROMETHEUS_ENDPOINT
+      value: "http://localhost:9090"
+
+# Experimental features
+experimental:
+  # Enable experimental features
+  enabled: false
+  
+  # Experimental features to enable
+  features:
+    - "docker-buildkit"
+    - "kustomize-v4"
+    - "helm-v3"
+    - "debug-logs"
+
+# Security configuration
+security:
+  # Security context for pods
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 2000
+    seccompProfile:
+      type: RuntimeDefault
+  
+  # Network policies
+  networkPolicies:
+    enabled: true
+    defaultDeny: false
+    allowEgress: true
+    allowIngress: true
+
+# Performance optimization
+performance:
+  # Build performance
+  buildConcurrency: 4
+  buildTimeout: 600
+  
+  # Deployment performance
+  deployConcurrency: 2
+  deployTimeout: 300
+  
+  # Resource optimization
+  resourceOptimization:
+    enabled: true
+    defaultRequests:
+      cpu: "100m"
+      memory: "128Mi"
+    defaultLimits:
+      cpu: "500m"
+      memory: "512Mi"
+
+# Integration with external tools
+integrations:
+  # Docker Desktop integration
+  dockerDesktop:
+    enabled: true
+    kubeconfigPath: ~/.kube/config
+  
+  # Minikube integration
+  minikube:
+    enabled: true
+    profile: minikube
+  
+  # Kubernetes integration
+  kubernetes:
+    enabled: true
+    kubeconfigPath: ~/.kube/config
+    context: docker-desktop
+  
+  # Helm integration
+  helm:
+    enabled: true
+    version: v3
+    defaultChartPath: deploy/helm
+  
+  # Tilt integration
+  tilt:
+    enabled: true
+    configPath: ./tilt/Tiltfile
+    autoTrigger:
+      - "*.go"
+      - "*.rs"
+      - "Dockerfile"
+      - "docker-compose*.yml"
+      - "k8s/*.yaml"

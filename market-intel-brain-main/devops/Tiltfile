@@ -1,0 +1,543 @@
+# Tilt Configuration for Market Intel Brain
+# Provides live development with hot reloading and automatic updates
+
+# Tilt version
+api_version: 0.32.0
+
+# Global settings
+settings:
+  # Enable experimental features
+  experimental: true
+  
+  # Kubernetes namespace
+  namespace: market-intel-brain
+  
+  # Default registry
+  default_registry: docker.io
+  
+  # Tiltfile execution timeout
+  timeout: 600
+  
+  # Enable Tilt web UI
+  enable_tilt_webui: true
+  
+  # Port for Tilt web UI
+  tilt_webui_port: 10350
+  
+  # Log level
+  log_level: info
+
+# Docker registries
+docker_build:
+  # Local registry for development
+  local_registry: localhost:5000
+  
+  # Build arguments
+  build_args:
+    - "--build-arg=ENVIRONMENT=development"
+    - "--build-arg=DEBUG=true"
+    - "--build-arg=ENABLE_PPROF=true"
+    - "--build-arg=SKIP_TLS_VERIFY=true"
+
+# Kubernetes settings
+k8s:
+  # Kubernetes context
+  context: docker-desktop
+  
+  # Kubernetes namespace
+  namespace: market-intel-brain
+  
+  # Wait for resources to be ready
+  wait_for:
+    deployment:
+      api-gateway:
+        image: "api-gateway:latest"
+        timeout: 120
+      core-engine:
+        image: "core-engine:latest"
+        timeout: 120
+  
+  # Resource limits for development
+  resource_limits:
+    api-gateway:
+      cpu: "500m"
+      memory: "512Mi"
+    core-engine:
+      cpu: "500m"
+      memory: "1Gi"
+
+# Go API Gateway service
+api_gateway:
+  # Build configuration
+  build:
+    context: microservices/go-services/api-gateway
+    dockerfile: Dockerfile
+    target: api-gateway
+    cache_from:
+      - host:
+        paths:
+          - /var/run/docker.sock:/var/run/docker.sock
+    args:
+      - "--platform=linux/amd64"
+      - "--build-arg=GO_VERSION=1.21"
+      - "--build-arg=ENVIRONMENT=development"
+      - "--build-arg=DEBUG=true"
+      - "--build-arg=ENABLE_PPROF=true"
+      - "--build-arg=SKIP_TLS_VERIFY=true"
+  
+  # Kubernetes deployment
+  k8s:
+    kind: Deployment
+    name: api-gateway
+    port_forwards:
+      - 8080:8080
+    env:
+      - ENVIRONMENT: development
+      - DEBUG: "true"
+      - LOG_LEVEL: debug
+      - ENABLE_PPROF: "true"
+      - SKIP_TLS_VERIFY: "true"
+      - DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/market_intel_dev"
+      - REDIS_URL: "redis://localhost:6379/0"
+      - CORE_ENGINE_URL: "core-engine:50052"
+      - JAEGER_ENDPOINT: "http://localhost:14268/api/traces"
+      - PROMETHEUS_ENDPOINT: "http://localhost:9090"
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+  
+  # Health check
+  health_check:
+    http:
+      path: /api/v1/health
+      port: 8080
+      initial_delay: 5
+      period: 10
+      timeout: 5
+      success_threshold: 1
+      failure_threshold: 3
+  
+  # Live update configuration
+  live_update:
+    # Enable live updates
+    enabled: true
+    # Paths to watch for changes
+    paths:
+      - microservices/go-services/api-gateway/**/*.go
+      - microservices/go-services/api-gateway/**/*.mod
+      - microservices/go-services/api-gateway/Dockerfile
+    # Exclude patterns
+    exclude:
+      - "vendor/**"
+      - "*.pb.go"
+      - "*_test.go"
+      - "mocks/**"
+      - "*.log"
+      - "tmp/**"
+      - ".git/**"
+      - ".idea/**"
+      - ".vscode/**"
+      - "node_modules/**"
+    # Restart on file changes
+    restart_on:
+      file_changes: true
+      config_changes: false
+
+# Rust Core Engine service
+core_engine:
+  # Build configuration
+  build:
+    context: microservices/rust-services/core-engine
+    dockerfile: Dockerfile
+    target: core-engine
+    cache_from:
+      - host:
+        paths:
+          - /var/run/docker.sock:/var/run/docker.sock
+    args:
+      - "--platform=linux/amd64"
+      - "--build-arg=RUST_VERSION=1.75"
+      - "--build-arg=ENVIRONMENT=development"
+      - "--build-arg=DEBUG=true"
+      - "--build-arg=ENABLE_PPROF=true"
+      - "--build-arg=SKIP_TLS_VERIFY=true"
+  
+  # Kubernetes deployment
+  k8s:
+    kind: Deployment
+    name: core-engine
+    port_forwards:
+      - 50052:50052
+      - 8081:8081  # Metrics endpoint
+    env:
+      - ENVIRONMENT: development
+      - DEBUG: "true"
+      - RUST_LOG: debug
+      - ENABLE_PPROF: true
+      - SKIP_TLS_VERIFY: "true"
+      - DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/market_intel_dev"
+      - REDIS_URL: "redis://localhost:6379/0"
+      - CORE_ENGINE_URL: "core-engine:50052"
+      - JAEGER_ENDPOINT: "http://localhost:14268/api/traces"
+      - PROMETHEUS_ENDPOINT: "http://localhost:9090"
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+  
+  # Health check
+  health_check:
+    grpc:
+      service: core-engine
+      port: 50052
+      initial_delay: 5
+      period: 10
+      timeout: 5
+      success_threshold: 1
+      failure_threshold: 3
+  
+  # Live update configuration
+  live_update:
+    # Enable live updates
+    enabled: true
+    # Paths to watch for changes
+    paths:
+      - microservices/rust-services/core-engine/**/*.rs
+      - microservices/rust-services/core-engine/Cargo.toml
+      - microservices/rust-services/core-engine/Dockerfile
+    # Exclude patterns
+    exclude:
+      - "target/**"
+      - "*.pb.rs"
+      - "*_test.rs"
+      - "mocks/**"
+      - "*.log"
+      - "tmp/**"
+      - ".git/**"
+      - ".idea/**"
+      - ".vscode/**"
+      - "node_modules/**"
+    # Restart on file changes
+    restart_on:
+      file_changes: true
+      config_changes: false
+
+# Observability stack
+observability:
+  # PostgreSQL
+  postgres:
+    k8s:
+      kind: Deployment
+      name: postgres
+      port_forwards:
+        - 5432:5432
+      env:
+        - POSTGRES_DB: market_intel_dev
+        - POSTGRES_USER: postgres
+        - POSTGRES_PASSWORD: postgres
+        - POSTGRES_HOST: localhost
+        - POSTGRES_PORT: "5432"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+  
+  # Redis
+  redis:
+    k8s:
+      kind: Deployment
+      name: redis
+      port_forwards:
+        - 6379:6379
+      env:
+        - REDIS_PASSWORD: ""
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "128Mi"
+        limits:
+          cpu: "200m"
+          memory: "512Mi"
+  
+  # Prometheus
+  prometheus:
+    k8s:
+      kind: Deployment
+      name: prometheus
+      port_forwards:
+        - 9090:9090
+      config_maps:
+        - prometheus.yml:/etc/prometheus/prometheus.yml
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+  
+  # Jaeger
+  jaeger:
+    k8s:
+      kind: Deployment
+      name: jaeger
+      port_forwards:
+        - 16686:16686
+        - 14268:14268
+      env:
+        - COLLECTOR_ZIPKIN_HTTP_PORT: "9411"
+        - SPAN_STORAGE_TYPE: memory
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+  
+  # Grafana
+  grafana:
+    k8s:
+      kind: Deployment
+      name: grafana
+      port_forwards:
+        - 3000:3000
+      env:
+        - GF_SECURITY_ADMIN_USER: admin
+        - GF_SECURITY_ADMIN_PASSWORD: admin
+        - GF_USERS_ALLOW_SIGN_UP: "false"
+        - GF_INSTALL_PLUGINS: "grafana-piechart-panel,grafana-worldmap-panel"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "128Mi"
+        limits:
+          cpu: "200m"
+          memory: "512Mi"
+      config_maps:
+        - grafana/provisioning/datasources/prometheus.yml:/etc/grafana/provisioning/datasources/prometheus.yml
+        - grafana/provisioning/dashboards/market-intel.yml:/etc/grafana/provisioning/dashboards/market-intel.yml
+
+# Development scripts
+dev_scripts:
+  # Pre-start script
+  pre_start:
+    command: ["./scripts/dev-pre-start.sh"]
+    args: ["--profile", "dev"]
+  
+  # Post-start script
+  post_start:
+    command: ["./scripts/dev-post-start.sh"]
+    args: ["--profile", "dev"]
+  
+  # Database migration script
+  migrate_db:
+    command: ["./scripts/migrate-db.sh"]
+    args: ["--profile", "dev"]
+  
+  # Certificate generation script
+  generate_certs:
+    command: ["./scripts/generate-dev-certs.sh"]
+    args: ["--profile", "dev"]
+
+# Testing configuration
+testing:
+  # Enable testing
+  enabled: true
+  
+  # Test configuration
+  test:
+    # Integration tests
+    integration:
+      enabled: true
+      command: ["./scripts/run-integration-tests.sh"]
+      args: ["--profile", "dev"]
+    
+    # Load tests
+    load:
+      enabled: true
+      command: ["./scripts/run-load-tests.sh"]
+      args: ["--profile", "dev"]
+    
+    # Chaos tests
+    chaos:
+      enabled: true
+      command: ["./scripts/run-chaos-tests.sh"]
+      args: ["--profile", "dev"]
+
+# Custom resource definitions
+custom_resources:
+  # Custom resource for API Gateway
+  api_gateway_custom:
+    k8s:
+      kind: Deployment
+      name: api-gateway-custom
+      port_forwards:
+        - 8081:8081  # Custom metrics endpoint
+      env:
+        - ENVIRONMENT: development
+        - DEBUG: "true"
+        - LOG_LEVEL: debug
+        - ENABLE_PPROF: "true"
+        - SKIP_TLS_VERIFY: "true"
+        - CUSTOM_FEATURES: "true"
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "256Mi"
+        limits:
+          cpu: "1000m"
+          memory: "2Gi"
+  
+  # Custom resource for Core Engine
+  core_engine_custom:
+    k8s:
+      kind: Deployment
+      name: core-engine-custom
+      port_forwards:
+        - 50053:50053  # Custom debug endpoint
+      env:
+        - ENVIRONMENT: development
+        - DEBUG: "true"
+        - RUST_LOG: debug
+        - ENABLE_PPROF: true
+        - SKIP_TLS_VERIFY: "true"
+        - CUSTOM_FEATURES: "true"
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
+        limits:
+          cpu: "1000m"
+          memory: "2Gi"
+
+# Performance monitoring
+performance_monitoring:
+  # Enable performance monitoring
+  enabled: true
+  
+  # Metrics collection
+  metrics:
+    # Custom metrics endpoint
+    custom_metrics:
+      enabled: true
+      path: /metrics/custom
+      port: 8081
+    
+    # Performance profiling
+    profiling:
+      enabled: true
+      pprof:
+        enabled: true
+        path: /debug/pprof
+      memory_profiling:
+        enabled: true
+        path: /debug/memory
+      goroutine_profiling:
+        enabled: true
+        path: /debug/goroutine
+  
+  # Resource monitoring
+  resource_monitoring:
+    enabled: true
+    interval: 30  # seconds
+    thresholds:
+      cpu: 80      # percentage
+      memory: 85    # percentage
+      disk: 90      # percentage
+
+# Debug configuration
+debug:
+  # Enable debug mode
+  enabled: true
+  
+  # Debug logging
+  logging:
+    level: debug
+    verbose: true
+    show_timestamps: true
+    show_source_location: true
+  
+  # Debug endpoints
+  endpoints:
+    # Go API Gateway debug endpoints
+    api_gateway:
+      pprof: /debug/pprof
+      vars: /debug/vars
+      goroutines: /debug/goroutines
+      heap: /debug/heap
+      trace: /debug/trace
+      config: /debug/config
+    
+    # Rust Core Engine debug endpoints
+    core_engine:
+      pprof: /debug/pprof
+      vars: /debug/vars
+      goroutines: /debug/goroutines
+      heap: /debug/heap
+      trace: /debug/trace
+      config: /debug/config
+
+# Security configuration for development
+security:
+  # Development security settings
+  development:
+    # Skip TLS verification for local development
+    skip_tls_verify: true
+    
+    # Use self-signed certificates
+    allow_self_signed_certs: true
+    
+    # Disable strict security checks
+    strict_security_checks: false
+    
+    # Enable debug endpoints
+    enable_debug_endpoints: true
+    
+    # Allow insecure connections
+    allow_insecure_connections: true
+    
+    # Development secrets (for local development only)
+    dev_secrets:
+      database_url: "postgresql://postgres:postgres@localhost:5432/market_intel_dev"
+      redis_url: "redis://localhost:6379/0"
+      jwt_secret: "dev-secret-key"
+      encryption_key: "dev-encryption-key"
+
+# Notification configuration
+notifications:
+  # Enable notifications
+  enabled: true
+  
+  # Slack notifications
+  slack:
+    webhook_url: "https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK"
+    channel: "#dev-alerts"
+    username: "market-intel-bot"
+    icon_emoji: ":robot_face:"
+    
+  # Email notifications
+  email:
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    smtp_username: "your-email@gmail.com"
+    smtp_password: "your-app-password"
+    from_email: "noreply@market-intel.com"
+    to_emails:
+      - "dev-team@market-intel.com"
+    
+  # Desktop notifications
+  desktop:
+    enabled: true
+    title_prefix: "[Market Intel Brain Dev]"
+    sound: true
