@@ -13,12 +13,14 @@ import (
 	pb "github.com/market-intel/api-gateway/proto"
 	"github.com/market-intel/api-gateway/pkg/logger"
 	"github.com/market-intel/api-gateway/pkg/otel"
+	"github.com/market-intel/api-gateway/pkg/resilience"
 	"github.com/market-intel/api-gateway/pkg/tls"
 )
 
 type CoreEngineClient struct {
-	conn   *grpc.ClientConn
-	client pb.CoreEngineServiceClient
+	conn           *grpc.ClientConn
+	client         pb.CoreEngineServiceClient
+	circuitBreaker *resilience.CircuitBreakerWithRetry
 }
 
 func NewCoreEngineClient(address string) (*CoreEngineClient, error) {
@@ -67,9 +69,15 @@ func NewCoreEngineClient(address string) (*CoreEngineClient, error) {
 	
 	logger.Infof("Connected to core engine at %s with mTLS", address)
 	
+	// Initialize circuit breaker with retry
+	cbConfig := resilience.DefaultCircuitBreakerConfig()
+	retryConfig := resilience.DefaultRetryConfig()
+	circuitBreaker := resilience.NewCircuitBreakerWithRetry(cbConfig, retryConfig)
+	
 	return &CoreEngineClient{
-		conn:   conn,
-		client: client,
+		conn:           conn,
+		client:         client,
+		circuitBreaker: circuitBreaker,
 	}, nil
 }
 
@@ -133,95 +141,194 @@ func (c *CoreEngineClient) GetStatus(ctx context.Context) (*pb.EngineStatusRespo
 	return resp, nil
 }
 
-// Data Ingestion Methods
-
+// FetchMarketData fetches market data from the core engine with circuit breaker protection
 func (c *CoreEngineClient) FetchMarketData(ctx context.Context, req *pb.FetchMarketDataRequest) (*pb.FetchMarketDataResponse, error) {
-	// Inject trace context
-	ctx = c.injectTraceContext(ctx)
+	logger.Infof("Fetching market data from core engine with circuit breaker protection")
 	
-	resp, err := c.client.FetchMarketData(ctx, req)
+	var response *pb.FetchMarketDataResponse
+	err := c.circuitBreaker.Execute(ctx, func() error {
+		// Inject trace context
+		ctx = c.injectTraceContext(ctx)
+		
+		// Add timeout to context
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		
+		// Make gRPC call
+		resp, err := c.client.FetchMarketData(ctx, req)
+		if err != nil {
+			return logger.Errorf("failed to fetch market data: %w", err)
+		}
+		
+		response = resp
+		return nil
+	})
+	
 	if err != nil {
-		logger.Errorf("Failed to fetch market data: %v", err)
-		return nil, fmt.Errorf("fetch market data failed: %w", err)
+		logger.Errorf("Circuit breaker error for market data fetch: %v", err)
+		return nil, err
 	}
-
-	logger.Infof("Fetched market data: status=%s, items=%d", resp.Status.String(), len(resp.MarketData))
-
-	return resp, nil
+	
+	logger.Infof("Market data fetched successfully")
+	return response, nil
 }
 
+// FetchNewsData fetches news data from the core engine with circuit breaker protection
 func (c *CoreEngineClient) FetchNewsData(ctx context.Context, req *pb.FetchNewsDataRequest) (*pb.FetchNewsDataResponse, error) {
-	// Inject trace context
-	ctx = c.injectTraceContext(ctx)
+	logger.Infof("Fetching news data from core engine with circuit breaker protection")
 	
-	resp, err := c.client.FetchNewsData(ctx, req)
+	var response *pb.FetchNewsDataResponse
+	err := c.circuitBreaker.Execute(ctx, func() error {
+		// Inject trace context
+		ctx = c.injectTraceContext(ctx)
+		
+		// Add timeout to context
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		
+		// Make gRPC call
+		resp, err := c.client.FetchNewsData(ctx, req)
+		if err != nil {
+			return logger.Errorf("failed to fetch news data: %w", err)
+		}
+		
+		response = resp
+		return nil
+	})
+	
 	if err != nil {
-		logger.Errorf("Failed to fetch news data: %v", err)
-		return nil, fmt.Errorf("fetch news data failed: %w", err)
+		logger.Errorf("Circuit breaker error for news data fetch: %v", err)
+		return nil, err
 	}
-
-	logger.Infof("Fetched news data: status=%s, items=%d", resp.Status.String(), len(resp.NewsItems))
-
-	return resp, nil
+	
+	logger.Infof("News data fetched successfully")
+	return response, nil
 }
 
+// GetMarketDataBuffer gets market data buffer from the core engine with circuit breaker protection
 func (c *CoreEngineClient) GetMarketDataBuffer(ctx context.Context, req *pb.GetMarketDataBufferRequest) (*pb.GetMarketDataBufferResponse, error) {
-	// Inject trace context
-	ctx = c.injectTraceContext(ctx)
+	logger.Infof("Getting market data buffer from core engine with circuit breaker protection")
 	
-	resp, err := c.client.GetMarketDataBuffer(ctx, req)
+	var response *pb.GetMarketDataBufferResponse
+	err := c.circuitBreaker.Execute(ctx, func() error {
+		// Inject trace context
+		ctx = c.injectTraceContext(ctx)
+		
+		// Add timeout to context
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		
+		// Make gRPC call
+		resp, err := c.client.GetMarketDataBuffer(ctx, req)
+		if err != nil {
+			return logger.Errorf("failed to get market data buffer: %w", err)
+		}
+		
+		response = resp
+		return nil
+	})
+	
 	if err != nil {
-		logger.Errorf("Failed to get market data buffer: %v", err)
-		return nil, fmt.Errorf("get market data buffer failed: %w", err)
+		logger.Errorf("Circuit breaker error for market data buffer: %v", err)
+		return nil, err
 	}
-
-	logger.Infof("Got market data buffer: status=%s, items=%d", resp.Status.String(), len(resp.MarketData))
-
-	return resp, nil
+	
+	logger.Infof("Market data buffer retrieved successfully")
+	return response, nil
 }
 
+// GetNewsBuffer gets news buffer from the core engine with circuit breaker protection
 func (c *CoreEngineClient) GetNewsBuffer(ctx context.Context, req *pb.GetNewsBufferRequest) (*pb.GetNewsBufferResponse, error) {
-	// Inject trace context
-	ctx = c.injectTraceContext(ctx)
+	logger.Infof("Getting news buffer from core engine with circuit breaker protection")
 	
-	resp, err := c.client.GetNewsBuffer(ctx, req)
+	var response *pb.GetNewsBufferResponse
+	err := c.circuitBreaker.Execute(ctx, func() error {
+		// Inject trace context
+		ctx = c.injectTraceContext(ctx)
+		
+		// Add timeout to context
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		
+		// Make gRPC call
+		resp, err := c.client.GetNewsBuffer(ctx, req)
+		if err != nil {
+			return logger.Errorf("failed to get news buffer: %w", err)
+		}
+		
+		response = resp
+		return nil
+	})
+	
 	if err != nil {
-		logger.Errorf("Failed to get news buffer: %v", err)
-		return nil, fmt.Errorf("get news buffer failed: %w", err)
+		logger.Errorf("Circuit breaker error for news buffer: %v", err)
+		return nil, err
 	}
-
-	logger.Infof("Got news buffer: status=%s, items=%d", resp.Status.String(), len(resp.NewsItems))
-
-	return resp, nil
+	
+	logger.Infof("News buffer retrieved successfully")
+	return response, nil
 }
 
-func (c *CoreEngineClient) GetIngestionStats(ctx context.Context, req *pb.Empty) (*pb.GetIngestionStatsResponse, error) {
-	// Inject trace context
-	ctx = c.injectTraceContext(ctx)
+// GetIngestionStats gets ingestion stats from the core engine with circuit breaker protection
+func (c *CoreEngineClient) GetIngestionStats(ctx context.Context, req *pb.GetIngestionStatsRequest) (*pb.GetIngestionStatsResponse, error) {
+	logger.Infof("Getting ingestion stats from core engine with circuit breaker protection")
 	
-	resp, err := c.client.GetIngestionStats(ctx, req)
+	var response *pb.GetIngestionStatsResponse
+	err := c.circuitBreaker.Execute(ctx, func() error {
+		// Inject trace context
+		ctx = c.injectTraceContext(ctx)
+		
+		// Add timeout to context
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		
+		// Make gRPC call
+		resp, err := c.client.GetIngestionStats(ctx, req)
+		if err != nil {
+			return logger.Errorf("failed to get ingestion stats: %w", err)
+		}
+		
+		response = resp
+		return nil
+	})
+	
 	if err != nil {
-		logger.Errorf("Failed to get ingestion stats: %v", err)
-		return nil, fmt.Errorf("get ingestion stats failed: %w", err)
+		logger.Errorf("Circuit breaker error for ingestion stats: %v", err)
+		return nil, err
 	}
-
-	logger.Infof("Got ingestion stats: status=%s", resp.Status.String())
-
-	return resp, nil
+	
+	logger.Infof("Ingestion stats retrieved successfully")
+	return response, nil
 }
 
+// ConnectDataSource connects a data source to the core engine with circuit breaker protection
 func (c *CoreEngineClient) ConnectDataSource(ctx context.Context, req *pb.ConnectDataSourceRequest) (*pb.ConnectDataSourceResponse, error) {
-	// Inject trace context
-	ctx = c.injectTraceContext(ctx)
+	logger.Infof("Connecting data source to core engine with circuit breaker protection")
 	
-	resp, err := c.client.ConnectDataSource(ctx, req)
+	var response *pb.ConnectDataSourceResponse
+	err := c.circuitBreaker.Execute(ctx, func() error {
+		// Inject trace context
+		ctx = c.injectTraceContext(ctx)
+		
+		// Add timeout to context
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		
+		// Make gRPC call
+		resp, err := c.client.ConnectDataSource(ctx, req)
+		if err != nil {
+			return logger.Errorf("failed to connect data source: %w", err)
+		}
+		
+		response = resp
+		return nil
+	})
+	
 	if err != nil {
-		logger.Errorf("Failed to connect to data source: %v", err)
-		return nil, fmt.Errorf("connect data source failed: %w", err)
+		logger.Errorf("Circuit breaker error for data source connection: %v", err)
+		return nil, err
 	}
-
-	logger.Infof("Data source connection: source_id=%s, connected=%v, status=%s", 
-		req.SourceId, resp.Connected, resp.Status.String())
-
-	return resp, nil
+	
+	logger.Infof("Data source connected successfully")
+	return response, nil
 }
