@@ -10,7 +10,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
-	pb "github.com/market-intel/api-gateway/proto"
 	"github.com/market-intel/api-gateway/pkg/logger"
 	"github.com/market-intel/api-gateway/pkg/otel"
 	"github.com/market-intel/api-gateway/pkg/resilience"
@@ -19,7 +18,6 @@ import (
 
 type CoreEngineClient struct {
 	conn           *grpc.ClientConn
-	client         pb.CoreEngineServiceClient
 	circuitBreaker *resilience.CircuitBreakerWithRetry
 }
 

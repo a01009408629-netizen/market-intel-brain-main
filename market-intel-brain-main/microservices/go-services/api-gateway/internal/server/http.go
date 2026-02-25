@@ -12,7 +12,6 @@ import (
 	"github.com/market-intel/api-gateway/internal/services"
 	"github.com/market-intel/api-gateway/pkg/logger"
 	"github.com/market-intel/api-gateway/pkg/otel"
-	pb "github.com/market-intel/api-gateway/proto"
 )
 
 type HTTPServer struct {
