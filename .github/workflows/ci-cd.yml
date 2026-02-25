@@ -140,7 +140,7 @@ jobs:
         go vet ./...
         echo "Go syntax validation passed"
 
-    - name: �📦 Install Dependencies
+    - name: �� Install Dependencies
       run: |
         echo "Installing Rust and Go dependencies..."
         
@@ -207,7 +207,7 @@ jobs:
           ~/.cargo/registry/
           ~/.cargo/git/
           ~/go/pkg/mod/
-        key: ${{ runner.os }}-deps-${{ hashFiles('market-intel-brain-main/microservices/rust-services/core-engine/Cargo.lock', 'market-intel-brain-main/microservices/go-services/api-gateway/go.sum') }}
+        key: ${{ runner.os }}-deps-v2-${{ hashFiles('market-intel-brain-main/microservices/rust-services/core-engine/Cargo.lock', 'market-intel-brain-main/microservices/go-services/api-gateway/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-deps-
 
