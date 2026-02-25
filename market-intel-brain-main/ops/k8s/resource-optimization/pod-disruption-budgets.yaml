@@ -1,0 +1,220 @@
+---
+# PodDisruptionBudget for Go Gateway API
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: go-gateway-pdb
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: go-gateway
+    pdb: "true"
+  annotations:
+    description: "PodDisruptionBudget for Go Gateway API to ensure high availability"
+    pdb.kubernetes.io/max-unavailable: "25%"
+    pdb.kubernetes.io/min-available: "2"
+spec:
+  minAvailable: 2
+  maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: go-gateway
+---
+# PodDisruptionBudget for Rust Core Engine
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rust-engine-pdb
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: rust-engine
+    pdb: "true"
+  annotations:
+    description: "PodDisruptionBudget for Rust Core Engine to ensure high availability"
+    pdb.kubernetes.io/max-unavailable: "1"
+    pdb.kubernetes.io/min-available: "1"
+spec:
+  minAvailable: 1
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: rust-engine
+---
+# PodDisruptionBudget for Analytics Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: analytics-pdb
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: analytics
+    pdb: "true"
+  annotations:
+    description: "PodDisruptionBudget for Analytics Service to ensure high availability"
+    pdb.kubernetes.io/max-unavailable: "50%"
+    pdb.kubernetes.io/min-available: "0"
+spec:
+  minAvailable: 0
+  maxUnavailable: 50%
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: analytics
+---
+# PodDisruptionBudget for Vector Store Service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vector-store-pdb
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: vector-store
+    pdb: "true"
+  annotations:
+    description: "PodDisruptionBudget for Vector Store Service to ensure high availability"
+    pdb.kubernetes.io/max-unavailable: "1"
+    pdb.kubernetes.io/min-available: "1"
+spec:
+  minAvailable: 1
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: vector-store
+---
+# PodDisruptionBudget for Redis Cache
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-pdb
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: redis
+    pdb: "true"
+  annotations:
+    description: "PodDisruptionBudget for Redis Cache to ensure high availability"
+    pdb.kubernetes.io/max-unavailable: "1"
+    pdb.kubernetes.io/min-available: "1"
+spec:
+  minAvailable: 1
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: redis
+---
+# PodDisruptionBudget for PostgreSQL Database
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgresql-pdb
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: postgresql
+    pdb: "true"
+  annotations:
+    description: "PodDisruptionBudget for PostgreSQL Database to ensure high availability"
+    pdb.kubernetes.io/max-unavailable: "0"
+    pdb.kubernetes.io/min-available: "1"
+spec:
+  minAvailable: 1
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: postgresql
+---
+# PodDisruptionBudget for Redpanda/Kafka
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redpanda-pdb
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-brain
+    component: redpanda
+    pdb: "true"
+  annotations:
+    description: "PodDisruptionBudget for Redpanda/Kafka to ensure high availability"
+    pdb.kubernetes.io/max-unavailable: "1"
+    pdb.kubernetes.io/min-available: "2"
+spec:
+  minAvailable: 2
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: redpanda
+---
+# PodDisruptionBudget for Prometheus
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: prometheus-pdb
+  namespace: market-intel-brain-observability
+  labels:
+    app: market-intel-brain
+    component: prometheus
+    pdb: "true"
+  annotations:
+    description: "PodDisruptionBudget for Prometheus to ensure monitoring continuity"
+    pdb.kubernetes.io/max-unavailable: "0"
+    pdb.kubernetes.io/min-available: "1"
+spec:
+  minAvailable: 1
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: prometheus
+---
+# PodDisruptionBudget for Grafana
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: grafana-pdb
+  namespace: market-intel-brain-observability
+  labels:
+    app: market-intel-brain
+    component: grafana
+    pdb: "true"
+  annotations:
+    description: "PodDisruptionBudget for Grafana to ensure visualization continuity"
+    pdb.kubernetes.io/max-unavailable: "1"
+    pdb.kubernetes.io/min-available: "0"
+spec:
+  minAvailable: 0
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: grafana
+---
+# PodDisruptionBudget for Jaeger
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: jaeger-pdb
+  namespace: market-intel-brain-observability
+  labels:
+    app: market-intel-brain
+    component: jaeger
+    pdb: "true"
+  annotations:
+    description: "PodDisruptionBudget for Jaeger to ensure tracing continuity"
+    pdb.kubernetes.io/max-unavailable: "1"
+    pdb.kubernetes.io/min-available: "0"
+spec:
+  minAvailable: 0
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: market-intel-brain
+      component: jaeger
