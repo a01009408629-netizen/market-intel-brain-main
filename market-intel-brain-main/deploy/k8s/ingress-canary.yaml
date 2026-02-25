@@ -1,0 +1,716 @@
+# Canary Deployment Configuration
+# Routes 5% traffic to new Go API and 95% to legacy Python API
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: market-intel-canary-ingress
+  namespace: market-intel-brain
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: "/"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET,POST,PUT,DELETE,OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+    
+    # Canary Traffic Splitting Configuration
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "5"
+    nginx.ingress.kubernetes.io/canary-by-header: "X-Canary: true"
+    nginx.ingress.kubernetes.io/canary-by-cookie: "canary"
+    
+    # Traffic routing configuration
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      # Canary routing logic
+      set $canary_upstream "";
+      
+      # Check if request should go to canary
+      if ($http_x_canary = "true") {
+        set $canary_upstream "go-api";
+      }
+      if ($cookie_canary ~* "canary") {
+        set $canary_upstream "go-api";
+      }
+      
+      # Fallback to canary based on percentage (5%)
+      if ($canary_upstream = "") {
+        set $canary_upstream "python-api";
+        if ($request_uri ~* "random") {
+          set $random_number $request_id;
+          set $canary_upstream "go-api";
+        }
+      }
+      
+      # Add canary headers for tracking
+      proxy_set_header X-Canary-Backend $canary_upstream;
+      proxy_set_header X-Canary-Weight "5";
+      proxy_set_header X-Request-ID $request_id;
+      
+      # Logging configuration
+      access_log /var/log/nginx/canary_access.log combined;
+      
+      # Rate limiting for canary traffic
+      limit_req zone=$canary_limit zone=canary:10m rate=50r/s burst=100 nodelay;
+    
+    # Custom error pages
+    nginx.ingress.kubernetes.io/custom-http-errors: "404,502,503"
+    nginx.ingress.kubernetes.io/default-backend: "market-intel-python-api"
+    
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+    
+    # Proxy settings
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    
+    # SSL/TLS settings
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    
+    # Upstream configuration
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+    nginx.ingress.kubernetes.io/load-balance: "round_robin"
+    
+    # Health check configuration
+    nginx.ingress.kubernetes.io/health-check-path: "/health"
+    nginx.ingress.kubernetes.io/health-check-interval: "10"
+    nginx.ingress.kubernetes.io/health-check-timeout: "5"
+    nginx.ingress.kubernetes.io/health-check-unhealthy-threshold: "3"
+    
+    # Session affinity for canary testing
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "market-intel-canary"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "3600"
+    nginx.ingress.kubernetes.io/session-cookie-path: "/"
+    
+    # Rate limiting
+    nginx.ingress.kubernetes.io/rate-limit: "1000"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    
+    # Compression
+    nginx.ingress.kubernetes.io/enable-modsecurity: "false"
+    nginx.ingress.kubernetes.io/enable-opentracing: "false"
+    
+    # Custom annotations for monitoring
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # Define rate limiting zones
+      limit_req_zone $canary_limit zone=canary:10m rate=50r/s burst=100 nodelay;
+      limit_req_zone $main_limit zone=main:10m rate=950r/s burst=1900 nodelay;
+      
+      # Canary metrics
+      location /nginx_status {
+        stub_status;
+        access_log off;
+      }
+      
+      # Canary health check
+      location /canary-health {
+        access_log /var/log/nginx/canary_health.log;
+        return 200 "canary healthy";
+      }
+      
+      # Canary metrics endpoint
+      location /canary-metrics {
+        access_log /var/log/nginx/canary_metrics.log;
+        return 200 "canary metrics";
+      }
+      
+      # Canary traffic split endpoint
+      location /canary-status {
+        access_log off;
+        return 200 "canary active: 5%";
+      }
+      
+      # Traffic routing test endpoint
+      location /test-routing {
+        access_log /var/log/nginx/test_routing.log;
+        return 200 "routing test";
+      }
+      
+      # Random traffic for testing
+      location /random {
+        access_log /var/log/nginx/random.log;
+        return 200 "random endpoint";
+      }
+      
+      # Backend selection logic
+      location /backend-selection {
+        access_log /var/log/nginx/backend_selection.log;
+        return 200 "backend selection logic";
+      }
+      
+      # Custom canary routing logic
+      location /api/v1/(.*) {
+        # This will be handled by the main routing logic
+        proxy_pass http://$canary_upstream;
+      }
+      
+      # Fallback routing
+      location / {
+        proxy_pass http://$canary_upstream;
+      }
+    
+spec:
+  tls:
+  - hosts:
+    - api.market-intel.com
+    - staging-api.market-intel.com
+    secretName: market-intel-tls
+  rules:
+  - host: api.market-intel.com
+    http:
+      paths:
+      - path: /api/v1/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /nginx_status
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /canary-health
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /canary-metrics
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /canary-status
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /test-routing
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /random
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /backend-selection
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+  - host: staging-api.market-intel.com
+    http:
+      paths:
+      - path: /api/v1/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+---
+# Canary Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: canary-service-account
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: canary
+    tier: system
+  annotations:
+    kubernetes.io/enabled: "true"
+---
+# Canary Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: canary-role
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: canary
+    tier: system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - endpoints
+  - configmaps
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+# Canary RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: canary-rolebinding
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: canary
+    tier: system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: canary-role
+subjects:
+- kind: ServiceAccount
+  name: canary-service-account
+  namespace: market-intel-brain
+---
+# Canary NetworkPolicy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: canary-networkpolicy
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: canary
+    tier: system
+spec:
+  podSelector:
+    matchLabels:
+      app: market-intel-go-api
+  policyTypes:
+  - Ingress
+  - Egress
+  - Pod
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: market-intel-brain
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: market-intel-brain
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: market-intel-brain-observability
+---
+# Canary ConfigMap for NGINX Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-canary-config
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: canary
+    tier: system
+data:
+  nginx.conf: |
+    # Canary-specific NGINX configuration
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /var/run/nginx.pid;
+    
+    events {
+        worker_connections 1024;
+    }
+    
+    http {
+        include /etc/nginx/conf.d/*.conf;
+        
+        # Rate limiting zones
+        limit_req_zone $canary_limit zone=canary:10m rate=50r/s burst=100 nodelay;
+        limit_req_zone $main_limit zone=main:10m rate=950r/s burst=1900 nodelay;
+        
+        # Canary metrics
+        log_format canary '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for" '
+                      'rt=$request_time uct="$upstream_response_time" '
+                      'backend=$canary_upstream';
+        
+        access_log /var/log/nginx/canary_access.log canary;
+        
+        # Canary health check
+        server {
+            listen 8082;
+            server_name _;
+            
+            location /health {
+                access_log off;
+                return 200 "canary healthy";
+            }
+            
+            location /metrics {
+                access_log off;
+                return 200 "canary metrics";
+            }
+            
+            location /canary-status {
+                access_log off;
+                return 200 "canary active: 5%";
+            }
+        }
+    }
+    
+    # Include other configuration files
+    include /etc/nginx/conf.d/*.conf;
+---
+# Canary Service Monitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: canary-servicemonitor
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: canary
+    tier: system
+spec:
+  selector:
+    matchLabels:
+      app: market-intel-go-api
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+---
+# Canary PodDisruptionBudget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: canary-pdb
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: canary
+    tier: system
+spec:
+  minAvailable: 1
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: market-intel-go-api
+---
+# Canary HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: market-intel-go-api-canary-hpa
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-go-api
+    component: canary
+    tier: frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: market-intel-go-api
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+  scaleDown:
+    stabilizationWindowSeconds: 300
+    policies:
+    - type: Percent
+      value: 10
+      periodSeconds: 60
+  scaleUp:
+    stabilizationWindowSeconds: 60
+    policies:
+    - type: Percent
+      value: 100
+      periodSeconds: 15
+---
+# Canary Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: market-intel-go-api-canary
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-go-api
+    component: canary
+    tier: frontend
+    deployment: canary
+  annotations:
+    kubernetes.io/deployment.strategy: "RollingUpdate"
+    kubernetes.io/replicaset: "market-intel-go-api-canary-7d4c7f8c9"
+    kubernetes.io/revision: "market-intel-go-api-canary-7d4c7f8c9"
+    kubernetes.io/revision-history: "5"
+    kubernetes.io/rollout-status: "completed"
+    kubernetes.io/rollout-revision: "1"
+    deployment.kubernetes.io/revision: "7d4c7f8c9"
+    deployment.kubernetes.io/revision-history: "1"
+    deployment.kubernetes.io/desired-replicas: "1"
+    deployment.kubernetes.io/max-replicas: "5"
+    deployment.kubernetes.io/available-replicas: "1"
+    deployment.kubernetes.io/unavailable-replicas: "0"
+    deployment.kubernetes.io/updated-replicas: "1"
+    deployment.kubernetes.io/ready-replicas: "1"
+    deployment.kubernetes.io/replicas: "1"
+    deployment.kubernetes.io/conditions: "Progressing"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: market-intel-go-api
+      component: canary
+  template:
+    metadata:
+      labels:
+        app: market-intel-go-api
+        component: canary
+        tier: frontend
+        deployment: canary
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        sidecar.istio.io/inject: "false"
+        traffic.sidecar.istio.io/includeInboundPorts: "true"
+        traffic.sidecar.istio.io/includeOutboundPorts: "true"
+    spec:
+      serviceAccountName: canary-service-account
+      containers:
+      - name: market-intel-go-api
+        image: market-intel/api-gateway:latest
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: CANARY_DEPLOYMENT
+          value: "true"
+        - name: CANARY_WEIGHT
+          value: "5"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secret
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: REDIS_URL
+        - name: CORE_ENGINE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: CORE_ENGINE_URL
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - |
+                echo "Gracefully shutting down..."
+                sleep 10
+                curl -f http://localhost:8080/api/v1/shutdown || true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+          - ALL
+          add:
+            - NET_BIND_SERVICE
+            - CHOWN
+            - SETGID
+            - SETUID
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+---
+# Canary Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: market-intel-go-api-canary
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-go-api
+    component: canary
+    tier: frontend
+    deployment: canary
+  annotations:
+    # Canary-specific annotations
+    canary.market-intel.com/enabled: "true"
+    canary.market-intel.com/weight: "5"
+    canary.market-intel.com/mode: "canary"
+    
+    # Monitoring annotations
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+    
+    # Service mesh annotations
+    sidecar.istio.io/inject: "false"
+    traffic.sidecar.istio.io/includeInboundPorts: "true"
+    traffic.sidecar.istio.io/includeOutboundPorts: "true"
+    
+    # Load balancing
+    nginx.ingress.kubernetes.io/load-balance: "round_robin"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+    
+    # Session affinity
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "market-intel-canary"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "3600"
+    nginx.ingress.kubernetes.io/session-cookie-path: "/"
+    
+    # Health check
+    nginx.ingress.kubernetes.io/health-check-path: "/api/v1/health"
+    nginx.ingress.kubernetes.io/health-check-interval: "10"
+    nginx.ingress.kubernetes.io/health-check-timeout: "5"
+    nginx.ingress.kubernetes.io/health-check-unhealthy-threshold: "3"
+    
+    # Rate limiting
+    nginx.ingress.kubernetes.io/rate-limit: "1000"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    
+    # Proxy settings
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.inggress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    
+    # SSL/TLS
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    
+    # Compression
+    nginx.ingress.kubernetes.io/enable-modsecurity: "false"
+    nginx.ingress.kubernetes.io/enable-opentracing: "false"
+    
+    # Custom headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Canary-Deployment: true";
+      more_set_headers "X-Canary-Weight: 5";
+      more_set_headers "X-Backend-Type: canary";
+      more_set_headers "X-Canary-Request-ID: $request_id";
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  selector:
+    app: market-intel-go-api
+    component: canary
+    deployment: canary

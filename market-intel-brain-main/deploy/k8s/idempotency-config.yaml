@@ -1,0 +1,666 @@
+# Idempotency Configuration for Shadowing and Canary Deployments
+# Ensures safe handling of mutating requests during traffic shadowing
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: idempotency-config
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: idempotency
+    tier: system
+data:
+  # Idempotency configuration
+  idempotency.yaml: |
+    # Idempotency Configuration for Market Intel Brain
+    # Ensures safe handling of mutating requests during traffic shadowing
+    
+    idempotency:
+      # Enable idempotency for all mutating operations
+      enabled: true
+      
+      # Idempotency key configuration
+      key:
+        # Use combination of user ID, operation type, and timestamp
+        strategy: "user_id:operation_type:timestamp"
+        # Alternative strategies: "request_id", "client_id:operation_type"
+        ttl: 3600  # 1 hour TTL for idempotency keys
+        
+      # Operation types that require idempotency
+      operations:
+        - "POST /api/v1/market-data/fetch"
+        - "POST /api/v1/news/fetch"
+        - "POST /api/v1/data-sources/connect"
+        - "PUT /api/v1/market-data/buffer"
+        - "PUT /api/v1/news/buffer"
+        - "DELETE /api/v1/data-sources/{id}"
+        
+      # Database write handling during shadowing
+      shadowing:
+        # Shadowing mode: "mirror", "dry_run", "safe_write"
+        mode: "mirror"
+        
+        # Safe write configuration
+        safe_write:
+          # Use separate shadow database for writes
+          shadow_database: "market_intel_shadow"
+          # Enable write-through caching
+          write_through_cache: true
+          # Enable write-behind for performance
+          write_behind: true
+          # Write-behind delay in seconds
+          write_behind_delay: 5
+          
+        # Idempotency key storage
+        storage:
+          # Use Redis for idempotency keys
+          type: "redis"
+          # Redis connection string
+          connection: "redis://redis:6379/1"
+          # Key prefix
+          prefix: "idempotency:"
+          # TTL for idempotency keys
+          ttl: 3600
+          
+        # Conflict resolution
+        conflict_resolution:
+          # Strategy: "first_write", "last_write", "merge", "manual"
+          strategy: "first_write"
+          # Enable conflict logging
+          log_conflicts: true
+          # Conflict resolution timeout
+          timeout: 30
+          
+      # Canary deployment idempotency
+      canary:
+        # Enable idempotency for canary traffic
+        enabled: true
+        
+        # Canary-specific configuration
+        canary_database: "market_intel_canary"
+        canary_redis: "redis://redis:6379/2"
+        
+        # Traffic routing for canary
+        routing:
+          # Use sticky sessions for canary traffic
+          sticky_sessions: true
+          # Session cookie name
+          session_cookie: "market_intel_canary"
+          # Session TTL
+          session_ttl: 1800  # 30 minutes
+          
+        # Write consistency
+        write_consistency:
+          # Ensure writes are consistent across main and canary
+          ensure_consistency: true
+          # Consistency check interval
+          check_interval: 60
+          # Consistency timeout
+          timeout: 300
+          
+    # Database configuration
+    database:
+      # Main database
+      main:
+        host: "postgres"
+        port: 5432
+        database: "market_intel"
+        username: "postgres"
+        # Password from secret
+        # password: ""
+        # Connection pool settings
+        pool:
+          max_connections: 20
+          min_connections: 5
+          connection_timeout: 30
+          idle_timeout: 300
+          
+      # Shadow database for shadowing
+      shadow:
+        host: "postgres-shadow"
+        port: 5432
+        database: "market_intel_shadow"
+        username: "postgres"
+        # Password from secret
+        # password: ""
+        # Connection pool settings
+        pool:
+          max_connections: 10
+          min_connections: 2
+          connection_timeout: 30
+          idle_timeout: 300
+          
+      # Canary database for canary deployment
+      canary:
+        host: "postgres-canary"
+        port: 5432
+        database: "market_intel_canary"
+        username: "postgres"
+        # Password from secret
+        # password: ""
+        # Connection pool settings
+        pool:
+          max_connections: 10
+          min_connections: 2
+          connection_timeout: 30
+          idle_timeout: 300
+          
+    # Redis configuration
+    redis:
+      # Main Redis
+      main:
+        host: "redis"
+        port: 6379
+        database: 0
+        # Connection pool settings
+        pool:
+          max_connections: 20
+          min_connections: 5
+          connection_timeout: 30
+          idle_timeout: 300
+          
+      # Shadow Redis for shadowing
+      shadow:
+        host: "redis-shadow"
+        port: 6379
+        database: 1
+        # Connection pool settings
+        pool:
+          max_connections: 10
+          min_connections: 2
+          connection_timeout: 30
+          idle_timeout: 300
+          
+      # Canary Redis for canary deployment
+      canary:
+        host: "redis-canary"
+        port: 6379
+        database: 2
+        # Connection pool settings
+        pool:
+          max_connections: 10
+          min_connections: 2
+          connection_timeout: 30
+          idle_timeout: 300
+          
+    # Monitoring configuration
+    monitoring:
+      # Enable idempotency metrics
+      enabled: true
+      
+      # Metrics to collect
+      metrics:
+        - "idempotency_keys_total"
+        - "idempotency_keys_hit"
+        - "idempotency_keys_miss"
+        - "idempotency_conflicts_total"
+        - "shadowing_writes_total"
+        - "shadowing_writes_failed"
+        - "canary_writes_total"
+        - "canary_writes_failed"
+        - "write_consistency_checks_total"
+        - "write_consistency_checks_failed"
+        
+      # Alerting rules
+      alerts:
+        - name: "IdempotencyKeyHighMissRate"
+          condition: "idempotency_keys_miss / idempotency_keys_total > 0.1"
+          message: "High idempotency key miss rate detected"
+          severity: "warning"
+          
+        - name: "ShadowingWriteFailure"
+          condition: "shadowing_writes_failed / shadowing_writes_total > 0.05"
+          message: "High shadowing write failure rate detected"
+          severity: "critical"
+          
+        - name: "CanaryWriteFailure"
+          condition: "canary_writes_failed / canary_writes_total > 0.05"
+          message: "High canary write failure rate detected"
+          severity: "critical"
+          
+        - name: "WriteConsistencyFailure"
+          condition: "write_consistency_checks_failed / write_consistency_checks_total > 0.01"
+          message: "Write consistency check failure detected"
+          severity: "warning"
+          
+    # Logging configuration
+    logging:
+      # Enable idempotency logging
+      enabled: true
+      
+      # Log level
+      level: "info"
+      
+      # Log format
+      format: "json"
+      
+      # Log fields
+      fields:
+        - "timestamp"
+        - "request_id"
+        - "user_id"
+        - "operation_type"
+        - "idempotency_key"
+        - "result"
+        - "duration"
+        - "error"
+        
+      # Log destinations
+      destinations:
+        - type: "file"
+          path: "/var/log/idempotency.log"
+          max_size: "100MB"
+          max_files: 10
+        - type: "elasticsearch"
+          hosts:
+            - "elasticsearch:9200"
+          index: "idempotency"
+          template: "idempotency-template"
+        - type: "kafka"
+          brokers:
+            - "kafka:9092"
+          topic: "idempotency-logs"
+          partition_key: "user_id"
+          
+  # Database migration scripts
+  migrations.yaml: |
+    # Database migrations for idempotency support
+    
+    # Main database migrations
+    main:
+      - version: "001"
+        description: "Create idempotency keys table"
+        sql: |
+          CREATE TABLE IF NOT EXISTS idempotency_keys (
+            id SERIAL PRIMARY KEY,
+            key VARCHAR(255) NOT NULL UNIQUE,
+            operation_type VARCHAR(100) NOT NULL,
+            user_id VARCHAR(100) NOT NULL,
+            request_id VARCHAR(100) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP NOT NULL,
+            processed_at TIMESTAMP,
+            result JSONB,
+            error TEXT,
+            INDEX idx_idempotency_key (key),
+            INDEX idx_idempotency_user (user_id),
+            INDEX idx_idempotency_operation (operation_type),
+            INDEX idx_idempotency_expires (expires_at)
+          );
+          
+      - version: "002"
+        description: "Create shadow write tracking table"
+        sql: |
+          CREATE TABLE IF NOT EXISTS shadow_writes (
+            id SERIAL PRIMARY KEY,
+            operation_type VARCHAR(100) NOT NULL,
+            user_id VARCHAR(100) NOT NULL,
+            request_id VARCHAR(100) NOT NULL,
+            shadow_request_id VARCHAR(100),
+            main_request_id VARCHAR(100),
+            shadow_data JSONB,
+            main_data JSONB,
+            shadow_status VARCHAR(20) DEFAULT 'pending',
+            main_status VARCHAR(20) DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            processed_at TIMESTAMP,
+            error TEXT,
+            INDEX idx_shadow_writes_user (user_id),
+            INDEX idx_shadow_writes_request (request_id),
+            INDEX idx_shadow_writes_status (shadow_status),
+            INDEX idx_shadow_writes_created (created_at)
+          );
+          
+      - version: "003"
+        description: "Create canary write tracking table"
+        sql: |
+          CREATE TABLE IF NOT EXISTS canary_writes (
+            id SERIAL PRIMARY KEY,
+            operation_type VARCHAR(100) NOT NULL,
+            user_id VARCHAR(100) NOT NULL,
+            request_id VARCHAR(100) NOT NULL,
+            canary_request_id VARCHAR(100),
+            main_request_id VARCHAR(100),
+            canary_data JSONB,
+            main_data JSONB,
+            canary_status VARCHAR(20) DEFAULT 'pending',
+            main_status VARCHAR(20) DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            processed_at TIMESTAMP,
+            error TEXT,
+            INDEX idx_canary_writes_user (user_id),
+            INDEX idx_canary_writes_request (request_id),
+            INDEX idx_canary_writes_status (canary_status),
+            INDEX idx_canary_writes_created (created_at)
+          );
+          
+    # Shadow database migrations
+    shadow:
+      - version: "001"
+        description: "Create shadow database tables"
+        sql: |
+          CREATE TABLE IF NOT EXISTS shadow_market_data (
+            id SERIAL PRIMARY KEY,
+            symbol VARCHAR(50) NOT NULL,
+            price DECIMAL(10,2) NOT NULL,
+            volume BIGINT NOT NULL,
+            timestamp TIMESTAMP NOT NULL,
+            source VARCHAR(100) NOT NULL,
+            additional_data JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_shadow_market_data_symbol (symbol),
+            INDEX idx_shadow_market_data_timestamp (timestamp),
+            INDEX idx_shadow_market_data_source (source)
+          );
+          
+          CREATE TABLE IF NOT EXISTS shadow_news_items (
+            id SERIAL PRIMARY KEY,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            source VARCHAR(100) NOT NULL,
+            timestamp TIMESTAMP NOT NULL,
+            sentiment_score DECIMAL(3,2),
+            relevance_score DECIMAL(3,2),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_shadow_news_source (source),
+            INDEX idx_shadow_news_timestamp (timestamp)
+          );
+          
+    # Canary database migrations
+    canary:
+      - version: "001"
+        description: "Create canary database tables"
+        sql: |
+          CREATE TABLE IF NOT EXISTS canary_market_data (
+            id SERIAL PRIMARY KEY,
+            symbol VARCHAR(50) NOT NULL,
+            price DECIMAL(10,2) NOT NULL,
+            volume BIGINT NOT NULL,
+            timestamp TIMESTAMP NOT NULL,
+            source VARCHAR(100) NOT NULL,
+            additional_data JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_canary_market_data_symbol (symbol),
+            INDEX idx_canary_market_data_timestamp (timestamp),
+            INDEX idx_canary_market_data_source (source)
+          );
+          
+          CREATE TABLE IF NOT EXISTS canary_news_items (
+            id SERIAL PRIMARY KEY,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            source VARCHAR(100) NOT NULL,
+            timestamp TIMESTAMP NOT NULL,
+            sentiment_score DECIMAL(3,2),
+            relevance_score DECIMAL(3,2),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_canary_news_source (source),
+            INDEX idx_canary_news_timestamp (timestamp)
+          );
+          
+  # Idempotency service configuration
+  service.yaml: |
+    # Idempotency service configuration
+    
+    service:
+      name: "idempotency-service"
+      namespace: "market-intel-brain"
+      labels:
+        app: "market-intel"
+        component: "idempotency"
+        tier: "system"
+        
+    # Service configuration
+    config:
+      # Service port
+      port: 8083
+      
+      # Metrics port
+      metrics_port: 9093
+      
+      # Health check port
+      health_port: 8084
+      
+      # Environment variables
+      env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: IDEMPOTENCY_ENABLED
+          value: "true"
+        - name: IDEMPOTENCY_TTL
+          value: "3600"
+        - name: SHADOWING_MODE
+          value: "mirror"
+        - name: CANARY_ENABLED
+          value: "true"
+        - name: CONSISTENCY_CHECK_ENABLED
+          value: "true"
+        
+      # Resource requirements
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+          
+      # Health checks
+      health:
+        liveness:
+          path: "/health"
+          port: 8084
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readiness:
+          path: "/ready"
+          port: 8084
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+          
+      # Scaling
+      scaling:
+        min_replicas: 1
+        max_replicas: 3
+        target_cpu: 70
+        target_memory: 80
+        
+---
+# Idempotency Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: idempotency-service-account
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: idempotency
+    tier: system
+---
+# Idempotency Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: idempotency-role
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: idempotency
+    tier: system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  verbs:
+  - get
+  - list
+  - watch
+---
+# Idempotency RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: idempotency-rolebinding
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: idempotency
+    tier: system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: idempotency-role
+subjects:
+- kind: ServiceAccount
+  name: idempotency-service-account
+  namespace: market-intel-brain
+---
+# Idempotency Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: idempotency-service
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: idempotency
+    tier: system
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9093"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8083
+    targetPort: 8083
+    protocol: TCP
+  - name: metrics
+    port: 9093
+    targetPort: 9093
+    protocol: TCP
+  - name: health
+    port: 8084
+    targetPort: 8084
+    protocol: TCP
+  selector:
+    app: market-intel
+    component: idempotency
+---
+# Idempotency Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: idempotency-service
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: idempotency
+    tier: system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: market-intel
+      component: idempotency
+  template:
+    metadata:
+      labels:
+        app: market-intel
+        component: idempotency
+        tier: system
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9093"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: idempotency-service-account
+      containers:
+      - name: idempotency-service
+        image: market-intel/idempotency-service:latest
+        ports:
+        - containerPort: 8083
+          name: http
+          protocol: TCP
+        - containerPort: 9093
+          name: metrics
+          protocol: TCP
+        - containerPort: 8084
+          name: health
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: IDEMPOTENCY_ENABLED
+          value: "true"
+        - name: IDEMPOTENCY_TTL
+          value: "3600"
+        - name: SHADOWING_MODE
+          value: "mirror"
+        - name: CANARY_ENABLED
+          value: "true"
+        - name: CONSISTENCY_CHECK_ENABLED
+          value: "true"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secret
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: idempotency-config
+              key: REDIS_URL
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8084
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8084
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - |
+                echo "Gracefully shutting down idempotency service..."
+                sleep 10

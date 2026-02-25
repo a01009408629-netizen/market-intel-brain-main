@@ -1,0 +1,384 @@
+# Traffic Shadowing Configuration
+# Routes 100% traffic to legacy Python API while mirroring to new Go API
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: market-intel-shadow-ingress
+  namespace: market-intel-brain
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: "/"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET,POST,PUT,DELETE,OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+    
+    # Traffic Shadowing Configuration
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      # Mirror all traffic to the new Go API for validation
+      mirror /market-intel-go-api {
+        mirror_request_body on;
+        mirror_set_header Host "api-gateway.market-intel-brain.svc.cluster.local";
+        mirror_set_header X-Shadow-Request "true";
+        mirror_set_header X-Original-Host $host;
+        mirror_set_header X-Original-URI $request_uri;
+        mirror_set_header X-Original-Method $request_method;
+        mirror_set_header X-Original-Remote-Addr $remote_addr;
+        mirror_set_header X-Original-Forwarded-For $http_x_forwarded_for;
+        mirror_set_header X-Original-User-Agent $http_user_agent;
+      }
+      
+      # Add shadowing headers to original request
+      proxy_set_header X-Shadowing-Enabled "true";
+      proxy_set_header X-Shadow-Target "go-api";
+      
+      # Log shadowing metrics
+      access_log /var/log/nginx/shadow_access.log combined;
+      
+      # Rate limiting for shadowing to prevent overwhelming the new service
+      limit_req zone=$shadow_limit zone=shadow:10m rate=100r/s burst=200 nodelay;
+    
+    # Custom error pages
+    nginx.ingress.kubernetes.io/custom-http-errors: "404,502,503"
+    nginx.ingress.kubernetes.io/default-backend: "market-intel-python-api"
+    
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+    
+    # Proxy settings
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    
+    # SSL/TLS settings (if applicable)
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    
+    # Upstream configuration
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+    nginx.ingress.kubernetes.io/load-balance: "round_robin"
+    
+    # Health check configuration
+    nginx.ingress.kubernetes.io/health-check-path: "/health"
+    nginx.ingress.kubernetes.io/health-check-interval: "10"
+    nginx.ingress.kubernetes.io/health-check-timeout: "5"
+    nginx.ingress.kubernetes.io/health-check-unhealthy-threshold: "3"
+    
+    # Session affinity (if needed)
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "market-intel-affinity"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "3600"
+    nginx.ingress.kubernetes.io/session-cookie-path: "/"
+    
+    # Rate limiting
+    nginx.ingress.kubernetes.io/rate-limit: "1000"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    
+    # Compression
+    nginx.ingress.kubernetes.io/enable-modsecurity: "false"
+    nginx.ingress.kubernetes.io/enable-opentracing: "false"
+    
+    # Custom annotations for monitoring
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # Define rate limiting zones
+      limit_req_zone $shadow_limit zone=shadow:10m rate=100r/s burst=200 nodelay;
+      limit_req_zone $main_limit zone=main:10m rate=1000r/s burst=2000 nodelay;
+      
+      # Shadowing metrics
+      location /nginx_status {
+        stub_status;
+        access_log off;
+      }
+      
+      # Shadowing health check
+      location /shadow-health {
+        access_log /var/log/nginx/shadow_health.log;
+        return 200 "shadowing healthy";
+      }
+      
+      # Shadowing metrics endpoint
+      location /shadow-metrics {
+        access_log /var/log/nginx/shadow_metrics.log;
+        return 200 "shadowing metrics";
+      }
+spec:
+  tls:
+  - hosts:
+    - api.market-intel.com
+    - staging-api.market-intel.com
+    secretName: market-intel-tls
+  rules:
+  - host: api.market-intel.com
+    http:
+      paths:
+      - path: /api/v1/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /nginx_status
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /shadow-health
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /shadow-metrics
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+  - host: staging-api.market-intel.com
+    http:
+      paths:
+      - path: /api/v1/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: market-intel-python-api
+            port:
+              number: 8000
+---
+# Mirror Service for Shadowing
+apiVersion: v1
+kind: Service
+metadata:
+  name: market-intel-go-api-mirror
+  namespace: market-intel-brain
+  labels:
+    app: market-intel-go-api
+    component: shadowing
+    tier: frontend
+  annotations:
+    # Shadowing configuration
+    shadowing.market-intel.com/enabled: "true"
+    shadowing.market-intel.com/target: "go-api"
+    shadowing.market-intel.com/mode: "mirror"
+    
+    # Monitoring annotations
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+    
+    # Service mesh annotations (if using Istio)
+    sidecar.istio.io/inject: "false"
+    traffic.sidecar.istio.io/includeInboundPorts: "true"
+    traffic.sidecar.istio.io/includeOutboundPorts: "true"
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  selector:
+    app: market-intel-go-api
+---
+# Shadowing Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: shadowing-service-account
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: shadowing
+    tier: system
+  annotations:
+    kubernetes.io/enabled: "true"
+---
+# Shadowing Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: shadowing-role
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: shadowing
+    tier: system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - endpoints
+  - configmaps
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+---
+# Shadowing RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: shadowing-rolebinding
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: shadowing
+    tier: system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: shadowing-role
+subjects:
+- kind: ServiceAccount
+  name: shadowing-service-account
+  namespace: market-intel-brain
+---
+# Shadowing NetworkPolicy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: shadowing-networkpolicy
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: shadowing
+    tier: system
+spec:
+  podSelector:
+    matchLabels:
+      app: market-intel-go-api
+  policyTypes:
+  - Ingress
+  - Egress
+  - Pod
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: market-intel-brain
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: market-intel-brain
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: market-intel-brain-observability
+---
+# Shadowing ConfigMap for NGINX Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-shadowing-config
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: shadowing
+    tier: system
+data:
+  nginx.conf: |
+    # Shadowing-specific NGINX configuration
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /var/run/nginx.pid;
+    
+    events {
+        worker_connections 1024;
+    }
+    
+    http {
+        include /etc/nginx/conf.d/*.conf;
+        
+        # Rate limiting zones
+        limit_req_zone $shadow_limit zone=shadow:10m rate=100r/s burst=200 nodelay;
+        limit_req_zone $main_limit zone=main:10m rate=1000r/s burst=2000 nodelay;
+        
+        # Shadowing metrics
+        log_format shadow '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for" '
+                      'rt=$request_time uct="$upstream_response_time"';
+        
+        access_log /var/log/nginx/shadow_access.log shadow;
+        
+        # Shadowing health check
+        server {
+            listen 8081;
+            server_name _;
+            
+            location /health {
+                access_log off;
+                return 200 "shadowing healthy";
+            }
+            
+            location /metrics {
+                access_log off;
+                return 200 "shadowing metrics";
+            }
+        }
+    }
+    
+    # Include other configuration files
+    include /etc/nginx/conf.d/*.conf;
+---
+# Shadowing Service Monitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: shadowing-servicemonitor
+  namespace: market-intel-brain
+  labels:
+    app: market-intel
+    component: shadowing
+    tier: system
+spec:
+  selector:
+    matchLabels:
+      app: market-intel-go-api
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
