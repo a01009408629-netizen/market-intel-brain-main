@@ -11,6 +11,7 @@ pub mod otel;
 pub mod metrics;
 pub mod analytics;
 pub mod vector_store;
+pub mod execution_safety;
 
 // Re-export commonly used items
 pub use config::*;
@@ -20,6 +21,7 @@ pub use otel::*;
 pub use metrics::*;
 pub use analytics::*;
 pub use vector_store::*;
+pub use execution_safety::*;
 
 /// Core Engine version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
