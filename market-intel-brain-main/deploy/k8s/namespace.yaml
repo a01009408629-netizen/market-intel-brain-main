@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: market-intel-brain
+  labels:
+    name: market-intel-brain
+    environment: production
+    component: microservices
+  annotations:
+    description: "Market Intel Brain microservices namespace"
+    contact: "devops@market-intel.com"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: market-intel-brain-observability
+  labels:
+    name: market-intel-brain-observability
+    environment: production
+    component: observability
+  annotations:
+    description: "Market Intel Brain observability namespace"
+    contact: "devops@market-intel.com"

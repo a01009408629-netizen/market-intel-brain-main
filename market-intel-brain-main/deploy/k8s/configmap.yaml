@@ -1,0 +1,120 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: market-intel-brain
+  labels:
+    app: api-gateway
+    component: config
+data:
+  # API Gateway Configuration
+  HTTP_PORT: "8080"
+  GRPC_PORT: "50052"
+  LOG_LEVEL: "info"
+  ENVIRONMENT: "production"
+  
+  # Database Configuration
+  DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/market_intel"
+  REDIS_URL: "redis://redis:6379"
+  
+  # Core Engine Configuration
+  CORE_ENGINE_URL: "core-engine:50052"
+  AUTH_SERVICE_URL: "auth-service:50051"
+  
+  # Observability Configuration
+  JAEGER_ENDPOINT: "http://jaeger:14268/api/traces"
+  PROMETHEUS_ENDPOINT: "http://prometheus:9090"
+  
+  # Performance Configuration
+  GOMAXPROCS: "4"
+  READ_TIMEOUT: "30s"
+  WRITE_TIMEOUT: "30s"
+  IDLE_TIMEOUT: "60s"
+  MAX_HEADER_BYTES: "1048576"
+  
+  # Security Configuration
+  CORS_ORIGINS: "*"
+  CORS_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
+  CORS_HEADERS: "Origin,Content-Type,Accept,Authorization"
+  
+  # Rate Limiting
+  RATE_LIMIT_REQUESTS_PER_MINUTE: "1000"
+  RATE_LIMIT_BURST_SIZE: "100"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-engine-config
+  namespace: market-intel-brain
+  labels:
+    app: core-engine
+    component: config
+data:
+  # Core Engine Configuration
+  GRPC_PORT: "50052"
+  HTTP_PORT: "8081"
+  LOG_LEVEL: "info"
+  ENVIRONMENT: "production"
+  
+  # Database Configuration
+  DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/market_intel"
+  REDIS_URL: "redis://redis:6379"
+  
+  # Performance Configuration
+  NUM_PROCESSORS: "4"
+  BUFFER_SIZE: "1048576"
+  MAX_BUFFER_SIZE: "10000"
+  
+  # Data Sources Configuration
+  DEFAULT_DATA_SOURCES: "yahoo_finance,news_api"
+  
+  # Observability Configuration
+  JAEGER_ENDPOINT: "http://jaeger:14268/api/traces"
+  PROMETHEUS_ENDPOINT: "http://prometheus:9090"
+  
+  # Rust-specific Configuration
+  RUST_LOG: "info"
+  RUST_BACKTRACE: "1"
+  
+  # Performance Tuning
+  TOKIO_THREAD_POOL_SIZE: "4"
+  TOKIO_MAX_BLOCKING_THREADS: "32"
+  
+  # Memory Management
+  GC_HEAP_SIZE: "512MB"
+  GC_HEAP_GROWTH: "64MB"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: observability-config
+  namespace: market-intel-brain-observability
+  labels:
+    app: observability
+    component: config
+data:
+  # Jaeger Configuration
+  JAEGER_COLLECTOR_ZIPKIN_HOST_PORT: "jaeger:9411"
+  JAEGER_AGENT_HOST: "jaeger"
+  JAEGER_AGENT_PORT: "6831"
+  JAEGER_SAMPLER_TYPE: "const"
+  JAEGER_SAMPLER_PARAM: "1"
+  
+  # Prometheus Configuration
+  PROMETHEUS_RETENTION: "15d"
+  PROMETHEUS_STORAGE_TSDB_RETENTION: "15d"
+  PROMETHEUS_WEB_EXTERNAL_URL: "http://prometheus:9090"
+  
+  # Grafana Configuration
+  GF_SECURITY_ADMIN_USER: "admin"
+  GF_SECURITY_ADMIN_PASSWORD: "admin123"
+  GF_USERS_ALLOW_SIGN_UP: "false"
+  GF_INSTALL_PLUGINS: "grafana-piechart-panel,grafana-worldmap-panel"
+  
+  # Alertmanager Configuration
+  ALERTMANAGER_SLACK_API_URL: ""
+  ALERTMANAGER_SLACK_CHANNEL: "#alerts"
+  
+  # General Configuration
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
