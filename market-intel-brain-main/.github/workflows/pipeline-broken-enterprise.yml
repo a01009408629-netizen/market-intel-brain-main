@@ -1,8 +1,8 @@
-name: Enterprise CI/CD Pipeline - Fixed
+name: Enterprise CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, 'feature/*', 'hotfix/*' ]
   pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
@@ -16,6 +16,7 @@ env:
   GO_VERSION: '1.21'
   RUST_VERSION: '1.75'
   BUF_VERSION: '1.28.1'
+  NODE_VERSION: '20'
 
 jobs:
   # ===== LINTING & QUALITY =====
@@ -23,18 +24,26 @@ jobs:
     name: 🔍 Linting & Quality
     runs-on: ubuntu-latest
     
+    strategy:
+      matrix:
+        service: [go-api-gateway, rust-core-engine]
+    
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: 🐹 Setup Go
+      - name: 🐹 Setup Go (for Go service)
+        if: matrix.service == 'go-api-gateway'
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
           cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
 
-      - name: 🦀 Setup Rust
+      - name: 🦀 Setup Rust (for Rust service)
+        if: matrix.service == 'rust-core-engine'
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
@@ -42,6 +51,7 @@ jobs:
           override: true
 
       - name: 🔧 Go Linting & Formatting
+        if: matrix.service == 'go-api-gateway'
         working-directory: ./microservices/go-services/api-gateway
         run: |
           echo "🔍 Running Go quality checks..."
@@ -54,12 +64,12 @@ jobs:
           fi
           echo "✅ Go formatting check passed"
           
-          # Install and run golangci-lint
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          # Run golangci-lint
           golangci-lint run --timeout=10m --verbose
           echo "✅ Go linting completed"
 
       - name: 🦀 Rust Linting & Formatting
+        if: matrix.service == 'rust-core-engine'
         working-directory: ./microservices/rust-services/core-engine
         run: |
           echo "🔍 Running Rust quality checks..."
@@ -77,21 +87,28 @@ jobs:
     name: 🔒 Security Scan (SAST)
     runs-on: ubuntu-latest
     
+    strategy:
+      matrix:
+        service: [go-api-gateway, rust-core-engine]
+    
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🐹 Setup Go
+      - name: 🐹 Setup Go (for Go service)
+        if: matrix.service == 'go-api-gateway'
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: 🦀 Setup Rust
+      - name: 🦀 Setup Rust (for Rust service)
+        if: matrix.service == 'rust-core-engine'
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
 
       - name: 🔍 Go Security Scan
+        if: matrix.service == 'go-api-gateway'
         working-directory: ./microservices/go-services/api-gateway
         run: |
           echo "🔍 Running Go security scan..."
@@ -104,6 +121,7 @@ jobs:
           echo "✅ Go security scan completed"
 
       - name: 🔍 Rust Security Scan
+        if: matrix.service == 'rust-core-engine'
         working-directory: ./microservices/rust-services/core-engine
         run: |
           echo "🔍 Running Rust security scan..."
@@ -117,6 +135,7 @@ jobs:
           echo "✅ Rust security scan completed"
 
       - name: 🔍 Trivy Vulnerability Scan
+        if: matrix.service == 'rust-core-engine'
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
@@ -129,8 +148,8 @@ jobs:
         if: always()
         with:
           sarif_file: |
-            ./microservices/go-services/api-gateway/gosec-report.sarif
-            ./microservices/rust-services/core-engine/trivy-results.sarif
+            ${{ matrix.service == 'go-api-gateway' && 'microservices/go-services/api-gateway/gosec-report.sarif' || '' }}
+            ${{ matrix.service == 'rust-core-engine' && 'microservices/rust-services/core-engine/trivy-results.sarif' || '' }}
 
   # ===== BUILD & TEST =====
   build-test:
@@ -138,18 +157,24 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint-quality, security-scan]
     
+    strategy:
+      matrix:
+        service: [go-api-gateway, rust-core-engine]
+    
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🐹 Setup Go
+      - name: 🐹 Setup Go (for Go service)
+        if: matrix.service == 'go-api-gateway'
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
           cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
 
-      - name: 🦀 Setup Rust
+      - name: 🦀 Setup Rust (for Rust service)
+        if: matrix.service == 'rust-core-engine'
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
@@ -159,17 +184,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: ${{ runner.os }}-enterprise-${{ hashFiles('**/go.sum', '**/Cargo.lock') }}
+            ${{ matrix.service == 'go-api-gateway' && '~/.cache/go-build' || '' }}
+            ${{ matrix.service == 'go-api-gateway' && '~/go/pkg/mod' || '' }}
+            ${{ matrix.service == 'rust-core-engine' && '~/.cargo/registry/index' || '' }}
+            ${{ matrix.service == 'rust-core-engine' && '~/.cargo/registry/cache' || '' }}
+            ${{ matrix.service == 'rust-core-engine' && '~/.cargo/git/db' || '' }}
+            ${{ matrix.service == 'rust-core-engine' && 'target' || '' }}
+          key: ${{ runner.os }}-${{ matrix.service }}-${{ hashFiles(matrix.service == 'go-api-gateway' && '**/go.sum' || '**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-enterprise-
+            ${{ runner.os }}-${{ matrix.service }}-
 
       - name: 🐹 Go Build & Test
+        if: matrix.service == 'go-api-gateway'
         working-directory: ./microservices/go-services/api-gateway
         run: |
           echo "🏗️ Building and testing Go service..."
@@ -187,6 +213,7 @@ jobs:
           echo "✅ Go build and test completed"
 
       - name: 🦀 Rust Build & Test
+        if: matrix.service == 'rust-core-engine'
         working-directory: ./microservices/rust-services/core-engine
         run: |
           echo "🏗️ Building and testing Rust service..."
@@ -208,10 +235,10 @@ jobs:
         if: always()
         with:
           file: |
-            ./microservices/go-services/api-gateway/coverage.out
-            ./microservices/rust-services/core-engine/coverage/cobertura.xml
-          flags: enterprise
-          name: enterprise-coverage
+            ${{ matrix.service == 'go-api-gateway' && 'microservices/go-services/api-gateway/coverage.out' || '' }}
+            ${{ matrix.service == 'rust-core-engine' && 'microservices/rust-services/core-engine/coverage/cobertura.xml' || '' }}
+          flags: ${{ matrix.service }}
+          name: ${{ matrix.service }}-coverage
 
   # ===== PROTOBUF VALIDATION =====
   protobuf-validation:
