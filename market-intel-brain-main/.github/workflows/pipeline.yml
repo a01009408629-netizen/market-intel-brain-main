@@ -157,8 +157,9 @@ jobs:
           # Clean module cache and regenerate go.sum
           go clean -modcache
           
-          # Fix OpenTelemetry propagation dependency
-          go get go.opentelemetry.io/otel/propagation@v1.24.0
+          # Fix OpenTelemetry dependencies - main modules only
+          go get go.opentelemetry.io/otel@v1.24.0
+          go get go.opentelemetry.io/otel/sdk@v1.24.0
           
           # Update dependencies and tidy
           go mod tidy
