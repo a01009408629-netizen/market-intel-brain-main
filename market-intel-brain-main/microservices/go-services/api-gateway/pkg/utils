@@ -1,0 +1,44 @@
+// TLS utilities
+package utils
+
+import (
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
+	"time"
+
+	"github.com/market-intel/api-gateway/pkg/logger"
+)
+
+// Load certificate chain from PEM file
+func LoadCertificateChain(certPath string) ([]*x509.Certificate, error) {
+	data, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read certificate file: %w", err)
+	}
+
+	var certs []*x509.Certificate
+	var block *pem.Block
+	remaining := data
+
+	for {
+		block, remaining = pem.Decode(remaining)
+		if block == nil {
+			break
+		}
+
+		if block.Type == "CERTIFICATE" {
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse certificate: %w", err)
+			}
+			certs = append(certs, cert)
+		}
+	}
+
+	if len(certs) == 0 {
+		return nil, fmt.Errorf("no certificates found in file")
+	}
+
+	return certs, nil
+}
