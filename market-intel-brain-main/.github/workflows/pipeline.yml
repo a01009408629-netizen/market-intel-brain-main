@@ -149,6 +149,19 @@ jobs:
           cache: true
           cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
 
+      - name: 🔧 Fix Go Dependencies Checksum
+        working-directory: ./microservices/go-services/api-gateway
+        run: |
+          echo "🔧 Fixing Go dependencies checksum..."
+          
+          # Clean module cache and regenerate go.sum
+          go clean -modcache
+          go mod tidy
+          go mod download
+          go mod verify
+          
+          echo "✅ Go dependencies checksum fixed"
+
       - name: 🦀 Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
