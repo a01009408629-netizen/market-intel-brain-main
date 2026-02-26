@@ -1,4 +1,7 @@
-# Rust
+# Enterprise-Grade .gitignore for Rust + Go Projects
+# Based on latest industry standards
+
+# === Rust ===
 /target/
 Cargo.lock
 *.pdb
@@ -7,7 +10,7 @@ Cargo.lock
 *.crt
 *.der
 
-# Go
+# === Go ===
 *.exe
 *.exe~
 *.dll
@@ -15,106 +18,160 @@ Cargo.lock
 *.dylib
 *.test
 *.prof
-# vendor/ - Commented out to allow vendor directory for CI/CD
-# vendor/
+vendor/
 go.work
 go.work.sum
 
-# IDE
+# === IDE & Editors ===
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
 *.tmp
 *.temp
 
-# Logs
+# === OS ===
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+
+# === Logs ===
 *.log
 logs/
 
-# Environment
+# === Environment & Secrets ===
+.env
 .env.local
 .env.development
 .env.test
 .env.production
-
-# Docker
-.dockerignore
-docker-compose.override.yml
-
-# Coverage
-*.profraw
-*.svg
-*.png
-
-# Backup files
-*.bak
-*.backup
-*.old
-
-# Temporary files
-*.tmp
-*.temp
-*.swp
-*.swo
-
-# Cache directories
-.cache/
-cache/
-
-# Build artifacts
-build/
-dist/
-target/
-
-# Configuration files with secrets
-*.local.yml
-*.local.yaml
-*.local.toml
-*.local.json
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Protobuf generated files
-*.pb.go
-*.pb.rs
-
-# Performance reports
-benchmark-results/
-perf-results/
-
-# Security
+.env.*.local
+*.env
+secrets/
+*.key
+*.pem
+*.crt
 *.p12
 *.jks
 *.keystore
 *.pfx
 
-# Monitoring
+# === Docker ===
+.dockerignore
+docker-compose.override.yml
+docker-compose.*.yml
+!docker-compose.yml
+!docker-compose-observability.yml
+
+# === Coverage & Reports ===
+*.profraw
+*.svg
+*.png
+coverage/
+coverage.out
+*.cover
+*.gcov
+lcov.info
+
+# === Backup Files ===
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+
+# === Temporary Files ===
+*.tmp
+*.temp
+*.swp
+*.swo
+*.noindex
+
+# === Cache Directories ===
+.cache/
+cache/
+node_modules/
+.npm/
+.yarn/
+.pnpm-store/
+
+# === Build Artifacts ===
+build/
+dist/
+target/
+out/
+bin/
+lib/
+
+# === Configuration Files with Secrets ===
+*.local.yml
+*.local.yaml
+*.local.toml
+*.local.json
+*.local.ini
+config.local.*
+
+# === Database ===
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# === Protobuf Generated Files ===
+*.pb.go
+*.pb.rs
+*_pb2.py
+*_pb2.go
+
+# === Performance Reports ===
+benchmark-results/
+perf-results/
+*.prof
+
+# === Security Files ===
+*.p12
+*.jks
+*.keystore
+*.pfx
+bandit-report.json
+safety-report.json
+trivy-results.sarif
+*.audit
+
+# === Monitoring & Observability ===
 prometheus-data/
 grafana-data/
+jaeger-data/
+*.trace
 
-# Documentation build
+# === Documentation Build ===
 docs/_build/
 docs/site/
+*.aux
+*.toc
+*.idx
+*.ind
+*.ilg
+*.lot
+*.lof
 
-# Test artifacts
+# === Test Artifacts ===
 test-results/
 test-logs/
+*.test
+tests/*.log
 
-# Local development
+# === Local Development ===
 local/
 dev/
 staging/
+.tmp/
 
-# Python (completely excluded)
+# === Python (Legacy - Completely Blocked) ===
 *.py
 *.pyc
 *.pyo
@@ -162,35 +219,43 @@ coverage.xml
 cover/
 *.pkl
 *.pickle
+requirements*.txt
+pyproject.toml
+Pipfile*
+setup.py
+setup.cfg
 
-# Node.js (if any frontend components)
+# === Node.js (if any frontend components) ===
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .npm
 .yarn-integrity
+.pnpm-debug.log*
 
-# macOS
+# === macOS ===
 .AppleDouble
 .LSOverride
+Icon
+._*
 
-# Windows
+# === Windows ===
 *.cab
 *.msi
 *.msix
 *.msm
 *.msp
-*.lnk
+.lnk
 
-# Linux
+# === Linux ===
 *~
 .fuse_hidden*
 .directory
 .Trash-*
 .nfs*
 
-# Package files
+# === Package Files ===
 *.7z
 *.dmg
 *.gz
@@ -200,7 +265,7 @@ yarn-error.log*
 *.tar
 *.zip
 
-# Editor directories and files
+# === Editor Directories ===
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -209,3 +274,49 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+# === Enterprise Specific ===
+.enterprise/
+.enterprise-config/
+*.enterprise
+enterprise-secrets/
+corp-config/
+internal/
+.private/
+
+# === Cloud Provider Files ===
+.aws/
+.azure/
+.gcp/
+.kube/
+*.pem
+*.key
+*.json.gpg
+
+# === CI/CD Artifacts ===
+.github/workflows/*.tmp
+.github/workflows/*.bak
+artifacts/
+reports/
+
+# === Temporary Build Files ===
+*.tmp~
+*.swp~
+*.swo~
+
+# === Large Files ===
+*.iso
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.zip
+*.tar.gz
+*.tar.bz2
+
+# === Generated Files ===
+generated/
+auto-generated/
+*.generated.*
+gen/
+gen-files/

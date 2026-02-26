@@ -1,281 +1,318 @@
-# 🧠 Market Intel Brain - Enterprise Financial Intelligence Platform
+# 🧠 Market Intel Brain
 
-[![CI/CD](https://github.com/a01009408629-netizen/market-intel-brain-main/workflows/main/badge.svg)](https://github.com/a01009408629-netizen/market-intel-brain-main/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
-
-> 🚀 **Enterprise-grade multi-agent financial intelligence platform** for real-time economic, geopolitical, sentiment, technical and market-reaction analysis.
-
-## 📖 Table of Contents
-
-- [🎯 Overview](#-overview)
-- [🏗️ Architecture](#️-architecture)
-- [🚀 Quick Start](#-quick-start)
-- [📚 Documentation](#-documentation)
-- [☸️ Deployment](#️-deployment)
-- [📊 Monitoring](#-monitoring)
-- [🔧 Development](#-development)
-- [🧪 Testing](#-testing)
-- [🔐 Security](#-security)
-- [📦 Contributing](#-contributing)
-- [📄 License](#-license)
-
----
-
-## 🎯 Overview
-
-Market Intel Brain is a **sophisticated multi-agent system** designed to process and analyze financial data from 17+ different sources in real-time. The platform leverages advanced AI/ML techniques to provide actionable intelligence for trading, investment, and risk management decisions.
-
-### 🌟 Key Features
-
-- **🤖 Multi-Agent Architecture**: 10+ specialized AI agents working in coordination
-- **⚡ Real-time Processing**: Sub-millisecond latency for critical operations
-- **🌍 Global Data Sources**: 17+ financial data providers worldwide
-- **🧠 Advanced Analytics**: Sentiment analysis, technical indicators, predictive modeling
-- **🔒 Enterprise Security**: Bank-grade security and compliance
-- **📈 Scalable Infrastructure**: Auto-scaling from 1 to 10,000+ requests/second
-- **📊 Complete Observability**: Real-time monitoring and alerting
-
-### 🎯 Use Cases
-
-- **📈 Algorithmic Trading**: Automated trading strategies with real-time market data
-- **💼 Investment Analysis**: Deep analysis of stocks, forex, commodities
-- **🌍 Geopolitical Intelligence**: Impact analysis of global events on markets
-- **📰 Risk Management**: Real-time risk assessment and mitigation
-- **📰 Portfolio Optimization**: AI-driven portfolio rebalancing
-- **📰 Regulatory Compliance**: Automated compliance checking and reporting
-
----
+Enterprise-grade market intelligence platform built with Rust and Go microservices architecture.
 
 ## 🏗️ Architecture
 
-### 📐 System Architecture Overview
+### Core Components
+
+- **🦀 Rust Core Engine** - High-performance data processing and analytics
+- **🐹 Go API Gateway** - Scalable HTTP/gRPC gateway and routing
+- **📋 Protobuf Contracts** - Type-safe service communication
+- **🐳 Docker Containers** - Multi-architecture containerized deployment
+- **📊 Observability Stack** - Comprehensive monitoring and logging
+
+### Microservices Structure
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    🌐 External Data Sources (17+)                │
-├─────────────────────────────────────────────────────────────────────┤
-│  📈 Stock Markets  │  💱 Forex  │  📰 Crypto  │  📰 Bonds  │
-│  📰 Commodities  │  🌍 News   │  🏛️ Economic │  🌍 Events   │
-└─────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                🎯 01_Perception_Layer                      │
-│  🔍 Data Ingestion • 📊 Normalization • 🔄 Validation    │
-└─────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                🌊 02_Event_Fabric                           │
-│  ⚡ Event Processing • 🔄 Routing • 📦 Queuing         │
-└─────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│              🤖 03_Cognitive_Agents                        │
-│  🧠 Sentiment • 📈 Technical • 🎯 Predictive • 🔍 Risk │
-└─────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│            🧠 04_Unified_Memory_Layer                      │
-│  💾 Vector Store • 📝 Event Log • 🔄 State Management   │
-└─────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│          🎭 05_Reasoning_Orchestration                    │
-│  🎯 Decision Making • 🔄 Coordination • 📊 Aggregation   │
-└─────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│           🌐 08_Interface_Layer                             │
-│  🚀 REST API • 📊 GraphQL • 🔄 WebSocket • 📱 SDK   │
-└─────────────────────────────────────────────────────────────────────┘
+microservices/
+├── go-services/
+│   └── api-gateway/          # HTTP/gRPC API Gateway
+├── rust-services/
+│   └── core-engine/          # Data Processing Engine
+├── proto/                   # Protobuf Definitions
+├── scripts/                 # Utility Scripts
+├── docker-compose.yml         # Services Orchestration
+└── docker-compose-observability.yml  # Monitoring Stack
+```
 
-## 🚀 Quick Start
+### Technology Stack
+
+| Component | Technology | Purpose |
+|------------|-------------|----------|
+| **Core Engine** | 🦀 Rust | High-performance data processing |
+| **API Gateway** | 🐹 Go | Scalable HTTP/gRPC services |
+| **Communication** | 📋 Protobuf | Type-safe inter-service communication |
+| **Containerization** | 🐳 Docker | Multi-architecture deployment |
+| **Orchestration** | 🐙 Docker Compose | Local development and testing |
+| **Observability** | 📊 Prometheus + Grafana | Monitoring and visualization |
+| **Logging** | 📝 ELK Stack | Centralized logging |
+| **Tracing** | 🔍 Jaeger | Distributed tracing |
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- Docker & Docker Compose
-- Python 3.11+
-- Kubernetes (for production)
-- Redis (for caching)
 
-### Installation
+- **Docker & Docker Compose** - For container orchestration
+- **Go 1.21+** - For API Gateway development
+- **Rust 1.75+** - For Core Engine development
+- **Buf** - For Protobuf management
+- **Make** - For build automation
+
+### Quick Start
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/a01009408629-netizen/market-intel-brain.git
+   cd market-intel-brain
+   ```
+
+2. **Start all services**
+   ```bash
+   # Start observability stack
+   make start-observability
+   
+   # Start application services
+   make start-services
+   ```
+   
+   Or using Docker Compose directly:
+   ```bash
+   # Start observability stack
+   docker-compose -f docker-compose-observability.yml up -d
+   
+   # Start application services
+   docker-compose -f docker-compose.yml up -d --build
+   ```
+
+3. **Verify services are running**
+   ```bash
+   # Check API Gateway
+   curl http://localhost:8080/api/v1/health
+   
+   # Check Core Engine (gRPC)
+   grpcurl -plaintext localhost:50052 list
+   ```
+
+### Development Setup
+
+1. **Install dependencies**
+   ```bash
+   # Go dependencies
+   cd microservices/go-services/api-gateway
+   go mod download
+   
+   # Rust dependencies
+   cd microservices/rust-services/core-engine
+   cargo build
+   ```
+
+2. **Run tests**
+   ```bash
+   # Go tests
+   cd microservices/go-services/api-gateway
+   go test -v ./...
+   
+   # Rust tests
+   cd microservices/rust-services/core-engine
+   cargo test
+   ```
+
+3. **Generate Protobuf files**
+   ```bash
+   cd microservices/proto
+   buf generate
+   ```
+
+### Available Make Commands
 
 ```bash
-# Clone the repository
-git clone https://github.com/a01009408629-netizen/market-intel-brain-main.git
-cd market-intel-brain-main/market-intel-brain-main
-
-# Set up environment
-cp .env.example .env
-# Edit .env with your API keys and configuration
-
-# Run with Docker (recommended)
-docker-compose up -d
-
-# Or run directly
-python production_server.py
+make help           # Show all available commands
+make start-services  # Start application services
+make stop-services   # Stop application services
+make start-observability  # Start monitoring stack
+make stop-observability   # Stop monitoring stack
+make test           # Run all tests
+make lint           # Run linting
+make build          # Build all services
+make clean          # Clean build artifacts
 ```
 
-### Environment Configuration
+## 🛠 Tech Stack
 
-See [📚 Documentation](./docs/) for detailed setup:
-- [🏗️ Architecture Overview](./docs/ARCHITECTURE.md)
-- [⚙️ Configuration Guide](./docs/CONFIGURATION.md)
-- [📁 Project Structure](./docs/PROJECT_STRUCTURE.md)
+### Backend Technologies
 
-## 🐳 Docker Deployment
+- **🦀 Rust 1.75+** - Core engine and data processing
+  - Tokio for async runtime
+  - Tonic for gRPC services
+  - Serde for serialization
+  - Tracing for observability
 
+- **🐹 Go 1.21+** - API gateway and HTTP services
+  - Gin for HTTP framework
+  - gRPC for service communication
+  - OpenTelemetry for observability
+  - Prometheus for metrics
+
+### Infrastructure
+
+- **🐳 Docker** - Containerization and deployment
+- **📋 Protobuf** - Service contract definitions
+- **🔍 Buf** - Protobuf linting and validation
+- **📊 Prometheus** - Metrics collection
+- **📈 Grafana** - Metrics visualization
+- **📝 Elasticsearch** - Log storage
+- **🔍 Jaeger** - Distributed tracing
+
+### Development Tools
+
+- **🔧 golangci-lint** - Go linting and quality
+- **🦀 Clippy** - Rust linting and quality
+- **🔒 Gosec** - Go security scanning
+- **🔒 cargo-audit** - Rust security scanning
+- **🔍 Trivy** - Container vulnerability scanning
+
+## 📊 Service Endpoints
+
+### API Gateway (Go)
+- **Health Check:** `GET http://localhost:8080/api/v1/health`
+- **Metrics:** `GET http://localhost:8080/metrics`
+- **API Documentation:** `GET http://localhost:8080/docs`
+
+### Core Engine (Rust)
+- **gRPC Port:** `50052`
+- **Health Check:** gRPC health service
+- **Metrics:** `GET http://localhost:9000/metrics`
+
+### Observability Stack
+- **Prometheus:** `http://localhost:9090`
+- **Grafana:** `http://localhost:3000` (admin/admin)
+- **Jaeger:** `http://localhost:16686`
+- **Elasticsearch:** `http://localhost:9200`
+- **Kibana:** `http://localhost:5601`
+
+## 🧪 Testing
+
+### Unit Tests
 ```bash
-# Build and run
-docker build -t market-intel-brain .
-docker run -p 8000:8000 market-intel-brain
+# Go tests
+make test-go
 
-# With Docker Compose (includes Redis)
-docker-compose up -d
+# Rust tests
+make test-rust
+
+# All tests
+make test
 ```
 
-## ☸️ Kubernetes Deployment
-
+### Integration Tests
 ```bash
-# Deploy to Kubernetes
-kubectl apply -f k8s/
+# Run full integration test suite
+make test-integration
 
-# Check deployment status
-kubectl get pods -l app=market-intel-brain
+# Run E2E validation
+make test-e2e
 ```
 
-## 📡 API Documentation
-
-Once running, access:
-- **API Documentation**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/health
-- **Metrics**: http://localhost:8000/metrics
-
-## 🔧 Development
-
-### Local Development Setup
-
+### Performance Tests
 ```bash
-# Install dependencies
-pip install -r requirements_production.txt
+# Run benchmarks
+make benchmark
 
-# Run development server
-python api_server.py
-
-# Run tests
-pytest tests/
+# Load testing
+make load-test
 ```
 
-### Code Quality
+## 📈 Monitoring & Observability
 
-```bash
-# Lint code
-ruff check . --fix
-
-# Type checking
-mypy .
-
-# Security scan
-bandit -r .
-
-# Format code
-ruff format .
-```
-
-## 📈 Performance
-
-- **Response Time**: <5 seconds for complex queries
-- **Throughput**: 300+ requests/minute
-- **Availability**: 99.9% uptime with auto-recovery
-- **Memory Usage**: Optimized for 8GB RAM environments
-- **Storage**: Efficient data compression and caching
-
-## 🛡️ Security
-
-- **Authentication**: JWT-based with encrypted secrets
-- **Authorization**: Role-based access control
-- **Data Protection**: End-to-end encryption
-- **Network Security**: Isolated microservices architecture
-- **Compliance**: Enterprise security standards
-
-## 📊 Monitoring & Observability
-
-### Health Endpoints
-- `/health` - Application health status
-- `/metrics` - Performance metrics
-- `/ready` - Readiness probe
+### Metrics
+- **Application Metrics:** Prometheus endpoints on all services
+- **Infrastructure Metrics:** Docker and system metrics
+- **Business Metrics:** Custom business KPIs
 
 ### Logging
-- Structured JSON logging
-- Multiple log levels (DEBUG, INFO, WARN, ERROR)
-- Centralized log aggregation
-- Real-time log streaming
+- **Structured Logging:** JSON format across all services
+- **Centralized Logs:** Elasticsearch + Kibana
+- **Log Levels:** Configurable log levels per service
 
-## � CI/CD Pipeline
+### Tracing
+- **Distributed Tracing:** Jaeger integration
+- **Request Tracing:** End-to-end request flow
+- **Performance Analysis:** Latency and bottleneck detection
 
-### Automated Workflows
-- **🔍 Quality & Security Checks** - Code analysis and security scanning
-- **🧪 Comprehensive Testing** - Unit, integration, and API tests
-- **🐳 Docker Build & Test** - Multi-platform container builds
-- **☸️ Kubernetes Testing** - Deployment validation
-- **� Production Deployment** - Automated deployment with approval gates
+## 🔒 Security
 
-### Security Tools
-- **Trivy** - Container vulnerability scanning
-- **Hadolint** - Dockerfile best practices
-- **Kube-score** - Kubernetes security validation
-- **Bandit** - Python security analysis
-- **Safety** - Dependency vulnerability checking
+### Security Scanning
+- **SAST:** Static code analysis (Gosec, Clippy)
+- **Dependency Scanning:** Vulnerability detection (cargo-audit, Trivy)
+- **Container Security:** Image vulnerability scanning
 
-## 📚 Architecture
+### Best Practices
+- **Secrets Management:** Environment variables only
+- **Network Security:** Service-to-service encryption
+- **Input Validation:** Comprehensive input sanitization
+- **Authentication:** JWT-based authentication
 
-### Core Components
-1. **Perception Layer** - Data ingestion and preprocessing
-2. **Event Fabric** - Event streaming and processing
-3. **Cognitive Agents** - AI-powered analysis
-4. **Memory Layer** - Data storage and retrieval
-5. **Reasoning Orchestration** - Decision making
-6. **Identity Isolation** - Security and isolation
-7. **Outcome Fusion** - Result aggregation
+## 🚀 Deployment
 
-### Data Providers
-- **Financial Markets** - Real-time stock data
-- **News Sources** - Financial news and analysis
-- **Economic Indicators** - GDP, inflation, employment
-- **Alternative Data** - Social media, satellite, etc.
+### Development
+```bash
+# Start development environment
+make dev
+
+# Stop development environment
+make stop-dev
+```
+
+### Production
+```bash
+# Build production images
+make build-prod
+
+# Deploy to production
+make deploy-prod
+```
+
+### Environment Variables
+See `.env.example` for all available configuration options.
+
+## 📚 Documentation
+
+- **[Architecture Guide](./ARCHITECTURE.md)** - Detailed system architecture
+- **[API Documentation](./docs/api/)** - REST and gRPC API docs
+- **[Development Guide](./docs/development/)** - Development setup and guidelines
+- **[Deployment Guide](./docs/deployment/)** - Production deployment instructions
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and security checks
-5. Submit a pull request
+Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
+
+### Branch Strategy (GitFlow)
+
+- **`main`** - Production-ready code
+- **`develop`** - Integration branch for features
+- **`feature/*`** - Feature branches
+- **`hotfix/*`** - Hotfix branches
+- **`release/*`** - Release preparation branches
+
+### Commit Convention
+
+We use [Conventional Commits](https://www.conventionalcommits.org/) specification:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+Types:
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes
+- `refactor`: Code refactoring
+- `test`: Test changes
+- `chore`: Maintenance tasks
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+## 🙏 Acknowledgments
 
-- **Documentation**: See [docs/](./docs/) folder
-- **Issues**: [GitHub Issues](https://github.com/a01009408629-netizen/market-intel-brain-main/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/a01009408629-netizen/market-intel-brain-main/discussions)
-
----
-
-<div align="center">
-
-**🚀 Built for Enterprise-Grade Financial Intelligence**
-
-[![Stars](https://img.shields.io/github/stars/a01009408629-netizen/market-intel-brain-main?style=social)](https://github.com/a01009408629-netizen/market-intel-brain-main)
-[![Forks](https://img.shields.io/github/forks/a01009408629-netizen/market-intel-brain-main?style=social)](https://github.com/a01009408629-netizen/market-intel-brain-main)
-[![License](https://img.shields.io/github/license/a01009408629-netizen/market-intel-brain-main)](https://github.com/a01009408629-netizen/market-intel-brain-main/blob/main/LICENSE)
-
-</div>
+- **Rust Community** - Excellent async and gRPC libraries
+- **Go Community** - Robust HTTP and gRPC tools
+- **OpenTelemetry** - Comprehensive observability framework
+- **Buf** - Modern Protobuf tooling
