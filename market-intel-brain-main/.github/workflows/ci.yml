@@ -232,11 +232,10 @@ jobs:
       - name: Setup Git Auth
         run: git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
-        with:
-          # المسار الذي نجحنا في الوصول إليه بالـ Tab
-          args: ./microservices/go-services/api-gateway/...
+      - name: Run Security Scan
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          ./bin/gosec ./...
 
       - name: 📤 Upload Security Report
         uses: github/codeql-action/upload-sarif@v3
