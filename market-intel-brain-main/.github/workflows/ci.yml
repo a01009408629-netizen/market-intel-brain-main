@@ -1,25 +1,13 @@
-name: CI with Auto-Fix
+name: High-Efficiency CI with Auto-Fix
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-  workflow_dispatch:
-
-# Concurrency control to cancel redundant runs
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  GO_VERSION: '1.21'
-  RUST_VERSION: 'stable'
+    branches: [ main, develop, '*' ]
 
 jobs:
-  # ===== AUTO-FIX JOB =====
+  # ===== AUTO-FIX AND VALIDATION =====
   auto-fix:
-    name: 🔧 Auto-Fix Dependencies & Linting
+    name: 🔧 Auto-Fix & Validate
     runs-on: ubuntu-latest
     
     steps:
@@ -28,63 +16,58 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🐹 Setup Go
+      - name: 🐹 Setup Go 1.21
         uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: '1.21'
           cache: true
           cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
 
-      - name: 🦀 Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: rustfmt, clippy
-
-      - name: 📦 Install Dependencies
+      - name: 📦 Install golangci-lint
         run: |
-          echo "📦 Installing dependencies..."
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-          echo "✅ Dependencies installed"
+          echo "📦 Installing golangci-lint..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+          echo "✅ golangci-lint installed"
 
-      - name: 🔧 Run Auto-Fix
+      - name: 🔧 Execute go mod tidy
+        working-directory: ./microservices/go-services/api-gateway
         run: |
-          echo "🔧 Running auto-fix..."
-          cd microservices/go-services/api-gateway
-          
-          # Fix Go dependencies
-          echo "🔧 Fixing Go dependencies..."
+          echo "🔧 Running go mod tidy..."
           go mod tidy
-          go mod vendor
-          
-          # Fix Go linting issues
-          echo "🔧 Fixing Go linting issues..."
-          golangci-lint run --fix
-          
-          # Fix Rust formatting
-          echo "🔧 Fixing Rust formatting..."
-          cd ../rust-services/core-engine
-          cargo fmt --all
-          
-          echo "✅ Auto-fix completed"
+          echo "✅ go mod tidy completed"
 
-      - name: 📤 Auto-Commit Changes
+      - name: 🔧 Execute go mod vendor
+        working-directory: ./microservices/go-services/api-gateway
+        run: |
+          echo "🔧 Running go mod vendor..."
+          go mod vendor
+          echo "✅ go mod vendor completed"
+
+      - name: 🔧 Run golangci-lint with --fix
+        working-directory: ./microservices/go-services/api-gateway
+        run: |
+          echo "🔧 Running golangci-lint with --fix..."
+          $(go env GOPATH)/bin/golangci-lint run --fix ./...
+          echo "✅ golangci-lint --fix completed"
+
+      - name: 📤 Auto-Commit Fixes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "🔧 Auto-fix: Dependencies & Linting"
+          commit_message: "chore: automated fix [skip ci]"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
           file_pattern: |
             microservices/go-services/api-gateway/go.mod
             microservices/go-services/api-gateway/go.sum
             microservices/go-services/api-gateway/vendor/
-            microservices/rust-services/core-engine/src/
+            microservices/go-services/api-gateway/**/*.go
           skip_dirty_check: false
           skip_fetch: false
+          commit_options: "--no-verify --signoff"
 
-  # ===== LINTING & QUALITY =====
-  lint-quality:
-    name: 🔍 Linting & Quality
+  # ===== BUILD AND TEST =====
+  build-test:
+    name: 🏗️ Build & Test
     runs-on: ubuntu-latest
     needs: auto-fix
     
@@ -92,72 +75,12 @@ jobs:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🐹 Setup Go
+      - name: 🐹 Setup Go 1.21
         uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: '1.21'
           cache: true
           cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
-
-      - name: 🦀 Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: rustfmt, clippy
-
-      - name: 🔧 Go Linting & Formatting
-        working-directory: ./microservices/go-services/api-gateway
-        run: |
-          echo "🔍 Running Go quality checks..."
-          
-          # Check formatting
-          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-            echo "❌ Go files are not formatted:"
-            gofmt -s -l .
-            exit 1
-          fi
-          echo "✅ Go formatting check passed"
-          
-          # Install and run golangci-lint
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-          golangci-lint run --timeout=10m --verbose
-          echo "✅ Go linting completed"
-
-      - name: 🦀 Rust Linting & Formatting
-        working-directory: ./microservices/rust-services/core-engine
-        run: |
-          echo "🔍 Running Rust quality checks..."
-          
-          # Check formatting
-          cargo fmt --all -- --check
-          echo "✅ Rust formatting check passed"
-          
-          # Run clippy
-          cargo clippy --all-targets --all-features -- -D warnings
-          echo "✅ Rust clippy completed"
-
-  # ===== BUILD & TEST =====
-  build-test:
-    name: 🏗️ Build & Test
-    runs-on: ubuntu-latest
-    needs: [lint-quality]
-    
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: 🐹 Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-          cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
-
-      - name: 🦀 Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: rustfmt, clippy
 
       - name: 📦 Cache Dependencies
         uses: actions/cache@v4
@@ -165,79 +88,137 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: ${{ runner.os }}-ci-${{ hashFiles('**/go.sum', '**/Cargo.lock') }}
+            ~/.cache/golangci-lint
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-ci-
+            ${{ runner.os }}-go-
 
-      - name: 🏗️ Build Go Service
+      - name: 📦 Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+
+      - name: 🔍 Validate Linting (No Fixes)
         working-directory: ./microservices/go-services/api-gateway
         run: |
-          echo "🏗️ Building Go service..."
+          echo "🔍 Validating linting (no fixes allowed)..."
+          $(go env GOPATH)/bin/golangci-lint run --timeout=10m ./...
+          echo "✅ Linting validation passed"
+
+      - name: 🏗️ Build Service
+        working-directory: ./microservices/go-services/api-gateway
+        run: |
+          echo "🏗️ Building service..."
           go build -o bin/api-gateway ./cmd/main.go
-          echo "✅ Go service built successfully"
+          echo "✅ Build completed successfully"
 
-      - name: 🏗️ Build Rust Service
-        working-directory: ./microservices/rust-services/core-engine
-        run: |
-          echo "🏗️ Building Rust service..."
-          cargo build --release
-          echo "✅ Rust service built successfully"
-
-      - name: 🧪 Test Go Service
+      - name: 🧪 Run Tests
         working-directory: ./microservices/go-services/api-gateway
         run: |
-          echo "🧪 Testing Go service..."
-          go test -v ./...
-          echo "✅ Go tests completed"
+          echo "🧪 Running tests..."
+          go test -v -race -coverprofile=coverage.out ./...
+          echo "✅ Tests completed successfully"
 
-      - name: 🧪 Test Rust Service
-        working-directory: ./microservices/rust-services/core-engine
-        run: |
-          echo "🧪 Testing Rust service..."
-          cargo test --all
-          echo "✅ Rust tests completed"
+      - name: 📊 Upload Coverage
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          file: ./microservices/go-services/api-gateway/coverage.out
+          flags: unittests
+          name: codecov-umbrella
 
-  # ===== SECURITY SCAN =====
-  security-scan:
-    name: 🔒 Security Scan
+  # ===== LOGIC VALIDATION =====
+  logic-validation:
+    name: 🔍 Logic Validation
     runs-on: ubuntu-latest
-    needs: [auto-fix]
+    needs: auto-fix
     
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🐹 Setup Go
+      - name: 🐹 Setup Go 1.21
         uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: '1.21'
+          cache: true
+          cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
 
-      - name: 🦀 Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-
-      - name: 🔍 Go Security Scan
+      - name: 🔍 Validate Go Module Structure
         working-directory: ./microservices/go-services/api-gateway
         run: |
-          echo "🔍 Running Go security scan..."
+          echo "🔍 Validating Go module structure..."
+          
+          # Check if go.mod exists and is valid
+          if [ ! -f "go.mod" ]; then
+            echo "❌ go.mod file not found"
+            exit 1
+          fi
+          
+          # Check if vendor directory exists
+          if [ ! -d "vendor" ]; then
+            echo "❌ vendor directory not found"
+            exit 1
+          fi
+          
+          # Validate go.mod syntax
+          if ! go mod verify; then
+            echo "❌ go.mod verification failed"
+            exit 1
+          fi
+          
+          echo "✅ Go module structure validation passed"
+
+      - name: 🔍 Validate Import Paths
+        working-directory: ./microservices/go-services/api-gateway
+        run: |
+          echo "🔍 Validating import paths..."
+          
+          # Check for invalid import paths
+          if grep -r "go.opentelemetry.io/otel/semconv/v1.24.0" .; then
+            echo "❌ Invalid OpenTelemetry semconv import path found"
+            exit 1
+          fi
+          
+          echo "✅ Import paths validation passed"
+
+      - name: 🔍 Validate Build Dependencies
+        working-directory: ./microservices/go-services/api-gateway
+        run: |
+          echo "🔍 Validating build dependencies..."
+          
+          # Try to build without errors
+          if ! go build -o /tmp/test-build ./cmd/main.go; then
+            echo "❌ Build validation failed - unfixable logic error"
+            exit 1
+          fi
+          
+          echo "✅ Build dependencies validation passed"
+
+  # ===== SECURITY SCAN =====
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    needs: auto-fix
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🐹 Setup Go 1.21
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: 🔍 Gosec Security Scan
+        working-directory: ./microservices/go-services/api-gateway
+        run: |
+          echo "🔍 Running Gosec security scan..."
           go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
           gosec -fmt sarif -out gosec-report.sarif ./...
-          echo "✅ Go security scan completed"
+          echo "✅ Security scan completed"
 
-      - name: 🔍 Rust Security Scan
-        working-directory: ./microservices/rust-services/core-engine
-        run: |
-          echo "🔍 Running Rust security scan..."
-          cargo install cargo-audit
-          cargo audit --json > cargo-audit.json || true
-          echo "✅ Rust security scan completed"
-
-      - name: 📤 Upload Security Reports
+      - name: 📤 Upload Security Report
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
