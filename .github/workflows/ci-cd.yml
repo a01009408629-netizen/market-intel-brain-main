@@ -86,13 +86,13 @@ jobs:
         # Go quality checks
         cd ../../go-services/api-gateway
         echo "=== Go Quality Checks ==="
-        go fmt ./... || echo "Go formatting issues found"
-        go vet ./... || echo "Go vet issues found"
-        go test -race -buildvcs=false ./... || echo "Go tests completed with issues"
+        go fmt -mod=vendor ./... || echo "Go formatting issues found"
+        go vet -mod=vendor ./... || echo "Go vet issues found"
+        go test -race -buildvcs=false -mod=vendor ./... || echo "Go tests completed with issues"
         
         # Security scanning
         go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
-        gosec -fmt json -out gosec-report.json ./... || echo "Go security issues found"
+        gosec -fmt json -out gosec-report.json -mod=vendor ./... || echo "Go security issues found"
         
         # Set output
         echo "passed=true" >> $GITHUB_OUTPUT
@@ -140,8 +140,8 @@ jobs:
         
         # Go syntax check
         cd market-intel-brain-main/microservices/go-services/api-gateway
-        go fmt ./...
-        go vet ./...
+        go fmt -mod=vendor ./...
+        go vet -mod=vendor ./...
         echo "Go syntax validation passed"
 
     - name: �� Install Dependencies
@@ -168,7 +168,7 @@ jobs:
         # Go tests
         echo "=== Go Tests ==="
         cd ../../go-services/api-gateway
-        go test -race -v ./... || echo "Go tests completed with issues"
+        go test -race -v -mod=vendor ./... || echo "Go tests completed with issues"
         
         # Integration tests
         echo "=== Integration Tests ==="
@@ -211,7 +211,7 @@ jobs:
           ~/go/pkg/mod/
           market-intel-brain-main/microservices/rust-services/core-engine/target/
           market-intel-brain-main/microservices/go-services/api-gateway/vendor/
-        key: ${{ runner.os }}-cache-${{ hashFiles('**/Cargo.lock', '**/go.sum', '**/vendor/modules.txt') }}
+        key: v5-go-hermetic-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-cache-
 
