@@ -168,6 +168,9 @@ jobs:
           go mod download
           go mod verify
           
+          # Update vendor directory to match go.mod
+          go mod vendor
+          
           echo "✅ Go dependencies checksum fixed"
 
       - name: 🦀 Setup Rust
