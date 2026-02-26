@@ -210,7 +210,8 @@ jobs:
           ~/.cargo/git/
           ~/go/pkg/mod/
           market-intel-brain-main/microservices/rust-services/core-engine/target/
-        key: ${{ runner.os }}-cache-${{ hashFiles('**/Cargo.lock', '**/go.sum') }}
+          market-intel-brain-main/microservices/go-services/api-gateway/vendor/
+        key: ${{ runner.os }}-cache-${{ hashFiles('**/Cargo.lock', '**/go.sum', '**/vendor/modules.txt') }}
         restore-keys: |
           ${{ runner.os }}-cache-
 

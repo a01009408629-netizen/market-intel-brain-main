@@ -15,7 +15,8 @@ Cargo.lock
 *.dylib
 *.test
 *.prof
-vendor/
+# vendor/ - Commented out to allow vendor directory for CI/CD
+# vendor/
 go.work
 go.work.sum
 
