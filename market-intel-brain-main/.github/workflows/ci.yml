@@ -233,7 +233,7 @@ jobs:
         working-directory: ./microservices/go-services/api-gateway
         run: |
           echo "🔍 Running Gosec security scan..."
-          go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
           if [ -f "gosec-report.sarif" ]; then
             rm gosec-report.sarif
           fi
