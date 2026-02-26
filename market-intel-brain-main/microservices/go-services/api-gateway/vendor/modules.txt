@@ -1,5 +1,5 @@
-# Vendor directory for Go modules
-# This directory contains all dependencies locally to prevent downloads in CI
+# Vendor directory for Go modules - Frozen dependencies
+# This prevents ANY network downloads in CI/CD
 
 # Core dependencies
 github.com/bytedance/sonic v1.9.1
