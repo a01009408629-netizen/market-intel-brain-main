@@ -229,6 +229,9 @@ jobs:
         with:
           go-version: '1.21'
 
+      - name: Setup Git Auth
+        run: git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
