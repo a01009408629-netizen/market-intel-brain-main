@@ -145,6 +145,9 @@ jobs:
         echo "Go syntax validation passed"
 
     - name: �� Install Dependencies
+      env:
+        GOPROXY: direct
+        GOSUMDB: sum.golang.org
       run: |
         echo "Installing Rust and Go dependencies..."
         
@@ -154,7 +157,8 @@ jobs:
         
         # Go dependencies
         cd ../../go-services/api-gateway
-        go mod download
+        go mod tidy
+        go mod verify
 
     - name: 🧪 Run Tests
       run: |
@@ -211,7 +215,7 @@ jobs:
           ~/go/pkg/mod/
           market-intel-brain-main/microservices/rust-services/core-engine/target/
           market-intel-brain-main/microservices/go-services/api-gateway/vendor/
-        key: v6-vendor-go-${{ hashFiles('**/go.sum') }}
+        key: v2-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-cache-
 
