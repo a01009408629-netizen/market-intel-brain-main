@@ -23,6 +23,10 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   RUST_VERSION: 'stable'
   GO_VERSION: '1.21'
+  # Go Module Security Configuration
+  GOPROXY: 'direct'
+  GOSUMDB: 'sum.golang.org'
+  GOPRIVATE: 'github.com/a01009408629-netizen/*'
 
 # Concurrency Control
 concurrency:
