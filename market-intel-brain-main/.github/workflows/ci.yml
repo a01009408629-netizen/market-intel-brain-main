@@ -43,7 +43,7 @@ jobs:
           go mod vendor
           echo "✅ go mod vendor completed"
 
-      - name: � Verify Vendor Sync
+      - name: 🔍 Verify Vendor Sync
         working-directory: ./microservices/go-services/api-gateway
         run: |
           echo "🔍 Verifying vendor sync..."
@@ -57,7 +57,7 @@ jobs:
           fi
           echo "✅ Vendor sync verification passed"
 
-      - name: � Run golangci-lint with --fix
+      - name: 🔧 Run golangci-lint with --fix
         working-directory: ./microservices/go-services/api-gateway
         run: |
           echo "🔧 Running golangci-lint with --fix..."
@@ -225,9 +225,12 @@ jobs:
           go-version: '1.21'
 
       - name: 🔍 Run Gosec Security Scanner
-        uses: securego/gosec@master
-        with:
-          args: '-fmt sarif -out gosec-report.sarif ./...'
+        working-directory: ./microservices/go-services/api-gateway
+        run: |
+          echo "🔍 Running Gosec security scan..."
+          go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+          gosec -fmt sarif -out gosec-report.sarif ./...
+          echo "✅ Security scan completed"
 
       - name: 📤 Upload Security Report
         uses: github/codeql-action/upload-sarif@v3
