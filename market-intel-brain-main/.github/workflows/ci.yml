@@ -2,7 +2,9 @@ name: High-Efficiency CI with Auto-Fix
 
 on:
   push:
-    branches: [ main, develop, '*' ]
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
 
 jobs:
   # ===== AUTO-FIX AND VALIDATION =====
@@ -28,6 +30,8 @@ jobs:
           echo "📦 Installing golangci-lint..."
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
           echo "✅ golangci-lint installed"
+          echo "🔍 Adding to PATH..."
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: 🔧 Execute go mod tidy
         working-directory: ./microservices/go-services/api-gateway
@@ -61,7 +65,8 @@ jobs:
         working-directory: ./microservices/go-services/api-gateway
         run: |
           echo "🔧 Running golangci-lint with --fix..."
-          $(go env GOPATH)/bin/golangci-lint run --fix ./...
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          golangci-lint run --fix ./...
           echo "✅ golangci-lint --fix completed"
 
       - name: 📤 Auto-Commit Fixes
@@ -229,8 +234,17 @@ jobs:
         run: |
           echo "🔍 Running Gosec security scan..."
           go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+          if [ -f "gosec-report.sarif" ]; then
+            rm gosec-report.sarif
+          fi
           gosec -fmt sarif -out gosec-report.sarif ./...
           echo "✅ Security scan completed"
+          if [ -f "gosec-report.sarif" ]; then
+            echo "📄 SARIF report generated"
+            ls -la gosec-report.sarif
+          else
+            echo "⚠️ No SARIF report generated"
+          fi
 
       - name: 📤 Upload Security Report
         uses: github/codeql-action/upload-sarif@v3
