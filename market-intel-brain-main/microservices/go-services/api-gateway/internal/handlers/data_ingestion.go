@@ -1,32 +1,28 @@
 package handlers
 
 import (
-	"context"
-	"encoding/json"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/market-intel/api-gateway/internal/config"
 	"github.com/market-intel/api-gateway/internal/services"
 	"github.com/market-intel/api-gateway/pkg/logger"
+	pb "github.com/market-intel/api-gateway/pb"
 )
 
 // DataIngestionHandler handles data ingestion endpoints
 type DataIngestionHandler struct {
 	config           *config.Config
-	coreEngineClient *services.CoreEngineClient
+	coreEngineClient services.CoreEngineInterface
 	upgrader         *websocket.Upgrader
 }
 
 // NewDataIngestionHandler creates a new data ingestion handler
-func NewDataIngestionHandler(config *config.Config, coreEngineClient *services.CoreEngineClient) *DataIngestionHandler {
+func NewDataIngestionHandler(config *config.Config, coreEngineClient services.CoreEngineInterface) *DataIngestionHandler {
 	return &DataIngestionHandler{
 		config:           config,
 		coreEngineClient: coreEngineClient,
@@ -37,704 +33,452 @@ func NewDataIngestionHandler(config *config.Config, coreEngineClient *services.C
 	}
 }
 
-// FetchMarketDataRequest represents the request for fetching market data
+// FetchMarketDataRequest represents a request for fetching market data
 type FetchMarketDataRequest struct {
 	Symbols  []string `json:"symbols" binding:"required"`
 	SourceID string   `json:"source_id"`
 }
 
-// FetchMarketDataResponse represents the response for market data
+// FetchMarketDataResponse represents a response for market data
 type FetchMarketDataResponse struct {
 	Success    bool                   `json:"success"`
 	Message    string                 `json:"message"`
 	MarketData []pb.MarketData        `json:"market_data,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata"`
-	Timestamp  time.Time              `json:"timestamp"`
 }
 
-// FetchNewsDataRequest represents the request for fetching news data
+// FetchNewsDataRequest represents a request for fetching news data
 type FetchNewsDataRequest struct {
-	Keywords  []string `json:"keywords"`
-	SourceID  string   `json:"source_id"`
-	HoursBack int      `json:"hours_back"`
+	SourceID string `json:"source_id"`
+	Limit    int    `json:"limit"`
 }
 
-// FetchNewsDataResponse represents the response for news data
+// FetchNewsDataResponse represents a response for news data
 type FetchNewsDataResponse struct {
-	Success   bool                   `json:"success"`
-	Message   string                 `json:"message"`
-	NewsItems []pb.NewsItem          `json:"news_items,omitempty"`
-	Metadata  map[string]interface{} `json:"metadata"`
-	Timestamp time.Time              `json:"timestamp"`
+	Success  bool           `json:"success"`
+	Message  string         `json:"message"`
+	NewsData []pb.NewsData   `json:"news_data,omitempty"`
 }
 
-// GetMarketDataBufferRequest represents the request for getting market data buffer
+// HealthCheckResponse represents a response for health check
+type HealthCheckResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// ConnectDataSourceRequest represents a request for connecting data source
+type ConnectDataSourceRequest struct {
+	SourceID string                 `json:"source_id"`
+	Config   map[string]interface{}   `json:"config"`
+}
+
+// ConnectDataSourceResponse represents a response for connecting data source
+type ConnectDataSourceResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// GetMarketDataBufferRequest represents a request for getting market data buffer
 type GetMarketDataBufferRequest struct {
-	Symbol string `json:"symbol"`
-	Limit  int    `json:"limit"`
+	SourceID string `json:"source_id"`
 }
 
-// GetMarketDataBufferResponse represents the response for market data buffer
+// GetMarketDataBufferResponse represents a response for market data buffer
 type GetMarketDataBufferResponse struct {
 	Success    bool                   `json:"success"`
 	Message    string                 `json:"message"`
 	MarketData []pb.MarketData        `json:"market_data,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata"`
-	Timestamp  time.Time              `json:"timestamp"`
 }
 
-// GetNewsBufferRequest represents the request for getting news buffer
+// GetNewsBufferRequest represents a request for getting news buffer
 type GetNewsBufferRequest struct {
-	Keywords []string `json:"keywords"`
-	Limit    int      `json:"limit"`
+	SourceID string `json:"source_id"`
 }
 
-// GetNewsBufferResponse represents the response for news buffer
+// GetNewsBufferResponse represents a response for news buffer
 type GetNewsBufferResponse struct {
-	Success   bool                   `json:"success"`
-	Message   string                 `json:"message"`
-	NewsItems []pb.NewsItem          `json:"news_items,omitempty"`
-	Metadata  map[string]interface{} `json:"metadata"`
-	Timestamp time.Time              `json:"timestamp"`
+	Success  bool           `json:"success"`
+	Message  string         `json:"message"`
+	NewsData []pb.NewsData   `json:"news_data,omitempty"`
 }
 
-// ConnectDataSourceRequest represents the request for connecting to a data source
-type ConnectDataSourceRequest struct {
-	SourceID string `json:"source_id" binding:"required"`
-	APIKey   string `json:"api_key"`
+// GetIngestionStatsRequest represents a request for getting ingestion stats
+type GetIngestionStatsRequest struct {
+	SourceID string `json:"source_id"`
 }
 
-// ConnectDataSourceResponse represents the response for connecting to a data source
-type ConnectDataSourceResponse struct {
-	Success   bool                   `json:"success"`
-	Message   string                 `json:"message"`
-	Connected bool                   `json:"connected"`
-	Metadata  map[string]interface{} `json:"metadata"`
-	Timestamp time.Time              `json:"timestamp"`
-}
-
-// GetIngestionStatsResponse represents the response for ingestion statistics
+// GetIngestionStatsResponse represents a response for ingestion stats
 type GetIngestionStatsResponse struct {
-	Success   bool                   `json:"success"`
-	Message   string                 `json:"message"`
-	Stats     *pb.IngestionStats     `json:"stats,omitempty"`
-	Metadata  map[string]interface{} `json:"metadata"`
-	Timestamp time.Time              `json:"timestamp"`
+	Success bool                   `json:"success"`
+	Message string                 `json:"message"`
+	Stats   map[string]interface{} `json:"stats,omitempty"`
 }
 
-// FetchMarketData handles the market data fetching endpoint
+// FetchMarketData handles HTTP POST request to fetch market data
 func (h *DataIngestionHandler) FetchMarketData(c *gin.Context) {
-	startTime := time.Now()
-
 	var req FetchMarketDataRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Errorf("Failed to bind request: %v", err)
-		c.JSON(http.StatusBadRequest, FetchMarketDataResponse{
-			Success:   false,
-			Message:   "Invalid request format",
-			Metadata:  map[string]interface{}{"error": err.Error()},
-			Timestamp: startTime,
+		logger.Errorf("Invalid request format: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request format",
 		})
 		return
 	}
 
-	// Set default source if not provided
-	if req.SourceID == "" {
-		req.SourceID = "yahoo_finance"
-	}
+	logger.Infof("Fetching market data for symbols: %v from source: %s", req.Symbols, req.SourceID)
 
-	// Validate request
-	if len(req.Symbols) == 0 {
-		c.JSON(http.StatusBadRequest, FetchMarketDataResponse{
-			Success:   false,
-			Message:   "At least one symbol is required",
-			Metadata:  map[string]interface{}{"error": "empty_symbols"},
-			Timestamp: startTime,
-		})
-		return
-	}
-
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
-	defer cancel()
-
-	// Call Rust service
-	response, err := h.coreEngineClient.FetchMarketData(ctx, &pb.FetchMarketDataRequest{
+	// Create protobuf request
+	pbReq := &pb.FetchMarketDataRequest{
 		Symbols:  req.Symbols,
-		SourceId: req.SourceID,
+		SourceID: req.SourceID,
+	}
+
+	// Call core engine with circuit breaker
+	err := h.coreEngineClient.ExecuteWithCircuitBreaker(c.Request.Context(), func() error {
+		var err error
+		_, err = h.coreEngineClient.FetchMarketData(c.Request.Context(), pbReq)
+		return err
 	})
 
 	if err != nil {
 		logger.Errorf("Failed to fetch market data: %v", err)
-		statusCode, message := h.mapGRPCToHTTPError(err)
-		c.JSON(statusCode, FetchMarketDataResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"error": err.Error()},
-			Timestamp: startTime,
+		c.JSON(http.StatusInternalServerError, FetchMarketDataResponse{
+			Success: false,
+			Message: "Failed to fetch market data",
 		})
 		return
 	}
 
-	// Check response status
-	if response.Status != pb.ResponseStatus_RESPONSE_STATUS_SUCCESS {
-		statusCode, message := h.mapResponseStatus(response.Status)
-		c.JSON(statusCode, FetchMarketDataResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"grpc_status": response.Status.String()},
-			Timestamp: startTime,
-		})
-		return
-	}
-
-	// Prepare response metadata
-	metadata := map[string]interface{}{
-		"source_id":     req.SourceID,
-		"symbols_count": len(req.Symbols),
-		"response_time": time.Since(startTime).Seconds(),
-		"grpc_status":   response.Status.String(),
-	}
-
-	logger.Infof("Successfully fetched market data for %d symbols from %s", len(req.Symbols), req.SourceID)
-
+	// Return success response
 	c.JSON(http.StatusOK, FetchMarketDataResponse{
-		Success:    true,
-		Message:    response.Message,
-		MarketData: response.MarketData,
-		Metadata:   metadata,
-		Timestamp:  startTime,
+		Success: true,
+		Message: "Market data fetched successfully",
 	})
 }
 
-// FetchNewsData handles the news data fetching endpoint
+// FetchNewsData handles HTTP POST request to fetch news data
 func (h *DataIngestionHandler) FetchNewsData(c *gin.Context) {
-	startTime := time.Now()
-
 	var req FetchNewsDataRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Errorf("Failed to bind request: %v", err)
-		c.JSON(http.StatusBadRequest, FetchNewsDataResponse{
-			Success:   false,
-			Message:   "Invalid request format",
-			Metadata:  map[string]interface{}{"error": err.Error()},
-			Timestamp: startTime,
+		logger.Errorf("Invalid request format: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request format",
 		})
 		return
 	}
 
-	// Set defaults
-	if req.SourceID == "" {
-		req.SourceID = "news_api"
-	}
-	if req.HoursBack == 0 {
-		req.HoursBack = 24
-	}
+	logger.Infof("Fetching news data from source: %s with limit: %d", req.SourceID, req.Limit)
 
-	// Validate request
-	if len(req.Keywords) == 0 {
-		c.JSON(http.StatusBadRequest, FetchNewsDataResponse{
-			Success:   false,
-			Message:   "At least one keyword is required",
-			Metadata:  map[string]interface{}{"error": "empty_keywords"},
-			Timestamp: startTime,
-		})
-		return
+	// Create protobuf request
+	pbReq := &pb.FetchNewsDataRequest{
+		SourceID: req.SourceID,
+		Limit:    req.Limit,
 	}
 
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
-	defer cancel()
-
-	// Call Rust service
-	response, err := h.coreEngineClient.FetchNewsData(ctx, &pb.FetchNewsDataRequest{
-		Keywords:  req.Keywords,
-		SourceId:  req.SourceID,
-		HoursBack: int32(req.HoursBack),
+	// Call core engine with circuit breaker
+	err := h.coreEngineClient.ExecuteWithCircuitBreaker(c.Request.Context(), func() error {
+		var err error
+		_, err = h.coreEngineClient.FetchNewsData(c.Request.Context(), pbReq)
+		return err
 	})
 
 	if err != nil {
 		logger.Errorf("Failed to fetch news data: %v", err)
-		statusCode, message := h.mapGRPCToHTTPError(err)
-		c.JSON(statusCode, FetchNewsDataResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"error": err.Error()},
-			Timestamp: startTime,
+		c.JSON(http.StatusInternalServerError, FetchNewsDataResponse{
+			Success: false,
+			Message: "Failed to fetch news data",
 		})
 		return
 	}
 
-	// Check response status
-	if response.Status != pb.ResponseStatus_RESPONSE_STATUS_SUCCESS {
-		statusCode, message := h.mapResponseStatus(response.Status)
-		c.JSON(statusCode, FetchNewsDataResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"grpc_status": response.Status.String()},
-			Timestamp: startTime,
-		})
-		return
-	}
-
-	// Prepare response metadata
-	metadata := map[string]interface{}{
-		"source_id":      req.SourceID,
-		"keywords_count": len(req.Keywords),
-		"hours_back":     req.HoursBack,
-		"response_time":  time.Since(startTime).Seconds(),
-		"grpc_status":    response.Status.String(),
-	}
-
-	logger.Infof("Successfully fetched %d news items for %d keywords from %s",
-		len(response.NewsItems), len(req.Keywords), req.SourceID)
-
+	// Return success response
 	c.JSON(http.StatusOK, FetchNewsDataResponse{
-		Success:   true,
-		Message:   response.Message,
-		NewsItems: response.NewsItems,
-		Metadata:  metadata,
-		Timestamp: startTime,
+		Success: true,
+		Message: "News data fetched successfully",
 	})
 }
 
-// GetMarketDataBuffer handles getting market data from buffer
-func (h *DataIngestionHandler) GetMarketDataBuffer(c *gin.Context) {
-	startTime := time.Now()
-
-	symbol := c.Query("symbol")
-	limitStr := c.DefaultQuery("limit", "100")
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		limit = 100
+// ConnectDataSource handles HTTP POST request to connect a data source
+func (h *DataIngestionHandler) ConnectDataSource(c *gin.Context) {
+	var req ConnectDataSourceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Errorf("Invalid request format: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request format",
+		})
+		return
 	}
 
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
-	defer cancel()
+	logger.Infof("Connecting data source: %s", req.SourceID)
 
-	// Call Rust service
-	response, err := h.coreEngineClient.GetMarketDataBuffer(ctx, &pb.GetMarketDataBufferRequest{
-		Symbol: symbol,
-		Limit:  int32(limit),
+	// Create protobuf request
+	pbReq := &pb.ConnectDataSourceRequest{
+		SourceID: req.SourceID,
+		Config:   req.Config,
+	}
+
+	// Call core engine with circuit breaker
+	err := h.coreEngineClient.ExecuteWithCircuitBreaker(c.Request.Context(), func() error {
+		var err error
+		_, err = h.coreEngineClient.ConnectDataSource(c.Request.Context(), pbReq)
+		return err
+	})
+
+	if err != nil {
+		logger.Errorf("Failed to connect data source: %v", err)
+		c.JSON(http.StatusInternalServerError, ConnectDataSourceResponse{
+			Success: false,
+			Message: "Failed to connect data source",
+		})
+		return
+	}
+
+	// Return success response
+	c.JSON(http.StatusOK, ConnectDataSourceResponse{
+		Success: true,
+		Message: "Data source connected successfully",
+	})
+}
+
+// HealthCheck handles HTTP GET request for health check
+func (h *DataIngestionHandler) HealthCheck(c *gin.Context) {
+	serviceName := c.Query("service")
+	if serviceName == "" {
+		serviceName = "api-gateway"
+	}
+
+	logger.Infof("Health check for service: %s", serviceName)
+
+	// Call core engine health check
+	err := h.coreEngineClient.HealthCheck(c.Request.Context(), serviceName)
+	if err != nil {
+		logger.Errorf("Health check failed: %v", err)
+		c.JSON(http.StatusServiceUnavailable, HealthCheckResponse{
+			Success: false,
+			Message: "Health check failed",
+		})
+		return
+	}
+
+	// Return success response
+	c.JSON(http.StatusOK, HealthCheckResponse{
+		Success: true,
+		Message: "Service is healthy",
+	})
+}
+
+// GetMarketDataBuffer handles HTTP GET request for market data buffer
+func (h *DataIngestionHandler) GetMarketDataBuffer(c *gin.Context) {
+	sourceID := c.Query("source_id")
+	if sourceID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "source_id query parameter is required",
+		})
+		return
+	}
+
+	logger.Infof("Getting market data buffer for source: %s", sourceID)
+
+	// Create protobuf request
+	pbReq := &pb.GetMarketDataBufferRequest{
+		SourceID: sourceID,
+	}
+
+	// Call core engine with circuit breaker
+	err := h.coreEngineClient.ExecuteWithCircuitBreaker(c.Request.Context(), func() error {
+		var err error
+		_, err = h.coreEngineClient.GetMarketDataBuffer(c.Request.Context(), pbReq)
+		return err
 	})
 
 	if err != nil {
 		logger.Errorf("Failed to get market data buffer: %v", err)
-		statusCode, message := h.mapGRPCToHTTPError(err)
-		c.JSON(statusCode, GetMarketDataBufferResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"error": err.Error()},
-			Timestamp: startTime,
+		c.JSON(http.StatusInternalServerError, GetMarketDataBufferResponse{
+			Success: false,
+			Message: "Failed to get market data buffer",
 		})
 		return
 	}
 
-	// Check response status
-	if response.Status != pb.ResponseStatus_RESPONSE_STATUS_SUCCESS {
-		statusCode, message := h.mapResponseStatus(response.Status)
-		c.JSON(statusCode, GetMarketDataBufferResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"grpc_status": response.Status.String()},
-			Timestamp: startTime,
-		})
-		return
-	}
-
-	// Prepare response metadata
-	metadata := map[string]interface{}{
-		"symbol":        symbol,
-		"limit":         limit,
-		"items_count":   len(response.MarketData),
-		"response_time": time.Since(startTime).Seconds(),
-		"grpc_status":   response.Status.String(),
-	}
-
-	logger.Infof("Retrieved %d market data items from buffer", len(response.MarketData))
-
+	// Return success response
 	c.JSON(http.StatusOK, GetMarketDataBufferResponse{
-		Success:    true,
-		Message:    response.Message,
-		MarketData: response.MarketData,
-		Metadata:   metadata,
-		Timestamp:  startTime,
+		Success: true,
+		Message: "Market data buffer retrieved successfully",
 	})
 }
 
-// GetNewsBuffer handles getting news from buffer
+// GetNewsBuffer handles HTTP GET request for news buffer
 func (h *DataIngestionHandler) GetNewsBuffer(c *gin.Context) {
-	startTime := time.Now()
-
-	keywords := c.QueryArray("keywords")
-	limitStr := c.DefaultQuery("limit", "100")
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		limit = 100
+	sourceID := c.Query("source_id")
+	if sourceID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "source_id query parameter is required",
+		})
+		return
 	}
 
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
-	defer cancel()
+	logger.Infof("Getting news buffer for source: %s", sourceID)
 
-	// Call Rust service
-	response, err := h.coreEngineClient.GetNewsBuffer(ctx, &pb.GetNewsBufferRequest{
-		Keywords: keywords,
-		Limit:    int32(limit),
+	// Create protobuf request
+	pbReq := &pb.GetNewsBufferRequest{
+		SourceID: sourceID,
+	}
+
+	// Call core engine with circuit breaker
+	err := h.coreEngineClient.ExecuteWithCircuitBreaker(c.Request.Context(), func() error {
+		var err error
+		_, err = h.coreEngineClient.GetNewsBuffer(c.Request.Context(), pbReq)
+		return err
 	})
 
 	if err != nil {
 		logger.Errorf("Failed to get news buffer: %v", err)
-		statusCode, message := h.mapGRPCToHTTPError(err)
-		c.JSON(statusCode, GetNewsBufferResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"error": err.Error()},
-			Timestamp: startTime,
+		c.JSON(http.StatusInternalServerError, GetNewsBufferResponse{
+			Success: false,
+			Message: "Failed to get news buffer",
 		})
 		return
 	}
 
-	// Check response status
-	if response.Status != pb.ResponseStatus_RESPONSE_STATUS_SUCCESS {
-		statusCode, message := h.mapResponseStatus(response.Status)
-		c.JSON(statusCode, GetNewsBufferResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"grpc_status": response.Status.String()},
-			Timestamp: startTime,
-		})
-		return
-	}
-
-	// Prepare response metadata
-	metadata := map[string]interface{}{
-		"keywords":      keywords,
-		"limit":         limit,
-		"items_count":   len(response.NewsItems),
-		"response_time": time.Since(startTime).Seconds(),
-		"grpc_status":   response.Status.String(),
-	}
-
-	logger.Infof("Retrieved %d news items from buffer", len(response.NewsItems))
-
+	// Return success response
 	c.JSON(http.StatusOK, GetNewsBufferResponse{
-		Success:   true,
-		Message:   response.Message,
-		NewsItems: response.NewsItems,
-		Metadata:  metadata,
-		Timestamp: startTime,
+		Success: true,
+		Message: "News buffer retrieved successfully",
 	})
 }
 
-// GetIngestionStats handles getting ingestion statistics
+// GetIngestionStats handles HTTP GET request for ingestion stats
 func (h *DataIngestionHandler) GetIngestionStats(c *gin.Context) {
-	startTime := time.Now()
+	sourceID := c.Query("source_id")
+	if sourceID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "source_id query parameter is required",
+		})
+		return
+	}
 
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
-	defer cancel()
+	logger.Infof("Getting ingestion stats for source: %s", sourceID)
 
-	// Call Rust service
-	response, err := h.coreEngineClient.GetIngestionStats(ctx, &pb.Empty{})
+	// Create protobuf request
+	pbReq := &pb.GetIngestionStatsRequest{
+		SourceID: sourceID,
+	}
+
+	// Call core engine with circuit breaker
+	err := h.coreEngineClient.ExecuteWithCircuitBreaker(c.Request.Context(), func() error {
+		var err error
+		_, err = h.coreEngineClient.GetIngestionStats(c.Request.Context(), pbReq)
+		return err
+	})
 
 	if err != nil {
 		logger.Errorf("Failed to get ingestion stats: %v", err)
-		statusCode, message := h.mapGRPCToHTTPError(err)
-		c.JSON(statusCode, GetIngestionStatsResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"error": err.Error()},
-			Timestamp: startTime,
+		c.JSON(http.StatusInternalServerError, GetIngestionStatsResponse{
+			Success: false,
+			Message: "Failed to get ingestion stats",
 		})
 		return
 	}
 
-	// Check response status
-	if response.Status != pb.ResponseStatus_RESPONSE_STATUS_SUCCESS {
-		statusCode, message := h.mapResponseStatus(response.Status)
-		c.JSON(statusCode, GetIngestionStatsResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"grpc_status": response.Status.String()},
-			Timestamp: startTime,
-		})
-		return
-	}
-
-	// Prepare response metadata
-	metadata := map[string]interface{}{
-		"response_time": time.Since(startTime).Seconds(),
-		"grpc_status":   response.Status.String(),
-	}
-
-	logger.Info("Retrieved ingestion statistics")
-
+	// Return success response
 	c.JSON(http.StatusOK, GetIngestionStatsResponse{
-		Success:   true,
-		Message:   response.Message,
-		Stats:     response.Stats,
-		Metadata:  metadata,
-		Timestamp: startTime,
+		Success: true,
+		Message: "Ingestion stats retrieved successfully",
 	})
 }
 
-// ConnectDataSource handles connecting to a data source
-func (h *DataIngestionHandler) ConnectDataSource(c *gin.Context) {
-	startTime := time.Now()
-
-	var req ConnectDataSourceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Errorf("Failed to bind request: %v", err)
-		c.JSON(http.StatusBadRequest, ConnectDataSourceResponse{
-			Success:   false,
-			Message:   "Invalid request format",
-			Metadata:  map[string]interface{}{"error": err.Error()},
-			Timestamp: startTime,
-		})
-		return
-	}
-
-	// Validate request
-	if req.SourceID == "" {
-		c.JSON(http.StatusBadRequest, ConnectDataSourceResponse{
-			Success:   false,
-			Message:   "Source ID is required",
-			Metadata:  map[string]interface{}{"error": "empty_source_id"},
-			Timestamp: startTime,
-		})
-		return
-	}
-
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
-	defer cancel()
-
-	// Call Rust service
-	response, err := h.coreEngineClient.ConnectDataSource(ctx, &pb.ConnectDataSourceRequest{
-		SourceId: req.SourceID,
-		ApiKey:   req.APIKey,
-	})
-
-	if err != nil {
-		logger.Errorf("Failed to connect to data source: %v", err)
-		statusCode, message := h.mapGRPCToHTTPError(err)
-		c.JSON(statusCode, ConnectDataSourceResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"error": err.Error()},
-			Timestamp: startTime,
-		})
-		return
-	}
-
-	// Check response status
-	if response.Status != pb.ResponseStatus_RESPONSE_STATUS_SUCCESS {
-		statusCode, message := h.mapResponseStatus(response.Status)
-		c.JSON(statusCode, ConnectDataSourceResponse{
-			Success:   false,
-			Message:   message,
-			Metadata:  map[string]interface{}{"grpc_status": response.Status.String()},
-			Timestamp: startTime,
-		})
-		return
-	}
-
-	// Prepare response metadata
-	metadata := map[string]interface{}{
-		"source_id":     req.SourceID,
-		"has_api_key":   req.APIKey != "",
-		"response_time": time.Since(startTime).Seconds(),
-		"grpc_status":   response.Status.String(),
-	}
-
-	logger.Infof("Successfully connected to data source: %s", req.SourceID)
-
-	c.JSON(http.StatusOK, ConnectDataSourceResponse{
-		Success:   true,
-		Message:   response.Message,
-		Connected: response.Connected,
-		Metadata:  metadata,
-		Timestamp: startTime,
-	})
-}
-
-// WebSocketMarketData handles WebSocket connections for real-time market data
-func (h *DataIngestionHandler) WebSocketMarketData(c *gin.Context) {
-	// Upgrade HTTP connection to WebSocket
+// HandleWebSocket handles WebSocket connections for real-time data
+func (h *DataIngestionHandler) HandleWebSocket(c *gin.Context) {
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		logger.Errorf("Failed to upgrade to WebSocket: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upgrade to WebSocket"})
 		return
 	}
 	defer conn.Close()
 
-	logger.Info("WebSocket market data connection established")
+	logger.Infof("WebSocket connection established")
 
-	// Handle WebSocket messages in a goroutine
-	go h.handleWebSocketMarketData(conn)
-}
-
-// handleWebSocketMarketData handles WebSocket messages for market data
-func (h *DataIngestionHandler) handleWebSocketMarketData(conn *websocket.Conn) {
 	for {
-		// Read message from client
-		messageType, message, err := conn.ReadMessage()
+		messageType, p, err := conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				logger.Infof("WebSocket connection closed: %v", err)
-			} else {
-				logger.Errorf("WebSocket read error: %v", err)
-			}
+			logger.Errorf("Failed to read WebSocket message: %v", err)
 			break
 		}
 
-		// Handle different message types
-		switch messageType {
-		case websocket.TextMessage:
-			// Parse JSON message
-			var req FetchMarketDataRequest
-			if err := json.Unmarshal(message, &req); err != nil {
-				logger.Errorf("Failed to unmarshal WebSocket message: %v", err)
-				h.sendWebSocketError(conn, "Invalid message format")
-				continue
+		if messageType == websocket.TextMessage {
+			logger.Infof("Received WebSocket message: %s", string(p))
+			
+			// Echo back the message for now
+			if err := conn.WriteMessage(messageType, p); err != nil {
+				logger.Errorf("Failed to write WebSocket message: %v", err)
+				break
 			}
-
-			// Process market data request
-			go h.processWebSocketMarketDataRequest(conn, req)
-
-		case websocket.BinaryMessage:
-			logger.Warn("Binary message not supported")
-			h.sendWebSocketError(conn, "Binary messages not supported")
-
-		case websocket.CloseMessage:
-			logger.Info("WebSocket close message received")
-			return
-
-		case websocket.PingMessage:
-			// Respond with pong
-			conn.WriteMessage(websocket.PongMessage, message)
 		}
 	}
 }
 
-// processWebSocketMarketDataRequest processes market data requests from WebSocket
-func (h *DataIngestionHandler) processWebSocketMarketDataRequest(conn *websocket.Conn, req FetchMarketDataRequest) {
-	startTime := time.Now()
-
-	// Set default source if not provided
-	if req.SourceID == "" {
-		req.SourceID = "yahoo_finance"
-	}
-
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	// Call Rust service
-	response, err := h.coreEngineClient.FetchMarketData(ctx, &pb.FetchMarketDataRequest{
-		Symbols:  req.Symbols,
-		SourceId: req.SourceID,
-	})
-
-	// Prepare response
-	responseData := map[string]interface{}{
-		"timestamp": startTime,
-		"success":   err == nil && response.Status == pb.ResponseStatus_RESPONSE_STATUS_SUCCESS,
-	}
-
+// WebSocketMarketData handles WebSocket connections for market data streaming
+func (h *DataIngestionHandler) WebSocketMarketData(c *gin.Context) {
+	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		responseData["error"] = err.Error()
-		responseData["grpc_error"] = true
-	} else {
-		responseData["message"] = response.Message
-		responseData["market_data"] = response.MarketData
-		responseData["grpc_status"] = response.Status.String()
-	}
-
-	// Convert to JSON and send
-	jsonResponse, err := json.Marshal(responseData)
-	if err != nil {
-		logger.Errorf("Failed to marshal WebSocket response: %v", err)
+		logger.Errorf("Failed to upgrade to WebSocket: %v", err)
 		return
 	}
+	defer conn.Close()
 
-	if err := conn.WriteMessage(websocket.TextMessage, jsonResponse); err != nil {
-		logger.Errorf("Failed to send WebSocket response: %v", err)
+	logger.Infof("Market data WebSocket connection established")
+
+	for {
+		messageType, p, err := conn.ReadMessage()
+		if err != nil {
+			logger.Errorf("Failed to read WebSocket message: %v", err)
+			break
+		}
+
+		if messageType == websocket.TextMessage {
+			logger.Infof("Received market data WebSocket message: %s", string(p))
+			
+			// Echo back the message for now
+			if err := conn.WriteMessage(messageType, p); err != nil {
+				logger.Errorf("Failed to write WebSocket message: %v", err)
+				break
+			}
+		}
 	}
 }
 
-// sendWebSocketError sends an error message over WebSocket
-func (h *DataIngestionHandler) sendWebSocketError(conn *websocket.Conn, message string) {
-	errorResponse := map[string]interface{}{
-		"timestamp": time.Now(),
-		"success":   false,
-		"error":     message,
+// mapResponseStatus maps gRPC status to HTTP status code
+func (h *DataIngestionHandler) mapResponseStatus(grpcErr error) int {
+	if grpcErr == nil {
+		return http.StatusOK
 	}
 
-	jsonResponse, err := json.Marshal(errorResponse)
-	if err != nil {
-		logger.Errorf("Failed to marshal WebSocket error response: %v", err)
-		return
+	st, ok := status.FromError(grpcErr)
+	if !ok {
+		return http.StatusInternalServerError
 	}
 
-	if err := conn.WriteMessage(websocket.TextMessage, jsonResponse); err != nil {
-		logger.Errorf("Failed to send WebSocket error: %v", err)
-	}
-}
-
-// mapGRPCToHTTPError maps gRPC errors to HTTP status codes
-func (h *DataIngestionHandler) mapGRPCToHTTPError(err error) (int, string) {
-	if grpcErr, ok := status.FromError(err); ok {
-		return mapGRPCToHTTPStatus(grpcErr.Code())
-	}
-
-	// Non-gRPC errors
-	return http.StatusInternalServerError, err.Error()
-}
-
-// mapGRPCToHTTPStatus maps gRPC status codes to HTTP status codes
-func mapGRPCToHTTPStatus(grpcStatus codes.Code) (int, string) {
-	switch grpcStatus {
-	case codes.OK:
-		return http.StatusOK, "Success"
-	case codes.Canceled:
-		return http.StatusRequestTimeout, "Request canceled"
-	case codes.Unknown:
-		return http.StatusInternalServerError, "Unknown error"
+	switch st.Code() {
 	case codes.InvalidArgument:
-		return http.StatusBadRequest, "Invalid argument"
-	case codes.DeadlineExceeded:
-		return http.StatusRequestTimeout, "Deadline exceeded"
+		return http.StatusBadRequest
 	case codes.NotFound:
-		return http.StatusNotFound, "Not found"
-	case codes.AlreadyExists:
-		return http.StatusConflict, "Already exists"
+		return http.StatusNotFound
 	case codes.PermissionDenied:
-		return http.StatusForbidden, "Permission denied"
+		return http.StatusForbidden
 	case codes.Unauthenticated:
-		return http.StatusUnauthorized, "Unauthorized"
+		return http.StatusUnauthorized
+	case codes.DeadlineExceeded:
+		return http.StatusRequestTimeout
 	case codes.ResourceExhausted:
-		return http.StatusTooManyRequests, "Resource exhausted"
-	case codes.FailedPrecondition:
-		return http.StatusPreconditionFailed, "Failed precondition"
-	case codes.Aborted:
-		return http.StatusConflict, "Aborted"
-	case codes.OutOfRange:
-		return http.StatusBadRequest, "Out of range"
-	case codes.Unimplemented:
-		return http.StatusNotImplemented, "Unimplemented"
-	case codes.Internal:
-		return http.StatusInternalServerError, "Internal error"
+		return http.StatusTooManyRequests
 	case codes.Unavailable:
-		return http.StatusServiceUnavailable, "Service unavailable"
-	case codes.DataLoss:
-		return http.StatusInternalServerError, "Data loss"
+		return http.StatusServiceUnavailable
 	default:
-		return http.StatusInternalServerError, "Unknown error"
+		return http.StatusInternalServerError
 	}
 }

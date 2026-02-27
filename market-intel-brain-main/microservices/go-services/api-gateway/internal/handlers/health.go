@@ -13,10 +13,10 @@ import (
 
 type HealthHandler struct {
 	config           *config.Config
-	coreEngineClient *services.CoreEngineClient
+	coreEngineClient services.CoreEngineInterface
 }
 
-func NewHealthHandler(config *config.Config, coreEngineClient *services.CoreEngineClient) *HealthHandler {
+func NewHealthHandler(config *config.Config, coreEngineClient services.CoreEngineInterface) *HealthHandler {
 	return &HealthHandler{
 		config:           config,
 		coreEngineClient: coreEngineClient,
@@ -48,7 +48,7 @@ func (h *HealthHandler) Health(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		coreEngineHealth, err := h.coreEngineClient.HealthCheck(ctx, "api-gateway")
+		err := h.coreEngineClient.HealthCheck(ctx, "api-gateway")
 		if err != nil {
 			logger.Errorf("Core Engine health check failed: %v", err)
 			response.Services["core_engine"] = map[string]interface{}{
@@ -58,19 +58,12 @@ func (h *HealthHandler) Health(c *gin.Context) {
 			response.Status = "degraded"
 		} else {
 			response.Services["core_engine"] = map[string]interface{}{
-				"status":  "healthy",
-				"version": coreEngineHealth.Version,
-				"details": coreEngineHealth.Details,
+				"status": "healthy",
 			}
 		}
-	} else {
-		response.Services["core_engine"] = map[string]interface{}{
-			"status": "not_connected",
-		}
-		response.Status = "degraded"
 	}
 
-	// Set HTTP status based on overall health
+	// Determine overall HTTP status
 	httpStatus := http.StatusOK
 	if response.Status == "degraded" {
 		httpStatus = http.StatusServiceUnavailable
@@ -79,40 +72,31 @@ func (h *HealthHandler) Health(c *gin.Context) {
 	c.JSON(httpStatus, response)
 }
 
+// Ping handles simple ping request
 func (h *HealthHandler) Ping(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"message":   "pong",
-		"service":   "api-gateway",
+		"message": "pong",
 		"timestamp": time.Now(),
 	})
 }
 
+// PingCoreEngine handles ping request to core engine
 func (h *HealthHandler) PingCoreEngine(c *gin.Context) {
-	if h.coreEngineClient == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": "Core Engine client not initialized",
-		})
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	health, err := h.coreEngineClient.HealthCheck(ctx, "api-gateway")
+	err := h.coreEngineClient.HealthCheck(ctx, "ping")
 	if err != nil {
-		logger.Errorf("Failed to ping Core Engine: %v", err)
+		logger.Errorf("Core Engine ping failed: %v", err)
 		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error":   "Failed to ping Core Engine",
-			"details": err.Error(),
+			"message": "Core Engine ping failed",
+			"error":   err.Error(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":   "Core Engine ping successful",
-		"healthy":   health.Healthy,
-		"status":    health.Status,
-		"version":   health.Version,
+		"message": "Core Engine is responsive",
 		"timestamp": time.Now(),
 	})
 }

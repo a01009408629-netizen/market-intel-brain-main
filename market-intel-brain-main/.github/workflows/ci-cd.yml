@@ -75,28 +75,14 @@ jobs:
             git push
           fi
 
-  # ===== BUILD AND TEST =====
-  build-test:
-    name: Build & Test
+  # ===== PROTOBUF GENERATION =====
+  generate-proto:
+    name: Generate Protocol Buffers
     runs-on: ubuntu-latest
-    needs: auto-fix
     
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Setup Rust Toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: rustfmt, clippy
-
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
-          cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
 
       - name: Install System Dependencies
         run: |
@@ -124,6 +110,42 @@ jobs:
           find . -name "*_grpc.pb.go" -not -path "./pb/*" -exec mv {} ./pb/ \;
           
           echo "Protocol buffers generated"
+
+      - name: Upload Generated Proto Files
+        uses: actions/upload-artifact@v3
+        with:
+          name: generated-proto
+          path: microservices/go-services/api-gateway/pb/
+          retention-days: 1
+
+  # ===== BUILD AND TEST =====
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    needs: [auto-fix, generate-proto]
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: rustfmt, clippy
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
+
+      - name: Download Generated Proto Files
+        uses: actions/download-artifact@v3
+        with:
+          name: generated-proto
+          path: microservices/go-services/api-gateway/pb/
 
       - name: Validate Linting (No Fixes)
         working-directory: ./microservices/go-services/api-gateway
@@ -165,7 +187,7 @@ jobs:
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
-    needs: auto-fix
+    needs: [auto-fix, generate-proto]
     if: always()
     
     steps:

@@ -1,9 +1,9 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"net/http/pprof"
-	"runtime"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -97,66 +97,38 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 
 	// Profiling endpoints (only in non-production environments)
 	if s.config.Environment != "production" {
-		router.GET("/debug/pprof/", gin.WrapF(http.HandlerFunc(pprof.Index)))
-		router.GET("/debug/pprof/cmdline", gin.WrapF(http.HandlerFunc(pprof.Cmdline)))
-		router.GET("/debug/pprof/profile", gin.WrapF(http.HandlerFunc(pprof.Profile)))
-		router.GET("/debug/pprof/symbol", gin.WrapF(http.HandlerFunc(pprof.Symbol)))
-		router.GET("/debug/pprof/trace", gin.WrapF(http.HandlerFunc(pprof.Trace)))
-		router.GET("/debug/pprof/heap", gin.WrapF(http.HandlerFunc(pprof.Heap)))
-		router.GET("/debug/pprof/goroutine", gin.WrapF(http.HandlerFunc(pprof.Goroutine)))
-		router.GET("/debug/pprof/threadcreate", gin.WrapF(http.HandlerFunc(pprof.ThreadCreate)))
-		router.GET("/debug/pprof/block", gin.WrapF(http.HandlerFunc(pprof.Block)))
-		router.GET("/debug/pprof/mutex", gin.WrapF(http.HandlerFunc(pprof.Mutex)))
-
-		// Additional profiling endpoints
-		router.GET("/debug/pprof/allocs", gin.WrapF(http.HandlerFunc(pprof.Allocs)))
-		router.GET("/debug/pprof/lookups", gin.WrapF(http.HandlerFunc(pprof.Lookups)))
-		router.GET("/debug/pprof/schedtrace", gin.WrapF(http.HandlerFunc(pprof.SchedTrace)))
-		router.GET("/debug/pprof/syscall", gin.WrapF(http.HandlerFunc(pprof.Syscall)))
+		router.GET("/debug/pprof/", gin.WrapF(pprof.Index))
+		router.GET("/debug/pprof/cmdline", gin.WrapF(pprof.Cmdline))
+		router.GET("/debug/pprof/profile", gin.WrapF(pprof.Profile))
+		router.GET("/debug/pprof/symbol", gin.WrapF(pprof.Symbol))
+		router.GET("/debug/pprof/trace", gin.WrapF(pprof.Trace))
+		router.GET("/debug/pprof/goroutine", gin.WrapF(pprof.Handler("goroutine")))
+		router.GET("/debug/pprof/heap", gin.WrapF(pprof.Handler("heap")))
+		router.GET("/debug/pprof/threadcreate", gin.WrapF(pprof.Handler("threadcreate")))
+		router.GET("/debug/pprof/block", gin.WrapF(pprof.Handler("block")))
 	}
-
-	// Legacy compatibility endpoints (redirect to v1)
-	router.GET("/api/market-data/fetch", func(c *gin.Context) {
-		c.Redirect(301, "/api/v1/market-data/fetch")
-	})
-	router.GET("/api/news/fetch", func(c *gin.Context) {
-		c.Redirect(301, "/api/v1/news/fetch")
-	})
-	router.GET("/api/market-data/buffer", func(c *gin.Context) {
-		c.Redirect(301, "/api/v1/market-data/buffer")
-	})
-	router.GET("/api/news/buffer", func(c *gin.Context) {
-		c.Redirect(301, "/api/v1/news/buffer")
-	})
 
 	return router
 }
 
-func (s *HTTPServer) ListenAndServe() error {
-	router := s.SetupRoutes()
-
-	// Create a custom server with profiling support
+func (s *HTTPServer) Start(addr string) error {
 	s.server = &http.Server{
-		Addr:    s.config.GetHTTPPort(),
-		Handler: router,
-		// Configure timeouts for production
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		ReadHeaderTimeout: 10 * time.Second,
-		IdleTimeout:       60 * time.Second,
-		MaxHeaderBytes:    1 << 20, // 1MB
+		Addr:    addr,
+		Handler:  s.SetupRoutes(),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
-	logger.Infof("Starting HTTP server on %s", s.config.GetHTTPPort())
-	logger.Infof("Profiling endpoints available at: http://localhost%s/debug/pprof/", s.config.GetHTTPPort())
-	logger.Infof("GOMAXPROCS set to: %d", runtime.GOMAXPROCS(0))
-
+	logger.Infof("Starting HTTP server on %s", addr)
 	return s.server.ListenAndServe()
 }
 
-func (s *HTTPServer) Shutdown() error {
-	if s.server != nil {
-		return s.server.Close()
-	}
-	return nil
+func (s *HTTPServer) Shutdown(ctx context.Context) error {
+	logger.Infof("Shutting down HTTP server...")
+	return s.server.Shutdown(ctx)
+}
+
+func (s *HTTPServer) GetServer() *http.Server {
+	return s.server
 }
