@@ -1,19 +1,41 @@
-# Multi-stage build for Go API Gateway
+# Multi-stage build for Go API Gateway with Protocol Buffer Generation
 FROM golang:1.22-alpine as builder
 
-# Install build dependencies
-RUN apk add --no-cache git
+# Install build dependencies and Protocol Buffer tools
+RUN apk add --no-cache \
+    git \
+    protobuf \
+    protobuf-dev \
+    curl
+
+# Install protoc-gen-go and protoc-gen-go-grpc
+RUN go install \
+    google.golang.org/protobuf/cmd/protoc-gen-go@latest \
+    google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 WORKDIR /app
 
 # Copy go mod files
 COPY go.mod go.sum ./
 
+# Copy proto files from both locations
+RUN mkdir -p /tmp/proto
+COPY microservices/proto/ /tmp/proto/
+COPY src/schemas/ /tmp/proto/ 2>/dev/null || true
+
+# Generate protocol buffers
+RUN echo "Generating protocol buffers..." && \
+    mkdir -p pb && \
+    protoc --go_out=. --go-grpc_out=. --go_opt=paths=source_relative \
+        /tmp/proto/*.proto \
+        /tmp/proto/versions/v1/*.proto && \
+    echo "Protocol buffers generated successfully"
+
 # Download dependencies with cache mount for faster rebuilds
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download
 
-# Copy source code (Assumes gRPC code is pre-generated)
+# Copy source code including generated pb files
 COPY . .
 
 # Build the application with stripped debug info to reduce binary size
@@ -35,8 +57,9 @@ WORKDIR /app
 # Copy binary from builder stage
 COPY --from=builder /app/api-gateway /usr/local/bin/api-gateway
 
-# Copy configuration files
+# Copy configuration files and generated pb files
 COPY --from=builder /app/config ./config
+COPY --from=builder /app/pb ./pb
 
 # Set permissions for config directory
 RUN chown -R apigateway:apigateway /app
