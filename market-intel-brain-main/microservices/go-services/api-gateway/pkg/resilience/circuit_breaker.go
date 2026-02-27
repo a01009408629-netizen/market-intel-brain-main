@@ -15,7 +15,6 @@ import (
 	"github.com/market-intel/api-gateway/pkg/logger"
 
 	"google.golang.org/grpc/codes"
-
 )
 
 // Circuit breaker states
@@ -31,13 +30,13 @@ const (
 type CircuitBreakerConfig struct {
 	// Maximum number of failures before opening circuit
 	MaxFailures int `json:"max_failures" yaml:"max_failures"`
-	
+
 	// Timeout for half-open state
 	Timeout time.Duration `json:"timeout" yaml:"timeout"`
-	
+
 	// Reset timeout for open state
 	ResetTimeout time.Duration `json:"reset_timeout" yaml:"reset_timeout"`
-	
+
 	// Whether to enable metrics
 	EnableMetrics bool `json:"enable_metrics" yaml:"enable_metrics"`
 }
@@ -46,31 +45,31 @@ type CircuitBreakerConfig struct {
 func DefaultCircuitBreakerConfig() *CircuitBreakerConfig {
 	return &CircuitBreakerConfig{
 		MaxFailures:   5,
-		Timeout:        30 * time.Second,
-		ResetTimeout:   60 * time.Second,
+		Timeout:       30 * time.Second,
+		ResetTimeout:  60 * time.Second,
 		EnableMetrics: true,
 	}
 }
 
 // Circuit breaker implementation
 type CircuitBreaker struct {
-	config           *CircuitBreakerConfig
-	state            int32
-	failures         int64
-	lastFailureTime  int64
-	generation       int64
+	config          *CircuitBreakerConfig
+	state           int32
+	failures        int64
+	lastFailureTime int64
+	generation      int64
 	mu              sync.RWMutex
-	metrics          *CircuitBreakerMetrics
+	metrics         *CircuitBreakerMetrics
 }
 
 // Circuit breaker metrics
 type CircuitBreakerMetrics struct {
 	RequestsTotal      int64
-	SuccessesTotal    int64
-	FailuresTotal     int64
-	CircuitOpensTotal int64
+	SuccessesTotal     int64
+	FailuresTotal      int64
+	CircuitOpensTotal  int64
 	CircuitClosesTotal int64
-	TimeoutsTotal     int64
+	TimeoutsTotal      int64
 }
 
 // Create new circuit breaker
@@ -78,17 +77,17 @@ func NewCircuitBreaker(config *CircuitBreakerConfig) *CircuitBreaker {
 	if config == nil {
 		config = DefaultCircuitBreakerConfig()
 	}
-	
+
 	cb := &CircuitBreaker{
 		config:  config,
 		state:   int32(StateClosed),
 		metrics: &CircuitBreakerMetrics{},
 	}
-	
+
 	if config.EnableMetrics {
 		logger.Infof("Circuit breaker initialized with metrics enabled")
 	}
-	
+
 	return cb
 }
 
@@ -100,7 +99,7 @@ func (cb *CircuitBreaker) Execute(ctx context.Context, fn func() error) error {
 		cb.recordFailure()
 		return fmt.Errorf("circuit breaker is open")
 	}
-	
+
 	// Check if circuit is half-open
 	if cb.isHalfOpen() {
 		cb.recordRequest()
@@ -115,7 +114,7 @@ func (cb *CircuitBreaker) Execute(ctx context.Context, fn func() error) error {
 		}
 		return err
 	}
-	
+
 	// Circuit is closed, allow request through
 	cb.recordRequest()
 	err := fn()
@@ -125,7 +124,7 @@ func (cb *CircuitBreaker) Execute(ctx context.Context, fn func() error) error {
 	} else {
 		cb.recordSuccess()
 	}
-	
+
 	return err
 }
 
@@ -133,7 +132,7 @@ func (cb *CircuitBreaker) Execute(ctx context.Context, fn func() error) error {
 func (cb *CircuitBreaker) isOpen() bool {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
-	
+
 	if cb.state == int32(StateOpen) {
 		// Check if reset timeout has passed
 		lastFailure := time.Unix(atomic.LoadInt64(&cb.lastFailureTime), 0)
@@ -144,7 +143,7 @@ func (cb *CircuitBreaker) isOpen() bool {
 		}
 		return true
 	}
-	
+
 	return false
 }
 
@@ -166,7 +165,7 @@ func (cb *CircuitBreaker) isClosed() bool {
 func (cb *CircuitBreaker) open() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	
+
 	if cb.state != int32(StateOpen) {
 		atomic.StoreInt32(&cb.state, int32(StateOpen))
 		atomic.StoreInt64(&cb.lastFailureTime, time.Now().Unix())
@@ -179,7 +178,7 @@ func (cb *CircuitBreaker) open() {
 func (cb *CircuitBreaker) close() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	
+
 	if cb.state != int32(StateClosed) {
 		atomic.StoreInt32(&cb.state, int32(StateClosed))
 		atomic.StoreInt64(&cb.failures, 0)
@@ -192,7 +191,7 @@ func (cb *CircuitBreaker) close() {
 func (cb *CircuitBreaker) halfOpen() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	
+
 	if cb.state != int32(StateHalfOpen) {
 		atomic.StoreInt32(&cb.state, int32(StateHalfOpen))
 		logger.Infof("Circuit breaker set to half-open state")
@@ -219,7 +218,7 @@ func (cb *CircuitBreaker) recordSuccess() {
 	if cb.config.EnableMetrics {
 		atomic.AddInt64(&cb.metrics.SuccessesTotal, 1)
 	}
-	
+
 	// Reset failure count on success
 	atomic.StoreInt64(&cb.failures, 0)
 }
@@ -229,7 +228,7 @@ func (cb *CircuitBreaker) recordFailure() {
 	if cb.config.EnableMetrics {
 		atomic.AddInt64(&cb.metrics.FailuresTotal, 1)
 	}
-	
+
 	atomic.AddInt64(&cb.failures, 1)
 	atomic.StoreInt64(&cb.lastFailureTime, time.Now().Unix())
 }
@@ -239,7 +238,7 @@ func (cb *CircuitBreaker) recordTimeout() {
 	if cb.config.EnableMetrics {
 		atomic.AddInt64(&cb.metrics.TimeoutsTotal, 1)
 	}
-	
+
 	atomic.AddInt64(&cb.failures, 1)
 	atomic.StoreInt64(&cb.lastFailureTime, time.Now().Unix())
 }
@@ -253,11 +252,11 @@ func (cb *CircuitBreaker) GetState() CircuitState {
 func (cb *CircuitBreaker) GetMetrics() CircuitBreakerMetrics {
 	return CircuitBreakerMetrics{
 		RequestsTotal:      atomic.LoadInt64(&cb.metrics.RequestsTotal),
-		SuccessesTotal:    atomic.LoadInt64(&cb.metrics.SuccessesTotal),
-		FailuresTotal:     atomic.LoadInt64(&cb.metrics.FailuresTotal),
-		CircuitOpensTotal: atomic.LoadInt64(&cb.metrics.CircuitOpensTotal),
+		SuccessesTotal:     atomic.LoadInt64(&cb.metrics.SuccessesTotal),
+		FailuresTotal:      atomic.LoadInt64(&cb.metrics.FailuresTotal),
+		CircuitOpensTotal:  atomic.LoadInt64(&cb.metrics.CircuitOpensTotal),
 		CircuitClosesTotal: atomic.LoadInt64(&cb.metrics.CircuitClosesTotal),
-		TimeoutsTotal:     atomic.LoadInt64(&cb.metrics.TimeoutsTotal),
+		TimeoutsTotal:      atomic.LoadInt64(&cb.metrics.TimeoutsTotal),
 	}
 }
 
@@ -265,12 +264,12 @@ func (cb *CircuitBreaker) GetMetrics() CircuitBreakerMetrics {
 func (cb *CircuitBreaker) Reset() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	
+
 	atomic.StoreInt32(&cb.state, int32(StateClosed))
 	atomic.StoreInt64(&cb.failures, 0)
 	atomic.StoreInt64(&cb.lastFailureTime, 0)
 	atomic.StoreInt64(&cb.generation, atomic.LoadInt64(&cb.generation)+1)
-	
+
 	logger.Infof("Circuit breaker reset")
 }
 
@@ -303,19 +302,19 @@ type CircuitBreakerWithRetry struct {
 type RetryConfig struct {
 	// Maximum number of retry attempts
 	MaxRetries int `json:"max_retries" yaml:"max_retries"`
-	
+
 	// Initial backoff delay
 	InitialDelay time.Duration `json:"initial_delay" yaml:"initial_delay"`
-	
+
 	// Maximum backoff delay
 	MaxDelay time.Duration `json:"max_delay" yaml:"max_delay"`
-	
+
 	// Backoff multiplier
 	Multiplier float64 `json:"multiplier" yaml:"multiplier"`
-	
+
 	// Whether to use jitter
 	Jitter bool `json:"jitter" yaml:"jitter"`
-	
+
 	// Retryable error codes
 	RetryableCodes []codes.Code `json:"retryable_codes" yaml:"retryable_codes"`
 }
@@ -323,11 +322,11 @@ type RetryConfig struct {
 // Default retry configuration
 func DefaultRetryConfig() *RetryConfig {
 	return &RetryConfig{
-		MaxRetries:     3,
-		InitialDelay:    100 * time.Millisecond,
-		MaxDelay:        5 * time.Second,
-		Multiplier:      2.0,
-		Jitter:          true,
+		MaxRetries:   3,
+		InitialDelay: 100 * time.Millisecond,
+		MaxDelay:     5 * time.Second,
+		Multiplier:   2.0,
+		Jitter:       true,
 		RetryableCodes: []codes.Code{
 			codes.Unavailable,
 			codes.DeadlineExceeded,
@@ -347,7 +346,7 @@ func NewCircuitBreakerWithRetry(cbConfig *CircuitBreakerConfig, retryConfig *Ret
 	if retryConfig == nil {
 		retryConfig = DefaultRetryConfig()
 	}
-	
+
 	return &CircuitBreakerWithRetry{
 		CircuitBreaker: NewCircuitBreaker(cbConfig),
 		retryConfig:    retryConfig,
@@ -357,13 +356,13 @@ func NewCircuitBreakerWithRetry(cbConfig *CircuitBreakerConfig, retryConfig *Ret
 // Execute with circuit breaker and retry
 func (cbr *CircuitBreakerWithRetry) Execute(ctx context.Context, fn func() error) error {
 	var lastErr error
-	
+
 	for attempt := 0; attempt <= cbr.retryConfig.MaxRetries; attempt++ {
 		// Check if context is cancelled
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		
+
 		// Execute with circuit breaker
 		err := cbr.CircuitBreaker.Execute(ctx, fn)
 		if err == nil {
@@ -372,25 +371,25 @@ func (cbr *CircuitBreakerWithRetry) Execute(ctx context.Context, fn func() error
 			}
 			return nil
 		}
-		
+
 		lastErr = err
-		
+
 		// Check if error is retryable
 		if !cbr.isRetryableError(err) {
 			logger.Warnf("Non-retryable error: %v", err)
 			return err
 		}
-		
+
 		// Check if this is the last attempt
 		if attempt == cbr.retryConfig.MaxRetries {
 			logger.Errorf("Max retries (%d) exceeded, last error: %v", cbr.retryConfig.MaxRetries, err)
 			return err
 		}
-		
+
 		// Calculate backoff delay
 		delay := cbr.calculateBackoff(attempt)
 		logger.Warnf("Request failed (attempt %d/%d): %v, retrying in %v", attempt+1, cbr.retryConfig.MaxRetries, err, delay)
-		
+
 		// Wait before retry
 		select {
 		case <-ctx.Done():
@@ -399,7 +398,7 @@ func (cbr *CircuitBreakerWithRetry) Execute(ctx context.Context, fn func() error
 			// Continue to next attempt
 		}
 	}
-	
+
 	return lastErr
 }
 
@@ -408,35 +407,35 @@ func (cbr *CircuitBreakerWithRetry) isRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check gRPC status code
-	if grpcErr, ok := err.(interface{ GRPCStatus() (codes.Code) }); ok {
+	if grpcErr, ok := err.(interface{ GRPCStatus() codes.Code }); ok {
 		for _, retryableCode := range cbr.retryConfig.RetryableCodes {
 			if grpcErr.GRPCStatus() == retryableCode {
 				return true
 			}
 		}
 	}
-	
+
 	return false
 }
 
 // Calculate exponential backoff delay
 func (cbr *CircuitBreakerWithRetry) calculateBackoff(attempt int) time.Duration {
 	delay := float64(cbr.retryConfig.InitialDelay) * math.Pow(cbr.retryConfig.Multiplier, float64(attempt))
-	
+
 	// Apply maximum delay
 	if delay > float64(cbr.retryConfig.MaxDelay) {
 		delay = float64(cbr.retryConfig.MaxDelay)
 	}
-	
+
 	// Add jitter if enabled
 	if cbr.retryConfig.Jitter {
 		// Add random jitter up to 25% of delay
 		jitter := delay * 0.25 * (rand.Float64() - 0.5)
 		delay += jitter
 	}
-	
+
 	return time.Duration(delay)
 }
 
@@ -448,25 +447,25 @@ func (cbr *CircuitBreakerWithRetry) GetRetryConfig() *RetryConfig {
 // Get combined metrics
 func (cbr *CircuitBreakerWithRetry) GetMetrics() CircuitBreakerWithRetryMetrics {
 	cbMetrics := cbr.CircuitBreaker.GetMetrics()
-	
+
 	return CircuitBreakerWithRetryMetrics{
 		CircuitBreakerMetrics: cbMetrics,
-		MaxRetries:             cbr.retryConfig.MaxRetries,
-		CurrentRetry:           0, // This would need to be tracked during execution
-		InitialDelay:           cbr.retryConfig.InitialDelay,
-		MaxDelay:               cbr.retryConfig.MaxDelay,
-		Multiplier:             cbr.retryConfig.Multiplier,
-		Jitter:                 cbr.retryConfig.Jitter,
+		MaxRetries:            cbr.retryConfig.MaxRetries,
+		CurrentRetry:          0, // This would need to be tracked during execution
+		InitialDelay:          cbr.retryConfig.InitialDelay,
+		MaxDelay:              cbr.retryConfig.MaxDelay,
+		Multiplier:            cbr.retryConfig.Multiplier,
+		Jitter:                cbr.retryConfig.Jitter,
 	}
 }
 
 // Combined metrics
 type CircuitBreakerWithRetryMetrics struct {
 	CircuitBreakerMetrics
-	MaxRetries     int
-	CurrentRetry   int
-	InitialDelay   time.Duration
-	MaxDelay       time.Duration
-	Multiplier     float64
-	Jitter         bool
+	MaxRetries   int
+	CurrentRetry int
+	InitialDelay time.Duration
+	MaxDelay     time.Duration
+	Multiplier   float64
+	Jitter       bool
 }

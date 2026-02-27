@@ -61,11 +61,11 @@ type FetchNewsDataRequest struct {
 
 // FetchNewsDataResponse represents the response for news data
 type FetchNewsDataResponse struct {
-	Success    bool                 `json:"success"`
-	Message    string               `json:"message"`
-	NewsItems  []pb.NewsItem        `json:"news_items,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata"`
-	Timestamp  time.Time             `json:"timestamp"`
+	Success   bool                   `json:"success"`
+	Message   string                 `json:"message"`
+	NewsItems []pb.NewsItem          `json:"news_items,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata"`
+	Timestamp time.Time              `json:"timestamp"`
 }
 
 // GetMarketDataBufferRequest represents the request for getting market data buffer
@@ -91,11 +91,11 @@ type GetNewsBufferRequest struct {
 
 // GetNewsBufferResponse represents the response for news buffer
 type GetNewsBufferResponse struct {
-	Success    bool                 `json:"success"`
-	Message    string               `json:"message"`
-	NewsItems  []pb.NewsItem        `json:"news_items,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata"`
-	Timestamp  time.Time             `json:"timestamp"`
+	Success   bool                   `json:"success"`
+	Message   string                 `json:"message"`
+	NewsItems []pb.NewsItem          `json:"news_items,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata"`
+	Timestamp time.Time              `json:"timestamp"`
 }
 
 // ConnectDataSourceRequest represents the request for connecting to a data source
@@ -125,7 +125,7 @@ type GetIngestionStatsResponse struct {
 // FetchMarketData handles the market data fetching endpoint
 func (h *DataIngestionHandler) FetchMarketData(c *gin.Context) {
 	startTime := time.Now()
-	
+
 	var req FetchMarketDataRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Errorf("Failed to bind request: %v", err)
@@ -210,7 +210,7 @@ func (h *DataIngestionHandler) FetchMarketData(c *gin.Context) {
 // FetchNewsData handles the news data fetching endpoint
 func (h *DataIngestionHandler) FetchNewsData(c *gin.Context) {
 	startTime := time.Now()
-	
+
 	var req FetchNewsDataRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Errorf("Failed to bind request: %v", err)
@@ -279,14 +279,14 @@ func (h *DataIngestionHandler) FetchNewsData(c *gin.Context) {
 
 	// Prepare response metadata
 	metadata := map[string]interface{}{
-		"source_id":     req.SourceID,
+		"source_id":      req.SourceID,
 		"keywords_count": len(req.Keywords),
-		"hours_back":    req.HoursBack,
-		"response_time": time.Since(startTime).Seconds(),
-		"grpc_status":   response.Status.String(),
+		"hours_back":     req.HoursBack,
+		"response_time":  time.Since(startTime).Seconds(),
+		"grpc_status":    response.Status.String(),
 	}
 
-	logger.Infof("Successfully fetched %d news items for %d keywords from %s", 
+	logger.Infof("Successfully fetched %d news items for %d keywords from %s",
 		len(response.NewsItems), len(req.Keywords), req.SourceID)
 
 	c.JSON(http.StatusOK, FetchNewsDataResponse{
@@ -301,10 +301,10 @@ func (h *DataIngestionHandler) FetchNewsData(c *gin.Context) {
 // GetMarketDataBuffer handles getting market data from buffer
 func (h *DataIngestionHandler) GetMarketDataBuffer(c *gin.Context) {
 	startTime := time.Now()
-	
+
 	symbol := c.Query("symbol")
 	limitStr := c.DefaultQuery("limit", "100")
-	
+
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
 		limit = 100
@@ -367,10 +367,10 @@ func (h *DataIngestionHandler) GetMarketDataBuffer(c *gin.Context) {
 // GetNewsBuffer handles getting news from buffer
 func (h *DataIngestionHandler) GetNewsBuffer(c *gin.Context) {
 	startTime := time.Now()
-	
+
 	keywords := c.QueryArray("keywords")
 	limitStr := c.DefaultQuery("limit", "100")
-	
+
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
 		limit = 100
@@ -485,7 +485,7 @@ func (h *DataIngestionHandler) GetIngestionStats(c *gin.Context) {
 // ConnectDataSource handles connecting to a data source
 func (h *DataIngestionHandler) ConnectDataSource(c *gin.Context) {
 	startTime := time.Now()
-	
+
 	var req ConnectDataSourceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Errorf("Failed to bind request: %v", err)
@@ -692,7 +692,7 @@ func (h *DataIngestionHandler) mapGRPCToHTTPError(err error) (int, string) {
 	if grpcErr, ok := status.FromError(err); ok {
 		return mapGRPCToHTTPStatus(grpcErr.Code())
 	}
-	
+
 	// Non-gRPC errors
 	return http.StatusInternalServerError, err.Error()
 }

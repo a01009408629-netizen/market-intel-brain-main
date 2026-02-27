@@ -55,7 +55,7 @@ func main() {
 	}
 
 	logger.WithFields(map[string]interface{}{
-		"version":    Version,
+		"version":     Version,
 		"environment": config.Environment,
 		"http_port":   config.HTTPPort,
 		"grpc_port":   config.GRPCPort,
@@ -73,7 +73,7 @@ func main() {
 
 	// Create HTTP server
 	httpServer := server.NewHTTPServer(config, coreEngineClient)
-	
+
 	// Create gRPC server
 	grpcServer := server.NewGRPCServer(config)
 

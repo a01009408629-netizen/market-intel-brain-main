@@ -1,14 +1,12 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
-	"time"
-	"errors"
 	"strings"
-
-
+	"time"
 )
 
 // ConfigError represents a configuration error
@@ -26,64 +24,64 @@ func (e *ConfigError) Error() string {
 type Config struct {
 	// Server configuration
 	Server ServerConfig `mapstructure:"server"`
-	
+
 	// Database configuration
 	Database DatabaseConfig `mapstructure:"database"`
-	
+
 	// Redis configuration
 	Redis RedisConfig `mapstructure:"redis"`
-	
+
 	// Kafka configuration
 	Kafka KafkaConfig `mapstructure:"kafka"`
-	
+
 	// Service URLs
 	Services ServiceURLs `mapstructure:"services"`
-	
+
 	// Security configuration
 	Security SecurityConfig `mapstructure:"security"`
-	
+
 	// Logging configuration
 	Logging LoggingConfig `mapstructure:"logging"`
-	
+
 	// Metrics configuration
 	Metrics MetricsConfig `mapstructure:"metrics"`
-	
+
 	// Environment
 	Environment string `mapstructure:"environment"`
 }
 
 // ServerConfig holds server-related configuration
 type ServerConfig struct {
-	HTTPPort           int           `mapstructure:"http_port"`
-	GRPCPort           int           `mapstructure:"grpc_port"`
-	Host               string        `mapstructure:"host"`
-	ReadTimeout        time.Duration `mapstructure:"read_timeout"`
-	WriteTimeout       time.Duration `mapstructure:"write_timeout"`
-	IdleTimeout        time.Duration `mapstructure:"idle_timeout"`
-	MaxHeaderBytes     int           `mapstructure:"max_header_bytes"`
-	MaxBodyBytes       int64         `mapstructure:"max_body_bytes"`
-	EnableHTTPS        bool          `mapstructure:"enable_https"`
-	EnableCORS         bool          `mapstructure:"enable_cors"`
-	EnableMetrics      bool          `mapstructure:"enable_metrics"`
-	EnablePprof        bool          `mapstructure:"enable_pprof"`
-	GracefulTimeout    time.Duration `mapstructure:"graceful_timeout"`
-	MaxConnections     int           `mapstructure:"max_connections"`
+	HTTPPort        int           `mapstructure:"http_port"`
+	GRPCPort        int           `mapstructure:"grpc_port"`
+	Host            string        `mapstructure:"host"`
+	ReadTimeout     time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
+	IdleTimeout     time.Duration `mapstructure:"idle_timeout"`
+	MaxHeaderBytes  int           `mapstructure:"max_header_bytes"`
+	MaxBodyBytes    int64         `mapstructure:"max_body_bytes"`
+	EnableHTTPS     bool          `mapstructure:"enable_https"`
+	EnableCORS      bool          `mapstructure:"enable_cors"`
+	EnableMetrics   bool          `mapstructure:"enable_metrics"`
+	EnablePprof     bool          `mapstructure:"enable_pprof"`
+	GracefulTimeout time.Duration `mapstructure:"graceful_timeout"`
+	MaxConnections  int           `mapstructure:"max_connections"`
 }
 
 // DatabaseConfig holds database configuration
 type DatabaseConfig struct {
-	Host            string        `mapstructure:"host"`
-	Port            int           `mapstructure:"port"`
-	Database        string        `mapstructure:"database"`
-	Username        string        `mapstructure:"username"`
-	Password        string        `mapstructure:"password"`
-	SSLMode         string        `mapstructure:"ssl_mode"`
-	MaxConnections  int           `mapstructure:"max_connections"`
-	MinConnections  int           `mapstructure:"min_connections"`
-	MaxIdleTime     time.Duration `mapstructure:"max_idle_time"`
-	MaxLifetime     time.Duration `mapstructure:"max_lifetime"`
-	ConnectTimeout  time.Duration `mapstructure:"connect_timeout"`
-	QueryTimeout    time.Duration `mapstructure:"query_timeout"`
+	Host           string        `mapstructure:"host"`
+	Port           int           `mapstructure:"port"`
+	Database       string        `mapstructure:"database"`
+	Username       string        `mapstructure:"username"`
+	Password       string        `mapstructure:"password"`
+	SSLMode        string        `mapstructure:"ssl_mode"`
+	MaxConnections int           `mapstructure:"max_connections"`
+	MinConnections int           `mapstructure:"min_connections"`
+	MaxIdleTime    time.Duration `mapstructure:"max_idle_time"`
+	MaxLifetime    time.Duration `mapstructure:"max_lifetime"`
+	ConnectTimeout time.Duration `mapstructure:"connect_timeout"`
+	QueryTimeout   time.Duration `mapstructure:"query_timeout"`
 }
 
 // RedisConfig holds Redis configuration
@@ -156,81 +154,81 @@ type LoggingConfig struct {
 
 // MetricsConfig holds metrics configuration
 type MetricsConfig struct {
-	Enabled    bool   `mapstructure:"enabled"`
-	Path       string `mapstructure:"path"`
-	Port       int    `mapstructure:"port"`
-	Namespace  string `mapstructure:"namespace"`
-	Subsystem  string `mapstructure:"subsystem"`
+	Enabled   bool   `mapstructure:"enabled"`
+	Path      string `mapstructure:"path"`
+	Port      int    `mapstructure:"port"`
+	Namespace string `mapstructure:"namespace"`
+	Subsystem string `mapstructure:"subsystem"`
 }
 
 // Load loads configuration from environment variables with validation
 func Load(configFile string) (*Config, error) {
 	config := &Config{}
-	
+
 	// Load server configuration
 	serverConfig, err := loadServerConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load server config: %w", err)
 	}
 	config.Server = serverConfig
-	
+
 	// Load database configuration
 	databaseConfig, err := loadDatabaseConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load database config: %w", err)
 	}
 	config.Database = databaseConfig
-	
+
 	// Load Redis configuration
 	redisConfig, err := loadRedisConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load redis config: %w", err)
 	}
 	config.Redis = redisConfig
-	
+
 	// Load Kafka configuration
 	kafkaConfig, err := loadKafkaConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load kafka config: %w", err)
 	}
 	config.Kafka = kafkaConfig
-	
+
 	// Load service URLs
 	serviceURLs, err := loadServiceURLs()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load service URLs: %w", err)
 	}
 	config.Services = serviceURLs
-	
+
 	// Load security configuration
 	securityConfig, err := loadSecurityConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load security config: %w", err)
 	}
 	config.Security = securityConfig
-	
+
 	// Load logging configuration
 	loggingConfig, err := loadLoggingConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load logging config: %w", err)
 	}
 	config.Logging = loggingConfig
-	
+
 	// Load metrics configuration
 	metricsConfig, err := loadMetricsConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load metrics config: %w", err)
 	}
 	config.Metrics = metricsConfig
-	
+
 	// Load environment
 	config.Environment = getEnv("ENVIRONMENT", "development")
-	
+
 	// Validate entire configuration
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
-	
+
 	return config, nil
 }
 
@@ -239,62 +237,62 @@ func (c *Config) Validate() error {
 	if err := c.Server.Validate(); err != nil {
 		return fmt.Errorf("server config validation failed: %w", err)
 	}
-	
+
 	if err := c.Database.Validate(); err != nil {
 		return fmt.Errorf("database config validation failed: %w", err)
 	}
-	
+
 	if err := c.Redis.Validate(); err != nil {
 		return fmt.Errorf("redis config validation failed: %w", err)
 	}
-	
+
 	if err := c.Kafka.Validate(); err != nil {
 		return fmt.Errorf("kafka config validation failed: %w", err)
 	}
-	
+
 	if err := c.Services.Validate(); err != nil {
 		return fmt.Errorf("services config validation failed: %w", err)
 	}
-	
+
 	if err := c.Security.Validate(); err != nil {
 		return fmt.Errorf("security config validation failed: %w", err)
 	}
-	
+
 	if err := c.Logging.Validate(); err != nil {
 		return fmt.Errorf("logging config validation failed: %w", err)
 	}
-	
+
 	if err := c.Metrics.Validate(); err != nil {
 		return fmt.Errorf("metrics config validation failed: %w", err)
 	}
-	
+
 	// Cross-component validation
 	if c.Server.HTTPPort == c.Server.GRPCPort {
 		return errors.New("HTTP and gRPC ports cannot be the same")
 	}
-	
+
 	return nil
 }
 
 // loadServerConfig loads server configuration from environment variables
 func loadServerConfig() (ServerConfig, error) {
 	config := ServerConfig{
-		HTTPPort:           getEnvInt("SERVER_HTTP_PORT", 8080),
-		GRPCPort:           getEnvInt("SERVER_GRPC_PORT", 8081),
-		Host:               getEnv("SERVER_HOST", "0.0.0.0"),
-		ReadTimeout:        getEnvDuration("SERVER_READ_TIMEOUT", 30*time.Second),
-		WriteTimeout:       getEnvDuration("SERVER_WRITE_TIMEOUT", 30*time.Second),
-		IdleTimeout:        getEnvDuration("SERVER_IDLE_TIMEOUT", 60*time.Second),
-		MaxHeaderBytes:     getEnvInt("SERVER_MAX_HEADER_BYTES", 1<<20), // 1MB
-		MaxBodyBytes:       getEnvInt64("SERVER_MAX_BODY_BYTES", 10<<20), // 10MB
-		EnableHTTPS:        getEnvBool("SERVER_ENABLE_HTTPS", false),
-		EnableCORS:         getEnvBool("SERVER_ENABLE_CORS", true),
-		EnableMetrics:      getEnvBool("SERVER_ENABLE_METRICS", true),
-		EnablePprof:        getEnvBool("SERVER_ENABLE_PPROF", false),
-		GracefulTimeout:    getEnvDuration("SERVER_GRACEFUL_TIMEOUT", 30*time.Second),
-		MaxConnections:     getEnvInt("SERVER_MAX_CONNECTIONS", 10000),
+		HTTPPort:        getEnvInt("SERVER_HTTP_PORT", 8080),
+		GRPCPort:        getEnvInt("SERVER_GRPC_PORT", 8081),
+		Host:            getEnv("SERVER_HOST", "0.0.0.0"),
+		ReadTimeout:     getEnvDuration("SERVER_READ_TIMEOUT", 30*time.Second),
+		WriteTimeout:    getEnvDuration("SERVER_WRITE_TIMEOUT", 30*time.Second),
+		IdleTimeout:     getEnvDuration("SERVER_IDLE_TIMEOUT", 60*time.Second),
+		MaxHeaderBytes:  getEnvInt("SERVER_MAX_HEADER_BYTES", 1<<20),  // 1MB
+		MaxBodyBytes:    getEnvInt64("SERVER_MAX_BODY_BYTES", 10<<20), // 10MB
+		EnableHTTPS:     getEnvBool("SERVER_ENABLE_HTTPS", false),
+		EnableCORS:      getEnvBool("SERVER_ENABLE_CORS", true),
+		EnableMetrics:   getEnvBool("SERVER_ENABLE_METRICS", true),
+		EnablePprof:     getEnvBool("SERVER_ENABLE_PPROF", false),
+		GracefulTimeout: getEnvDuration("SERVER_GRACEFUL_TIMEOUT", 30*time.Second),
+		MaxConnections:  getEnvInt("SERVER_MAX_CONNECTIONS", 10000),
 	}
-	
+
 	return config, config.Validate()
 }
 
@@ -314,7 +312,7 @@ func loadDatabaseConfig() (DatabaseConfig, error) {
 		ConnectTimeout: getEnvDuration("DB_CONNECT_TIMEOUT", 30*time.Second),
 		QueryTimeout:   getEnvDuration("DB_QUERY_TIMEOUT", 30*time.Second),
 	}
-	
+
 	return config, config.Validate()
 }
 
@@ -333,7 +331,7 @@ func loadRedisConfig() (RedisConfig, error) {
 		MinIdleConns: getEnvInt("REDIS_MIN_IDLE_CONNS", 5),
 		MaxConnAge:   getEnvDuration("REDIS_MAX_CONN_AGE", 30*time.Minute),
 	}
-	
+
 	return config, config.Validate()
 }
 
@@ -343,7 +341,7 @@ func loadKafkaConfig() (KafkaConfig, error) {
 	for i, broker := range brokers {
 		brokers[i] = strings.TrimSpace(broker)
 	}
-	
+
 	config := KafkaConfig{
 		Brokers:              brokers,
 		ConsumerGroup:        getEnv("KAFKA_CONSUMER_GROUP", "api-gateway"),
@@ -357,7 +355,7 @@ func loadKafkaConfig() (KafkaConfig, error) {
 		ConsumerFetchDefault: getEnvInt("KAFKA_CONSUMER_FETCH_DEFAULT", 1024),
 		ConsumerFetchMax:     getEnvInt("KAFKA_CONSUMER_FETCH_MAX", 1048576),
 	}
-	
+
 	return config, config.Validate()
 }
 
@@ -369,7 +367,7 @@ func loadServiceURLs() (ServiceURLs, error) {
 		Analytics:   getEnv("ANALYTICS_SERVICE_URL", "localhost:50053"),
 		VectorStore: getEnv("VECTOR_STORE_URL", "localhost:50054"),
 	}
-	
+
 	return config, config.Validate()
 }
 
@@ -389,7 +387,7 @@ func loadSecurityConfig() (SecurityConfig, error) {
 		EnableHTTPSRedirect: getEnvBool("ENABLE_HTTPS_REDIRECT", false),
 		TrustedProxies:      strings.Split(getEnv("TRUSTED_PROXIES", ""), ","),
 	}
-	
+
 	return config, config.Validate()
 }
 
@@ -407,7 +405,7 @@ func loadLoggingConfig() (LoggingConfig, error) {
 		MaxAge:        getEnvInt("LOG_MAX_AGE", 28),
 		Compress:      getEnvBool("LOG_COMPRESS", true),
 	}
-	
+
 	return config, config.Validate()
 }
 
@@ -420,7 +418,7 @@ func loadMetricsConfig() (MetricsConfig, error) {
 		Namespace: getEnv("METRICS_NAMESPACE", "market_intel"),
 		Subsystem: getEnv("METRICS_SUBSYSTEM", "api_gateway"),
 	}
-	
+
 	return config, config.Validate()
 }
 

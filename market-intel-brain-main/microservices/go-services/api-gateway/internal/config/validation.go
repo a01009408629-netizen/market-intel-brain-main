@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-
 )
 
 // Validation methods for each configuration struct
@@ -19,7 +18,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "HTTP port cannot be 0",
 		}
 	}
-	
+
 	if s.GRPCPort == 0 {
 		return &ConfigError{
 			Key:     "SERVER_GRPC_PORT",
@@ -27,7 +26,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "gRPC port cannot be 0",
 		}
 	}
-	
+
 	if s.HTTPPort == s.GRPCPort {
 		return &ConfigError{
 			Key:     "SERVER_PORTS",
@@ -35,7 +34,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "HTTP and gRPC ports cannot be the same",
 		}
 	}
-	
+
 	if s.HTTPPort < 1 || s.HTTPPort > 65535 {
 		return &ConfigError{
 			Key:     "SERVER_HTTP_PORT",
@@ -43,7 +42,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "HTTP port must be between 1 and 65535",
 		}
 	}
-	
+
 	if s.GRPCPort < 1 || s.GRPCPort > 65535 {
 		return &ConfigError{
 			Key:     "SERVER_GRPC_PORT",
@@ -51,7 +50,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "gRPC port must be between 1 and 65535",
 		}
 	}
-	
+
 	if s.Host == "" {
 		return &ConfigError{
 			Key:     "SERVER_HOST",
@@ -59,7 +58,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "Server host cannot be empty",
 		}
 	}
-	
+
 	if s.ReadTimeout <= 0 {
 		return &ConfigError{
 			Key:     "SERVER_READ_TIMEOUT",
@@ -67,7 +66,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "Read timeout must be positive",
 		}
 	}
-	
+
 	if s.WriteTimeout <= 0 {
 		return &ConfigError{
 			Key:     "SERVER_WRITE_TIMEOUT",
@@ -75,7 +74,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "Write timeout must be positive",
 		}
 	}
-	
+
 	if s.IdleTimeout <= 0 {
 		return &ConfigError{
 			Key:     "SERVER_IDLE_TIMEOUT",
@@ -83,7 +82,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "Idle timeout must be positive",
 		}
 	}
-	
+
 	if s.MaxHeaderBytes <= 0 {
 		return &ConfigError{
 			Key:     "SERVER_MAX_HEADER_BYTES",
@@ -91,7 +90,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "Max header bytes must be positive",
 		}
 	}
-	
+
 	if s.MaxBodyBytes <= 0 {
 		return &ConfigError{
 			Key:     "SERVER_MAX_BODY_BYTES",
@@ -99,7 +98,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "Max body bytes must be positive",
 		}
 	}
-	
+
 	if s.GracefulTimeout <= 0 {
 		return &ConfigError{
 			Key:     "SERVER_GRACEFUL_TIMEOUT",
@@ -107,7 +106,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "Graceful timeout must be positive",
 		}
 	}
-	
+
 	if s.MaxConnections <= 0 {
 		return &ConfigError{
 			Key:     "SERVER_MAX_CONNECTIONS",
@@ -115,7 +114,7 @@ func (s *ServerConfig) Validate() error {
 			Message: "Max connections must be positive",
 		}
 	}
-	
+
 	return nil
 }
 
@@ -128,7 +127,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Database host cannot be empty",
 		}
 	}
-	
+
 	if d.Port == 0 {
 		return &ConfigError{
 			Key:     "DB_PORT",
@@ -136,7 +135,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Database port cannot be 0",
 		}
 	}
-	
+
 	if d.Port < 1 || d.Port > 65535 {
 		return &ConfigError{
 			Key:     "DB_PORT",
@@ -144,7 +143,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Database port must be between 1 and 65535",
 		}
 	}
-	
+
 	if d.Database == "" {
 		return &ConfigError{
 			Key:     "DB_NAME",
@@ -152,7 +151,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Database name cannot be empty",
 		}
 	}
-	
+
 	if d.Username == "" {
 		return &ConfigError{
 			Key:     "DB_USERNAME",
@@ -160,7 +159,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Database username cannot be empty",
 		}
 	}
-	
+
 	if d.Password == "" {
 		return &ConfigError{
 			Key:     "DB_PASSWORD",
@@ -168,7 +167,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Database password cannot be empty",
 		}
 	}
-	
+
 	if d.MaxConnections <= 0 {
 		return &ConfigError{
 			Key:     "DB_MAX_CONNECTIONS",
@@ -176,7 +175,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Max connections must be positive",
 		}
 	}
-	
+
 	if d.MinConnections < 0 {
 		return &ConfigError{
 			Key:     "DB_MIN_CONNECTIONS",
@@ -184,7 +183,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Min connections cannot be negative",
 		}
 	}
-	
+
 	if d.MinConnections > d.MaxConnections {
 		return &ConfigError{
 			Key:     "DB_CONNECTIONS",
@@ -192,7 +191,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Min connections cannot be greater than max connections",
 		}
 	}
-	
+
 	// Validate SSL mode
 	validSSLModes := []string{"disable", "allow", "prefer", "require", "verify-ca", "verify-full"}
 	isValidSSLMode := false
@@ -209,7 +208,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: fmt.Sprintf("SSL mode must be one of: %s", strings.Join(validSSLModes, ", ")),
 		}
 	}
-	
+
 	if d.MaxIdleTime <= 0 {
 		return &ConfigError{
 			Key:     "DB_MAX_IDLE_TIME",
@@ -217,7 +216,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Max idle time must be positive",
 		}
 	}
-	
+
 	if d.MaxLifetime <= 0 {
 		return &ConfigError{
 			Key:     "DB_MAX_LIFETIME",
@@ -225,7 +224,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Max lifetime must be positive",
 		}
 	}
-	
+
 	if d.ConnectTimeout <= 0 {
 		return &ConfigError{
 			Key:     "DB_CONNECT_TIMEOUT",
@@ -233,7 +232,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Connect timeout must be positive",
 		}
 	}
-	
+
 	if d.QueryTimeout <= 0 {
 		return &ConfigError{
 			Key:     "DB_QUERY_TIMEOUT",
@@ -241,7 +240,7 @@ func (d *DatabaseConfig) Validate() error {
 			Message: "Query timeout must be positive",
 		}
 	}
-	
+
 	return nil
 }
 
@@ -254,7 +253,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Redis host cannot be empty",
 		}
 	}
-	
+
 	if r.Port == 0 {
 		return &ConfigError{
 			Key:     "REDIS_PORT",
@@ -262,7 +261,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Redis port cannot be 0",
 		}
 	}
-	
+
 	if r.Port < 1 || r.Port > 65535 {
 		return &ConfigError{
 			Key:     "REDIS_PORT",
@@ -270,7 +269,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Redis port must be between 1 and 65535",
 		}
 	}
-	
+
 	if r.Database < 0 || r.Database > 15 {
 		return &ConfigError{
 			Key:     "REDIS_DATABASE",
@@ -278,7 +277,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Redis database must be between 0 and 15",
 		}
 	}
-	
+
 	if r.MaxRetries < 0 {
 		return &ConfigError{
 			Key:     "REDIS_MAX_RETRIES",
@@ -286,7 +285,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Max retries cannot be negative",
 		}
 	}
-	
+
 	if r.DialTimeout <= 0 {
 		return &ConfigError{
 			Key:     "REDIS_DIAL_TIMEOUT",
@@ -294,7 +293,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Dial timeout must be positive",
 		}
 	}
-	
+
 	if r.ReadTimeout <= 0 {
 		return &ConfigError{
 			Key:     "REDIS_READ_TIMEOUT",
@@ -302,7 +301,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Read timeout must be positive",
 		}
 	}
-	
+
 	if r.WriteTimeout <= 0 {
 		return &ConfigError{
 			Key:     "REDIS_WRITE_TIMEOUT",
@@ -310,7 +309,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Write timeout must be positive",
 		}
 	}
-	
+
 	if r.PoolSize <= 0 {
 		return &ConfigError{
 			Key:     "REDIS_POOL_SIZE",
@@ -318,7 +317,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Pool size must be positive",
 		}
 	}
-	
+
 	if r.MinIdleConns < 0 {
 		return &ConfigError{
 			Key:     "REDIS_MIN_IDLE_CONNS",
@@ -326,7 +325,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Min idle connections cannot be negative",
 		}
 	}
-	
+
 	if r.MinIdleConns > r.PoolSize {
 		return &ConfigError{
 			Key:     "REDIS_CONNECTIONS",
@@ -334,7 +333,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Min idle connections cannot be greater than pool size",
 		}
 	}
-	
+
 	if r.MaxConnAge <= 0 {
 		return &ConfigError{
 			Key:     "REDIS_MAX_CONN_AGE",
@@ -342,7 +341,7 @@ func (r *RedisConfig) Validate() error {
 			Message: "Max connection age must be positive",
 		}
 	}
-	
+
 	return nil
 }
 
@@ -355,7 +354,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: "At least one Kafka broker must be specified",
 		}
 	}
-	
+
 	for i, broker := range k.Brokers {
 		if broker == "" {
 			return &ConfigError{
@@ -364,7 +363,7 @@ func (k *KafkaConfig) Validate() error {
 				Message: fmt.Sprintf("Broker %d cannot be empty", i),
 			}
 		}
-		
+
 		// Validate broker format (host:port)
 		if !isValidBroker(broker) {
 			return &ConfigError{
@@ -374,7 +373,7 @@ func (k *KafkaConfig) Validate() error {
 			}
 		}
 	}
-	
+
 	if k.ConsumerGroup == "" {
 		return &ConfigError{
 			Key:     "KAFKA_CONSUMER_GROUP",
@@ -382,7 +381,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: "Consumer group cannot be empty",
 		}
 	}
-	
+
 	if k.CompressionType == "" {
 		return &ConfigError{
 			Key:     "KAFKA_COMPRESSION_TYPE",
@@ -390,7 +389,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: "Compression type cannot be empty",
 		}
 	}
-	
+
 	validCompressionTypes := []string{"none", "gzip", "snappy", "lz4", "zstd"}
 	isValidCompressionType := false
 	for _, ct := range validCompressionTypes {
@@ -406,7 +405,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: fmt.Sprintf("Compression type must be one of: %s", strings.Join(validCompressionTypes, ", ")),
 		}
 	}
-	
+
 	if k.BatchSize <= 0 {
 		return &ConfigError{
 			Key:     "KAFKA_BATCH_SIZE",
@@ -414,7 +413,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: "Batch size must be positive",
 		}
 	}
-	
+
 	if k.BatchTimeout < 0 {
 		return &ConfigError{
 			Key:     "KAFKA_BATCH_TIMEOUT",
@@ -422,7 +421,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: "Batch timeout cannot be negative",
 		}
 	}
-	
+
 	if k.CompressionLevel < 0 || k.CompressionLevel > 9 {
 		return &ConfigError{
 			Key:     "KAFKA_COMPRESSION_LEVEL",
@@ -430,7 +429,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: "Compression level must be between 0 and 9",
 		}
 	}
-	
+
 	if k.MaxMessageBytes <= 0 {
 		return &ConfigError{
 			Key:     "KAFKA_MAX_MESSAGE_BYTES",
@@ -438,7 +437,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: "Max message bytes must be positive",
 		}
 	}
-	
+
 	if k.ConsumerFetchMin <= 0 {
 		return &ConfigError{
 			Key:     "KAFKA_CONSUMER_FETCH_MIN",
@@ -446,7 +445,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: "Consumer fetch min must be positive",
 		}
 	}
-	
+
 	if k.ConsumerFetchDefault <= 0 {
 		return &ConfigError{
 			Key:     "KAFKA_CONSUMER_FETCH_DEFAULT",
@@ -454,7 +453,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: "Consumer fetch default must be positive",
 		}
 	}
-	
+
 	if k.ConsumerFetchMax <= 0 {
 		return &ConfigError{
 			Key:     "KAFKA_CONSUMER_FETCH_MAX",
@@ -462,7 +461,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: "Consumer fetch max must be positive",
 		}
 	}
-	
+
 	if k.ConsumerFetchMin > k.ConsumerFetchDefault || k.ConsumerFetchDefault > k.ConsumerFetchMax {
 		return &ConfigError{
 			Key:     "KAFKA_CONSUMER_FETCH",
@@ -470,7 +469,7 @@ func (k *KafkaConfig) Validate() error {
 			Message: "Fetch values must be: min <= default <= max",
 		}
 	}
-	
+
 	return nil
 }
 
@@ -483,7 +482,7 @@ func (s *ServiceURLs) Validate() error {
 			Message: "Core engine URL cannot be empty",
 		}
 	}
-	
+
 	if s.AuthService == "" {
 		return &ConfigError{
 			Key:     "AUTH_SERVICE_URL",
@@ -491,7 +490,7 @@ func (s *ServiceURLs) Validate() error {
 			Message: "Auth service URL cannot be empty",
 		}
 	}
-	
+
 	if s.Analytics == "" {
 		return &ConfigError{
 			Key:     "ANALYTICS_SERVICE_URL",
@@ -499,7 +498,7 @@ func (s *ServiceURLs) Validate() error {
 			Message: "Analytics service URL cannot be empty",
 		}
 	}
-	
+
 	if s.VectorStore == "" {
 		return &ConfigError{
 			Key:     "VECTOR_STORE_URL",
@@ -507,7 +506,7 @@ func (s *ServiceURLs) Validate() error {
 			Message: "Vector store URL cannot be empty",
 		}
 	}
-	
+
 	// Validate URL formats
 	services := map[string]string{
 		"CoreEngine":  s.CoreEngine,
@@ -515,7 +514,7 @@ func (s *ServiceURLs) Validate() error {
 		"Analytics":   s.Analytics,
 		"VectorStore": s.VectorStore,
 	}
-	
+
 	for name, serviceURL := range services {
 		if !isValidServiceURL(serviceURL) {
 			return &ConfigError{
@@ -525,7 +524,7 @@ func (s *ServiceURLs) Validate() error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -538,7 +537,7 @@ func (s *SecurityConfig) Validate() error {
 			Message: "JWT secret cannot be empty",
 		}
 	}
-	
+
 	if len(s.JWTSecret) < 32 {
 		return &ConfigError{
 			Key:     "JWT_SECRET",
@@ -546,7 +545,7 @@ func (s *SecurityConfig) Validate() error {
 			Message: "JWT secret must be at least 32 characters long",
 		}
 	}
-	
+
 	if s.JWTExpiration <= 0 {
 		return &ConfigError{
 			Key:     "JWT_EXPIRATION",
@@ -554,7 +553,7 @@ func (s *SecurityConfig) Validate() error {
 			Message: "JWT expiration must be positive",
 		}
 	}
-	
+
 	if s.RefreshExpiration <= 0 {
 		return &ConfigError{
 			Key:     "REFRESH_TOKEN_EXPIRATION",
@@ -562,7 +561,7 @@ func (s *SecurityConfig) Validate() error {
 			Message: "Refresh token expiration must be positive",
 		}
 	}
-	
+
 	if s.RefreshExpiration < s.JWTExpiration {
 		return &ConfigError{
 			Key:     "TOKEN_EXPIRATION",
@@ -570,7 +569,7 @@ func (s *SecurityConfig) Validate() error {
 			Message: "Refresh token expiration must be greater than or equal to JWT expiration",
 		}
 	}
-	
+
 	if s.BcryptCost < 4 || s.BcryptCost > 31 {
 		return &ConfigError{
 			Key:     "BCRYPT_COST",
@@ -578,7 +577,7 @@ func (s *SecurityConfig) Validate() error {
 			Message: "Bcrypt cost must be between 4 and 31",
 		}
 	}
-	
+
 	if s.RateLimitRPS <= 0 {
 		return &ConfigError{
 			Key:     "RATE_LIMIT_RPS",
@@ -586,7 +585,7 @@ func (s *SecurityConfig) Validate() error {
 			Message: "Rate limit RPS must be positive",
 		}
 	}
-	
+
 	if s.RateLimitBurst <= 0 {
 		return &ConfigError{
 			Key:     "RATE_LIMIT_BURST",
@@ -594,7 +593,7 @@ func (s *SecurityConfig) Validate() error {
 			Message: "Rate limit burst must be positive",
 		}
 	}
-	
+
 	if s.RateLimitBurst < s.RateLimitRPS {
 		return &ConfigError{
 			Key:     "RATE_LIMIT",
@@ -602,14 +601,14 @@ func (s *SecurityConfig) Validate() error {
 			Message: "Rate limit burst must be greater than or equal to RPS",
 		}
 	}
-	
+
 	// Validate CORS origins
 	for i, origin := range s.CORSAllowedOrigins {
 		origin = strings.TrimSpace(origin)
 		if origin == "" {
 			continue
 		}
-		
+
 		if origin != "*" && !isValidOrigin(origin) {
 			return &ConfigError{
 				Key:     "CORS_ALLOWED_ORIGINS",
@@ -618,7 +617,7 @@ func (s *SecurityConfig) Validate() error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -639,7 +638,7 @@ func (l *LoggingConfig) Validate() error {
 			Message: fmt.Sprintf("Log level must be one of: %s", strings.Join(validLevels, ", ")),
 		}
 	}
-	
+
 	validFormats := []string{"json", "text"}
 	isValidFormat := false
 	for _, format := range validFormats {
@@ -655,7 +654,7 @@ func (l *LoggingConfig) Validate() error {
 			Message: fmt.Sprintf("Log format must be one of: %s", strings.Join(validFormats, ", ")),
 		}
 	}
-	
+
 	validOutputs := []string{"stdout", "stderr", "file"}
 	isValidOutput := false
 	for _, output := range validOutputs {
@@ -671,7 +670,7 @@ func (l *LoggingConfig) Validate() error {
 			Message: fmt.Sprintf("Log output must be one of: %s", strings.Join(validOutputs, ", ")),
 		}
 	}
-	
+
 	if l.EnableFile && l.FilePath == "" {
 		return &ConfigError{
 			Key:     "LOG_FILE_PATH",
@@ -679,7 +678,7 @@ func (l *LoggingConfig) Validate() error {
 			Message: "Log file path cannot be empty when file logging is enabled",
 		}
 	}
-	
+
 	if l.MaxSize <= 0 {
 		return &ConfigError{
 			Key:     "LOG_MAX_SIZE",
@@ -687,7 +686,7 @@ func (l *LoggingConfig) Validate() error {
 			Message: "Log max size must be positive",
 		}
 	}
-	
+
 	if l.MaxBackups < 0 {
 		return &ConfigError{
 			Key:     "LOG_MAX_BACKUPS",
@@ -695,7 +694,7 @@ func (l *LoggingConfig) Validate() error {
 			Message: "Log max backups cannot be negative",
 		}
 	}
-	
+
 	if l.MaxAge < 0 {
 		return &ConfigError{
 			Key:     "LOG_MAX_AGE",
@@ -703,7 +702,7 @@ func (l *LoggingConfig) Validate() error {
 			Message: "Log max age cannot be negative",
 		}
 	}
-	
+
 	return nil
 }
 
@@ -716,7 +715,7 @@ func (m *MetricsConfig) Validate() error {
 			Message: "Metrics path cannot be empty",
 		}
 	}
-	
+
 	if !strings.HasPrefix(m.Path, "/") {
 		return &ConfigError{
 			Key:     "METRICS_PATH",
@@ -724,7 +723,7 @@ func (m *MetricsConfig) Validate() error {
 			Message: "Metrics path must start with '/'",
 		}
 	}
-	
+
 	if m.Port == 0 {
 		return &ConfigError{
 			Key:     "METRICS_PORT",
@@ -732,7 +731,7 @@ func (m *MetricsConfig) Validate() error {
 			Message: "Metrics port cannot be 0",
 		}
 	}
-	
+
 	if m.Port < 1 || m.Port > 65535 {
 		return &ConfigError{
 			Key:     "METRICS_PORT",
@@ -740,7 +739,7 @@ func (m *MetricsConfig) Validate() error {
 			Message: "Metrics port must be between 1 and 65535",
 		}
 	}
-	
+
 	if m.Namespace == "" {
 		return &ConfigError{
 			Key:     "METRICS_NAMESPACE",
@@ -748,7 +747,7 @@ func (m *MetricsConfig) Validate() error {
 			Message: "Metrics namespace cannot be empty",
 		}
 	}
-	
+
 	if m.Subsystem == "" {
 		return &ConfigError{
 			Key:     "METRICS_SUBSYSTEM",
@@ -756,7 +755,7 @@ func (m *MetricsConfig) Validate() error {
 			Message: "Metrics subsystem cannot be empty",
 		}
 	}
-	
+
 	// Validate namespace and subsystem format (should match regex: ^[a-zA-Z_][a-zA-Z0-9_]*$)
 	validNamespace := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 	if !validNamespace.MatchString(m.Namespace) {
@@ -766,7 +765,7 @@ func (m *MetricsConfig) Validate() error {
 			Message: "Metrics namespace must contain only letters, numbers, and underscores, and start with a letter or underscore",
 		}
 	}
-	
+
 	if !validNamespace.MatchString(m.Subsystem) {
 		return &ConfigError{
 			Key:     "METRICS_SUBSYSTEM",
@@ -774,7 +773,7 @@ func (m *MetricsConfig) Validate() error {
 			Message: "Metrics subsystem must contain only letters, numbers, and underscores, and start with a letter or underscore",
 		}
 	}
-	
+
 	return nil
 }
 
@@ -785,25 +784,25 @@ func isValidBroker(broker string) bool {
 	if len(parts) != 2 {
 		return false
 	}
-	
+
 	host := parts[0]
 	port := parts[1]
-	
+
 	if host == "" {
 		return false
 	}
-	
+
 	// Validate port
 	if len(port) == 0 {
 		return false
 	}
-	
+
 	for _, char := range port {
 		if char < '0' || char > '9' {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -813,7 +812,7 @@ func isValidServiceURL(serviceURL string) bool {
 		_, err := url.Parse(serviceURL)
 		return err == nil
 	}
-	
+
 	// Otherwise, check if it's host:port
 	return isValidBroker(serviceURL)
 }
@@ -824,7 +823,7 @@ func isValidOrigin(origin string) bool {
 		_, err := url.Parse(origin)
 		return err == nil
 	}
-	
+
 	// Check if it's a valid hostname pattern
 	validOrigin := regexp.MustCompile(`^[a-zA-Z0-9.-]+$`)
 	return validOrigin.MatchString(origin)

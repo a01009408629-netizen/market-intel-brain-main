@@ -1,0 +1,253 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  GO_VERSION: "1.21"
+  RUST_VERSION: "1.88.0"
+
+jobs:
+  # ===== AUTO FIX =====
+  auto-fix:
+    name: Auto Fix Code Issues
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: rustfmt, clippy
+
+      - name: Install Go Tools
+        run: |
+          go install golang.org/x/tools/cmd/goimports@latest
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Auto Fix Go Code
+        working-directory: ./microservices/go-services/api-gateway
+        run: |
+          echo "Auto-fixing Go code..."
+          
+          # Format code
+          go fmt ./...
+          goimports -w .
+          
+          # Run golangci-lint with auto-fix
+          golangci-lint run --fix --timeout=10m ./...
+          
+          echo "Go code auto-fixed"
+
+      - name: Auto Fix Rust Code
+        working-directory: ./microservices/rust-services
+        run: |
+          echo "Auto-fixing Rust code..."
+          cargo fmt
+          cargo clippy --fix --allow-dirty --allow-staged
+          echo "Rust code auto-fixed"
+
+      - name: Commit and Push Fixes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Auto-fix code formatting and linting issues"
+            git push
+          fi
+
+  # ===== BUILD AND TEST =====
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    needs: auto-fix
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: rustfmt, clippy
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
+
+      - name: Install Protocol Buffer Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Install Go Protobuf Plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Generate Protocol Buffers
+        run: |
+          echo "Generating protocol buffers..."
+          
+          # Generate from microservices/proto
+          mkdir -p microservices/go-services/api-gateway/pb
+          protoc --go_out=. --go-grpc_out=. --go_opt=paths=source_relative \
+            microservices/proto/*.proto \
+            microservices/proto/versions/v1/*.proto
+          
+          # Move generated files to pb directory if needed
+          find . -name "*.pb.go" -not -path "./pb/*" -exec mv {} ./pb/ \;
+          find . -name "*_grpc.pb.go" -not -path "./pb/*" -exec mv {} ./pb/ \;
+          
+          echo "Protocol buffers generated"
+
+      - name: Validate Linting (No Fixes)
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Validating linting (no fixes allowed)..."
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          golangci-lint run --timeout=10m ./...
+          echo "Linting validation passed"
+
+      - name: Build Service
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Building service..."
+          go build -o bin/api-gateway ./cmd/api-gateway/main.go
+          echo "Build completed successfully"
+
+      - name: Run Tests
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Running tests..."
+          go test -v -race -coverprofile=coverage.out ./...
+          echo "Tests completed successfully"
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          file: ./microservices/go-services/api-gateway/coverage.out
+          flags: unittests
+          name: codecov-umbrella
+
+  # ===== SECURITY SCAN =====
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: auto-fix
+    if: always()
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: rustfmt, clippy
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Rust Security Audit
+        working-directory: ./microservices/rust-services
+        run: cargo audit
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Setup Git Auth
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Run Security Scan
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec ./...
+
+      - name: Upload Security Report
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: ./microservices/go-services/api-gateway/gosec-report.sarif
+
+  # ===== DEPLOY =====
+  deploy:
+    name: Deploy Services
+    runs-on: ubuntu-latest
+    needs: [build-test, security-scan]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push API Gateway
+        uses: docker/build-push-action@v5
+        with:
+          context: ./microservices/go-services/api-gateway
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/api-gateway:latest
+            ghcr.io/${{ github.repository }}/api-gateway:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Rust Services
+        uses: docker/build-push-action@v5
+        with:
+          context: ./microservices/rust-services
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/rust-services:latest
+            ghcr.io/${{ github.repository }}/rust-services:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

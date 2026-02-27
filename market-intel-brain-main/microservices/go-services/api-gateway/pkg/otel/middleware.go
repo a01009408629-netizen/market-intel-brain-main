@@ -1,7 +1,6 @@
 package otel
 
 import (
-
 	"fmt"
 
 	"time"
@@ -25,16 +24,16 @@ func NewOtelMiddleware(serviceName string) *OtelMiddleware {
 func (m *OtelMiddleware) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
+
 		// Process request
 		c.Next()
-		
+
 		// Calculate duration
 		duration := time.Since(start)
-		
+
 		// Add duration to response headers
 		c.Header("X-Duration", duration.String())
-		
+
 		// Log request
 		fmt.Printf("Request: %s %s - Status: %d - Duration: %s\n",
 			c.Request.Method, c.Request.URL.Path, c.Writer.Status(), duration.String())
@@ -54,7 +53,7 @@ func (m *MetricsMiddleware) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Process request
 		c.Next()
-		
+
 		// Log metrics
 		fmt.Printf("Metrics: %s %s - %d\n", c.Request.Method, c.Request.URL.Path, c.Writer.Status())
 	}

@@ -15,17 +15,17 @@ import (
 )
 
 type HTTPServer struct {
-	config           *config.Config
-	coreEngineClient *services.CoreEngineClient
-	server           *http.Server
+	config            *config.Config
+	coreEngineClient  *services.CoreEngineClient
+	server            *http.Server
 	otelMiddleware    *otel.OtelMiddleware
 	metricsMiddleware *otel.MetricsMiddleware
 }
 
 func NewHTTPServer(config *config.Config, coreEngineClient *services.CoreEngineClient) *HTTPServer {
 	return &HTTPServer{
-		config:           config,
-		coreEngineClient: coreEngineClient,
+		config:            config,
+		coreEngineClient:  coreEngineClient,
 		otelMiddleware:    otel.NewOtelMiddleware("api-gateway"),
 		metricsMiddleware: otel.NewMetricsMiddleware(),
 	}
@@ -66,7 +66,7 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 	// Create handlers
 	healthHandler := handlers.NewHealthHandler(s.config, s.coreEngineClient)
 	dataIngestionHandler := handlers.NewDataIngestionHandler(s.config, s.coreEngineClient)
-	
+
 	// Setup routes
 	v1 := router.Group("/api/v1")
 	{
@@ -107,7 +107,7 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 		router.GET("/debug/pprof/threadcreate", gin.WrapF(http.HandlerFunc(pprof.ThreadCreate)))
 		router.GET("/debug/pprof/block", gin.WrapF(http.HandlerFunc(pprof.Block)))
 		router.GET("/debug/pprof/mutex", gin.WrapF(http.HandlerFunc(pprof.Mutex)))
-		
+
 		// Additional profiling endpoints
 		router.GET("/debug/pprof/allocs", gin.WrapF(http.HandlerFunc(pprof.Allocs)))
 		router.GET("/debug/pprof/lookups", gin.WrapF(http.HandlerFunc(pprof.Lookups)))

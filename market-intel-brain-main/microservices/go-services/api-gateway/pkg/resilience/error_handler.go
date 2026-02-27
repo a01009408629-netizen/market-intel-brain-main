@@ -9,25 +9,25 @@ import (
 
 // Error codes
 const (
-	ErrCodeBadRequest       = 400
-	ErrCodeUnauthorized     = 401
-	ErrCodeForbidden        = 403
-	ErrCodeNotFound         = 404
-	ErrCodeConflict         = 409
-	ErrCodeTimeout          = 504
-	ErrCodeInternalError    = 500
+	ErrCodeBadRequest         = 400
+	ErrCodeUnauthorized       = 401
+	ErrCodeForbidden          = 403
+	ErrCodeNotFound           = 404
+	ErrCodeConflict           = 409
+	ErrCodeTimeout            = 504
+	ErrCodeInternalError      = 500
 	ErrCodeServiceUnavailable = 503
 )
 
 // Error types
 const (
-	ErrTypeBadRequest       = "BAD_REQUEST"
-	ErrTypeUnauthorized     = "UNAUTHORIZED"
-	ErrTypeForbidden        = "FORBIDDEN"
-	ErrTypeNotFound         = "NOT_FOUND"
-	ErrTypeConflict         = "CONFLICT"
-	ErrTypeTimeout          = "TIMEOUT"
-	ErrTypeInternalError    = "INTERNAL_ERROR"
+	ErrTypeBadRequest         = "BAD_REQUEST"
+	ErrTypeUnauthorized       = "UNAUTHORIZED"
+	ErrTypeForbidden          = "FORBIDDEN"
+	ErrTypeNotFound           = "NOT_FOUND"
+	ErrTypeConflict           = "CONFLICT"
+	ErrTypeTimeout            = "TIMEOUT"
+	ErrTypeInternalError      = "INTERNAL_ERROR"
 	ErrTypeServiceUnavailable = "SERVICE_UNAVAILABLE"
 )
 

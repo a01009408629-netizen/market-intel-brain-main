@@ -213,9 +213,9 @@ jobs:
           ~/.cargo/registry/
           ~/.cargo/git/
           ~/go/pkg/mod/
-          market-intel-brain-main/microservices/rust-services/core-engine/target/
-          market-intel-brain-main/microservices/go-services/api-gateway/vendor/
-        key: v2-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          market-intel-brain-main/microservices/rust-services/core-engine/Cargo.lock
+          market-intel-brain-main/microservices/go-services/api-gateway/go.sum
+        key: v2-${{ runner.os }}-go-${{ hashFiles('market-intel-brain-main/microservices/go-services/api-gateway/go.sum') }}-${{ hashFiles('market-intel-brain-main/microservices/rust-services/core-engine/Cargo.lock') }}
         restore-keys: |
           ${{ runner.os }}-cache-
 
