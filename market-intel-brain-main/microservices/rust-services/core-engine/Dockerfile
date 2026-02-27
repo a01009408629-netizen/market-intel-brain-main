@@ -1,64 +1,47 @@
 # Multi-stage build for Rust Core Engine
-FROM rust:1.89-slim as builder
+FROM rust:1.88-slim-bookworm as builder
 
-# Install build dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
+    libsasl2-dev \
     pkg-config \
     libssl-dev \
-    libpq-dev \
     protobuf-compiler \
-    libsasl2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy source code
-COPY . .
-COPY ../../../microservices/proto ./proto
+# Copy Cargo files
+COPY Cargo.toml Cargo.lock ./
 
-# Generate gRPC code
-RUN cargo build --release
+# Create dummy main.rs to cache dependencies
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+
+# Build dependencies
+RUN cargo build --release && rm -rf src
+
+# Copy source code
+COPY src ./src
+
+# Build the application
+RUN touch src/main.rs && cargo build --release
 
 # Runtime stage
 FROM debian:bookworm-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
-    libssl3 \
-    libpq5 \
+    libsasl2-2 \
     ca-certificates \
-    libsasl2-3 \
     && rm -rf /var/lib/apt/lists/*
-
-# Create app user
-RUN useradd -r -s /bin/false coreengine
 
 WORKDIR /app
 
-# Copy binary from builder stage
-COPY --from=builder /app/target/release/core-engine /usr/local/bin/core-engine
+# Copy binary from builder
+COPY --from=builder /app/target/release/market-intel-core-engine /usr/local/bin/
 
-# Copy configuration files
-COPY --from=builder /app/config ./config
-
-# Set permissions
-RUN chown -R coreengine:coreengine /app
-RUN chmod +x /usr/local/bin/core-engine
-
-# Switch to non-root user
-USER coreengine
-
-# Expose gRPC port
+# Expose port
 EXPOSE 50052
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD ["/bin/sh", "-c", "grpc_health_probe -addr=:50052 || exit 1"]
-
-# Set environment variables
-ENV RUST_LOG=info
-ENV NUM_PROCESSORS=4
-ENV BUFFER_SIZE=1048576
-
-# Run application
-CMD ["core-engine"]
+# Run the application
+CMD ["market-intel-core-engine"]

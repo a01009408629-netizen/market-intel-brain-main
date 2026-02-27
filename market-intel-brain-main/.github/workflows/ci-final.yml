@@ -35,7 +35,7 @@ jobs:
       - name: 📦 Install Protocol Buffer Compiler
         run: |
           sudo apt-get update
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler libsasl2-dev
+          sudo apt-get update && sudo apt-get install -y libsasl2-dev pkg-config libssl-dev protobuf-compiler
 
       - name: 📦 Install Go Protobuf Plugins
         run: |
@@ -149,7 +149,7 @@ jobs:
       - name: 📦 Install Protocol Buffer Compiler
         run: |
           sudo apt-get update
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler libsasl2-dev
+          sudo apt-get update && sudo apt-get install -y libsasl2-dev pkg-config libssl-dev protobuf-compiler
 
       - name: 📦 Install Go Protobuf Plugins
         run: |
@@ -235,7 +235,7 @@ jobs:
       - name: 📦 Install Protocol Buffer Compiler
         run: |
           sudo apt-get update
-          sudo apt-get update && sudo apt-get install -y protobuf-compiler libsasl2-dev
+          sudo apt-get update && sudo apt-get install -y libsasl2-dev pkg-config libssl-dev protobuf-compiler
 
       - name: 📦 Install Go Protobuf Plugins
         run: |
