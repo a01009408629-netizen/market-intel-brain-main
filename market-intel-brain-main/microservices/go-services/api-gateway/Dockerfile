@@ -38,7 +38,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Copy source code including generated pb files
 COPY . .
 
-# Build the application with stripped debug info to reduce binary size
+# Build application with stripped debug info to reduce binary size
 RUN --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -a -installsuffix cgo -o api-gateway ./cmd/api-gateway
 
@@ -80,5 +80,5 @@ ENV GIN_MODE=release \
     PORT=8080 \
     GRPC_PORT=8081
 
-# Run the application
+# Run application
 CMD ["api-gateway"]

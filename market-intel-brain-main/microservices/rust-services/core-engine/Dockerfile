@@ -1,5 +1,5 @@
 # Multi-stage build for Rust Core Engine
-FROM rust:1.85-slim as builder
+FROM rust:1.89-slim as builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     libpq-dev \
     protobuf-compiler \
+    libsasl2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -26,6 +27,7 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     libpq5 \
     ca-certificates \
+    libsasl2-3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app user
@@ -58,5 +60,5 @@ ENV RUST_LOG=info
 ENV NUM_PROCESSORS=4
 ENV BUFFER_SIZE=1048576
 
-# Run the application
+# Run application
 CMD ["core-engine"]
