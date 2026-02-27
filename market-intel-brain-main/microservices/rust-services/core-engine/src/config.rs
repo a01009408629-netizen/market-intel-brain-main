@@ -158,7 +158,6 @@ impl CoreEngineConfig {
         
         let server = ServerConfig::from_env()?;
         let database = database::DatabaseConfig::from_env()?;
-        let redis = redis::RedisConfig::from_env()?;
         let kafka = kafka::KafkaConfig::from_env()?;
         let tls = tls::TlsConfig::from_env()?;
         let tracing = tracing::TracingConfig::from_env()?;
@@ -199,7 +198,6 @@ impl CoreEngineConfig {
     pub fn validate(&self) -> Result<(), ConfigError> {
         self.server.validate()?;
         self.database.validate()?;
-        self.redis.validate()?;
         self.kafka.validate()?;
         self.tls.validate()?;
         self.tracing.validate()?;

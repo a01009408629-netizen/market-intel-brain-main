@@ -23,7 +23,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: 📦 Install cargo-audit
-        run: cargo install cargo-audit
+        run: cargo install cargo-audit --locked
 
       - name: 🐹 Setup Go 1.21
         uses: actions/setup-go@v4
@@ -35,7 +35,7 @@ jobs:
       - name: 📦 Install Protocol Buffer Compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler libsasl2-dev
 
       - name: 📦 Install Go Protobuf Plugins
         run: |
@@ -149,7 +149,7 @@ jobs:
       - name: 📦 Install Protocol Buffer Compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler libsasl2-dev
 
       - name: 📦 Install Go Protobuf Plugins
         run: |
@@ -235,7 +235,7 @@ jobs:
       - name: 📦 Install Protocol Buffer Compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler libsasl2-dev
 
       - name: 📦 Install Go Protobuf Plugins
         run: |
@@ -332,7 +332,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: 📦 Install cargo-audit
-        run: cargo install cargo-audit
+        run: cargo install cargo-audit --locked
 
       - name: 🔍 Rust Security Audit
         working-directory: ./microservices/rust-services
