@@ -7,8 +7,8 @@ import (
 	"time"
 	"errors"
 	"strings"
-	"net/url"
-	"regexp"
+
+
 )
 
 // ConfigError represents a configuration error

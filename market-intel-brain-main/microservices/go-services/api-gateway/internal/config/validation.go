@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
+
 )
 
 // Validation methods for each configuration struct

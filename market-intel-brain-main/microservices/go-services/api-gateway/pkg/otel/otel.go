@@ -2,7 +2,7 @@ package otel
 
 import (
 	"context"
-	"fmt"
+
 	"log"
 )
 

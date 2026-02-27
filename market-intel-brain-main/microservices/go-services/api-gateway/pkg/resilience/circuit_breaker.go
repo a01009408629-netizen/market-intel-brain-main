@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/market-intel/api-gateway/pkg/logger"
-	"google.golang.org/grpc"
+
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+
 )
 
 // Circuit breaker states
