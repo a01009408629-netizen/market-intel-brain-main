@@ -58,6 +58,21 @@ func LoadTLSConfig(certFile, keyFile, caFile, serverName string, skipVerify bool
 	return config, nil
 }
 
+// NewTLSConfigFromEnv creates TLS configuration from environment variables
+func NewTLSConfigFromEnv() (*TLSConfig, error) {
+	certFile := os.Getenv("TLS_CERT_FILE")
+	keyFile := os.Getenv("TLS_KEY_FILE")
+	caFile := os.Getenv("TLS_CA_FILE")
+	serverName := os.Getenv("TLS_SERVER_NAME")
+	skipVerify := os.Getenv("TLS_SKIP_VERIFY") == "true"
+
+	if certFile == "" || keyFile == "" {
+		return nil, fmt.Errorf("TLS_CERT_FILE and TLS_KEY_FILE environment variables are required")
+	}
+
+	return LoadTLSConfig(certFile, keyFile, caFile, serverName, skipVerify)
+}
+
 // CreateTLSClientConfig creates TLS client configuration
 func (config *TLSConfig) CreateTLSClientConfig() (*tls.Config, error) {
 	tlsConfig := &tls.Config{

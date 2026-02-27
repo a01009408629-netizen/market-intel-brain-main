@@ -1,0 +1,363 @@
+name: High-Efficiency CI with Auto-Fix
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # ===== AUTO-FIX AND VALIDATION =====
+  auto-fix:
+    name: 🔧 Auto-Fix & Validate
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🦀 Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+          components: rustfmt, clippy
+
+      - name: 📦 Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: 🐹 Setup Go 1.21
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+          cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
+
+      - name: 📦 Install Protocol Buffer Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: 📦 Install Go Protobuf Plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: 🔧 Generate Protocol Buffers
+        run: |
+          echo "🔧 Generating protocol buffers..."
+          
+          # Generate from microservices/proto
+          mkdir -p microservices/go-services/api-gateway/pb
+          protoc --go_out=. --go-grpc_out=. --go_opt=paths=source_relative \
+            microservices/proto/*.proto \
+            microservices/proto/versions/v1/*.proto
+          
+          # Move generated files to pb directory if needed
+          find . -name "*.pb.go" -not -path "./pb/*" -exec mv {} ./pb/ \;
+          find . -name "*_grpc.pb.go" -not -path "./pb/*" -exec mv {} ./pb/ \;
+          
+          echo "✅ Protocol buffers generated"
+
+      - name: 📦 Install golangci-lint
+        run: |
+          echo "📦 Installing golangci-lint..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2
+          echo "✅ golangci-lint installed"
+          echo "🔍 Adding to PATH..."
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: 🔧 Execute go mod tidy
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔧 Running go mod tidy..."
+          go mod tidy
+          echo "✅ go mod tidy completed"
+
+      - name: 🔧 Execute go mod vendor
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔧 Running go mod vendor..."
+          go mod vendor
+          echo "✅ go mod vendor completed"
+
+      - name: 🔍 Verify Vendor Sync
+        working-directory: ./microservices/go-services/api-gateway
+        run: |
+          echo "🔍 Verifying vendor sync..."
+          if [ ! -d "vendor" ]; then
+            echo "❌ Vendor directory not found"
+            exit 1
+          fi
+          if [ ! -f "vendor/modules.txt" ]; then
+            echo "❌ vendor/modules.txt not found"
+            exit 1
+          fi
+          echo "✅ Vendor sync verification passed"
+
+      - name: 🔧 Run golangci-lint with --fix
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔧 Running golangci-lint with --fix..."
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          golangci-lint run --fix ./...
+          echo "✅ golangci-lint --fix completed"
+
+      - name: 📤 Auto-Commit Fixes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: automated fix [skip ci]"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          file_pattern: |
+            microservices/go-services/api-gateway/go.mod
+            microservices/go-services/api-gateway/go.sum
+            microservices/go-services/api-gateway/vendor/
+            microservices/go-services/api-gateway/**/*.go
+            microservices/go-services/api-gateway/pb/
+          skip_dirty_check: false
+          skip_fetch: false
+          commit_options: "--no-verify --signoff"
+
+  # ===== BUILD AND TEST =====
+  build-test:
+    name: 🏗️ Build & Test
+    runs-on: ubuntu-latest
+    needs: auto-fix
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🦀 Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+          components: rustfmt, clippy
+
+      - name: 🐹 Setup Go 1.21
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: 📦 Install Protocol Buffer Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: 📦 Install Go Protobuf Plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: 🔧 Generate Protocol Buffers
+        run: |
+          echo "🔧 Generating protocol buffers..."
+          
+          # Generate from microservices/proto
+          mkdir -p microservices/go-services/api-gateway/pb
+          protoc --go_out=. --go-grpc_out=. --go_opt=paths=source_relative \
+            microservices/proto/*.proto \
+            microservices/proto/versions/v1/*.proto
+          
+          # Move generated files to pb directory if needed
+          find . -name "*.pb.go" -not -path "./pb/*" -exec mv {} ./pb/ \;
+          find . -name "*_grpc.pb.go" -not -path "./pb/*" -exec mv {} ./pb/ \;
+          
+          echo "✅ Protocol buffers generated"
+
+      - name: 🔍 Validate Linting (No Fixes)
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Validating linting (no fixes allowed)..."
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          golangci-lint run --timeout=10m ./...
+          echo "✅ Linting validation passed"
+
+      - name: 🏗️ Build Service
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🏗️ Building service..."
+          go build -o bin/api-gateway ./cmd/api-gateway/main.go
+          echo "✅ Build completed successfully"
+
+      - name: 🧪 Run Tests
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🧪 Running tests..."
+          go test -v -race -coverprofile=coverage.out ./...
+          echo "✅ Tests completed successfully"
+
+      - name: 📊 Upload Coverage
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          file: ./coverage.out
+          flags: unittests
+          name: codecov-umbrella
+
+  # ===== LOGIC VALIDATION =====
+  logic-validation:
+    name: 🔍 Logic Validation
+    runs-on: ubuntu-latest
+    needs: auto-fix
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🦀 Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+          components: rustfmt, clippy
+
+      - name: 🐹 Setup Go 1.21
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+          cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
+
+      - name: 📦 Install Protocol Buffer Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: 📦 Install Go Protobuf Plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: 🔧 Generate Protocol Buffers
+        run: |
+          echo "🔧 Generating protocol buffers..."
+          
+          # Generate from microservices/proto
+          mkdir -p microservices/go-services/api-gateway/pb
+          protoc --go_out=. --go-grpc_out=. --go_opt=paths=source_relative \
+            microservices/proto/*.proto \
+            microservices/proto/versions/v1/*.proto
+          
+          # Move generated files to pb directory if needed
+          find . -name "*.pb.go" -not -path "./pb/*" -exec mv {} ./pb/ \;
+          find . -name "*_grpc.pb.go" -not -path "./pb/*" -exec mv {} ./pb/ \;
+          
+          echo "✅ Protocol buffers generated"
+
+      - name: 🔍 Validate Go Module Structure
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Validating Go module structure..."
+          
+          # Check if go.mod exists and is valid
+          if [ ! -f "go.mod" ]; then
+            echo "❌ go.mod file not found"
+            exit 1
+          fi
+          
+          # Check if vendor directory exists
+          if [ ! -d "vendor" ]; then
+            echo "❌ vendor directory not found"
+            exit 1
+          fi
+          
+          # Validate go.mod syntax
+          if ! go mod verify; then
+            echo "❌ go.mod verification failed"
+            exit 1
+          fi
+          
+          echo "✅ Go module structure validation passed"
+
+      - name: 🔍 Validate Import Paths
+        working-directory: ./microservices/go-services/api-gateway
+        run: |
+          echo "🔍 Validating import paths..."
+          
+          # Check for invalid import paths
+          if grep -r "go.opentelemetry.io/otel/semconv/v1.24.0" .; then
+            echo "❌ Invalid OpenTelemetry semconv import path found"
+            exit 1
+          fi
+          
+          echo "✅ Import paths validation passed"
+
+      - name: 🔍 Validate Build Dependencies
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Validating build dependencies..."
+          
+          # Try to build without errors
+          if ! go build -o /tmp/test-build ./cmd/api-gateway/main.go; then
+            echo "❌ Build validation failed - unfixable logic error"
+            exit 1
+          fi
+          
+          echo "✅ Build dependencies validation passed"
+
+  # ===== SECURITY SCAN =====
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    needs: auto-fix
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🦀 Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+          components: rustfmt, clippy
+
+      - name: 📦 Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: 🔍 Rust Security Audit
+        working-directory: ./microservices/rust-services
+        run: cargo audit
+
+      - name: 🐹 Setup Go 1.21
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Setup Git Auth
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Run Security Scan
+        working-directory: ./microservices/go-services/api-gateway
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          ./bin/gosec ./...
+
+      - name: 📤 Upload Security Report
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: ./microservices/go-services/api-gateway/gosec-report.sarif

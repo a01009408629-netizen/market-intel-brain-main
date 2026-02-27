@@ -23,7 +23,7 @@ type CoreEngineClient struct {
 
 func NewCoreEngineClient(address string) (*CoreEngineClient, error) {
 	// Load TLS configuration
-	tlsConfig := tls.NewTLSConfigFromEnv()
+	tlsConfig, err := tls.NewTLSConfigFromEnv()()
 	
 	// Validate TLS configuration
 	if err := tlsConfig.Validate(); err != nil {
@@ -330,3 +330,4 @@ func (c *CoreEngineClient) ConnectDataSource(ctx context.Context, req *pb.Connec
 	logger.Infof("Data source connected successfully")
 	return response, nil
 }
+"github.com/market-intel/api-gateway/pb
