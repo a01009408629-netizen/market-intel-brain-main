@@ -102,10 +102,10 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 		router.GET("/debug/pprof/profile", gin.WrapF(pprof.Profile))
 		router.GET("/debug/pprof/symbol", gin.WrapF(pprof.Symbol))
 		router.GET("/debug/pprof/trace", gin.WrapF(pprof.Trace))
-		router.GET("/debug/pprof/goroutine", gin.WrapF(pprof.Handler("goroutine")))
-		router.GET("/debug/pprof/heap", gin.WrapF(pprof.Handler("heap")))
-		router.GET("/debug/pprof/threadcreate", gin.WrapF(pprof.Handler("threadcreate")))
-		router.GET("/debug/pprof/block", gin.WrapF(pprof.Handler("block")))
+		router.GET("/debug/pprof/goroutine", gin.WrapF(pprof.Handler("goroutine").ServeHTTP))
+		router.GET("/debug/pprof/heap", gin.WrapF(pprof.Handler("heap").ServeHTTP))
+		router.GET("/debug/pprof/threadcreate", gin.WrapF(pprof.Handler("threadcreate").ServeHTTP))
+		router.GET("/debug/pprof/block", gin.WrapF(pprof.Handler("block").ServeHTTP))
 	}
 
 	return router

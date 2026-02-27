@@ -28,7 +28,7 @@ func NewDataIngestionHandler(config *config.Config, coreEngineClient services.Co
 		coreEngineClient: coreEngineClient,
 		upgrader: &websocket.Upgrader{
 			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
+			WriteBufferSize:  1024,
 		},
 	}
 }
@@ -142,7 +142,7 @@ func (h *DataIngestionHandler) FetchMarketData(c *gin.Context) {
 
 	if err != nil {
 		logger.Errorf("Failed to fetch market data: %v", err)
-		c.JSON(http.StatusInternalServerError, FetchMarketDataResponse{
+		c.JSON(h.mapResponseStatus(err), FetchMarketDataResponse{
 			Success: false,
 			Message: "Failed to fetch market data",
 		})
@@ -185,7 +185,7 @@ func (h *DataIngestionHandler) FetchNewsData(c *gin.Context) {
 
 	if err != nil {
 		logger.Errorf("Failed to fetch news data: %v", err)
-		c.JSON(http.StatusInternalServerError, FetchNewsDataResponse{
+		c.JSON(h.mapResponseStatus(err), FetchNewsDataResponse{
 			Success: false,
 			Message: "Failed to fetch news data",
 		})
@@ -228,7 +228,7 @@ func (h *DataIngestionHandler) ConnectDataSource(c *gin.Context) {
 
 	if err != nil {
 		logger.Errorf("Failed to connect data source: %v", err)
-		c.JSON(http.StatusInternalServerError, ConnectDataSourceResponse{
+		c.JSON(h.mapResponseStatus(err), ConnectDataSourceResponse{
 			Success: false,
 			Message: "Failed to connect data source",
 		})
@@ -255,7 +255,7 @@ func (h *DataIngestionHandler) HealthCheck(c *gin.Context) {
 	err := h.coreEngineClient.HealthCheck(c.Request.Context(), serviceName)
 	if err != nil {
 		logger.Errorf("Health check failed: %v", err)
-		c.JSON(http.StatusServiceUnavailable, HealthCheckResponse{
+		c.JSON(h.mapResponseStatus(err), HealthCheckResponse{
 			Success: false,
 			Message: "Health check failed",
 		})
@@ -296,7 +296,7 @@ func (h *DataIngestionHandler) GetMarketDataBuffer(c *gin.Context) {
 
 	if err != nil {
 		logger.Errorf("Failed to get market data buffer: %v", err)
-		c.JSON(http.StatusInternalServerError, GetMarketDataBufferResponse{
+		c.JSON(h.mapResponseStatus(err), GetMarketDataBufferResponse{
 			Success: false,
 			Message: "Failed to get market data buffer",
 		})
@@ -337,7 +337,7 @@ func (h *DataIngestionHandler) GetNewsBuffer(c *gin.Context) {
 
 	if err != nil {
 		logger.Errorf("Failed to get news buffer: %v", err)
-		c.JSON(http.StatusInternalServerError, GetNewsBufferResponse{
+		c.JSON(h.mapResponseStatus(err), GetNewsBufferResponse{
 			Success: false,
 			Message: "Failed to get news buffer",
 		})
@@ -378,7 +378,7 @@ func (h *DataIngestionHandler) GetIngestionStats(c *gin.Context) {
 
 	if err != nil {
 		logger.Errorf("Failed to get ingestion stats: %v", err)
-		c.JSON(http.StatusInternalServerError, GetIngestionStatsResponse{
+		c.JSON(h.mapResponseStatus(err), GetIngestionStatsResponse{
 			Success: false,
 			Message: "Failed to get ingestion stats",
 		})

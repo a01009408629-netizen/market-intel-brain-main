@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -49,20 +48,16 @@ func main() {
 	logger.Info("Starting Market Intel Brain API Gateway")
 
 	// Load configuration
-	config, err := config.Load(*configFile)
+	cfg, err := config.Load(*configFile)
 	if err != nil {
 		logger.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	logger.WithFields(map[string]interface{}{
-		"version":     Version,
-		"environment": config.Environment,
-		"http_port":   config.HTTPPort,
-		"grpc_port":   config.GRPCPort,
-	}).Info("Starting Market Intel Brain API Gateway")
+	logger.Info(fmt.Sprintf("Starting Market Intel Brain API Gateway - Version: %s, Environment: %s, HTTP Port: %d, gRPC Port: %d", 
+		Version, cfg.Environment, cfg.Server.HTTPPort, cfg.Server.GRPCPort))
 
 	// Create core engine client
-	coreEngineClient, err := services.NewCoreEngineClient(config.CoreEngineURL)
+	coreEngineClient, err := services.NewCoreEngineClient(cfg.Services.CoreEngine)
 	if err != nil {
 		logger.Errorf("Failed to create Core Engine client: %v", err)
 		// Continue without Core Engine connection for now
@@ -72,21 +67,21 @@ func main() {
 	}
 
 	// Create HTTP server
-	httpServer := server.NewHTTPServer(config, coreEngineClient)
+	httpServer := server.NewHTTPServer(cfg, coreEngineClient)
 
 	// Create gRPC server
-	grpcServer := server.NewGRPCServer(config)
+	grpcServer := server.NewGRPCServer(cfg)
 
 	// Start servers in goroutines
 	go func() {
-		logger.Infof("Starting HTTP server on port %d", config.HTTPPort)
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		logger.Infof("Starting HTTP server on port %d", cfg.Server.HTTPPort)
+		if err := httpServer.Start(fmt.Sprintf(":%d", cfg.Server.HTTPPort)); err != nil && err != http.ErrServerClosed {
 			logger.Fatalf("HTTP server failed to start: %v", err)
 		}
 	}()
 
 	go func() {
-		logger.Infof("Starting gRPC server on port %d", config.GRPCPort)
+		logger.Infof("Starting gRPC server on port %d", cfg.Server.GRPCPort)
 		if err := grpcServer.Start(); err != nil {
 			logger.Errorf("gRPC server failed to start: %v", err)
 		}
@@ -105,7 +100,7 @@ func main() {
 	defer cancel()
 
 	// Shutdown HTTP server
-	if err := httpServer.Shutdown(); err != nil {
+	if err := httpServer.Shutdown(ctx); err != nil {
 		logger.Errorf("HTTP server shutdown error: %v", err)
 	}
 
