@@ -12,7 +12,7 @@ use thiserror::Error;
 use tracing::{info, warn, error};
 
 pub mod database;
-pub mod redis;
+
 pub mod kafka;
 pub mod tls;
 pub mod tracing;
@@ -43,7 +43,7 @@ pub enum ConfigError {
 pub struct CoreEngineConfig {
     pub server: ServerConfig,
     pub database: database::DatabaseConfig,
-    pub redis: redis::RedisConfig,
+
     pub kafka: kafka::KafkaConfig,
     pub tls: tls::TlsConfig,
     pub tracing: tracing::TracingConfig,
@@ -169,7 +169,7 @@ impl CoreEngineConfig {
         let config = Self {
             server,
             database,
-            redis,
+
             kafka,
             tls,
             tracing,
@@ -218,13 +218,13 @@ impl CoreEngineConfig {
     /// Get configuration summary for logging
     pub fn summary(&self) -> String {
         format!(
-            "CoreEngineConfig {{ server: {}:{}, grpc: {}:{}, database: {}, redis: {}, kafka: {}, tls: {} }}",
+            "CoreEngineConfig {{ server: {}:{}, grpc: {}:{}, database: {}, kafka: {}, tls: {} }}",
             self.server.host,
             self.server.port,
             self.server.host,
             self.server.grpc_port,
             self.database.host,
-            self.redis.host,
+
             self.kafka.bootstrap_servers,
             self.tls.enabled
         )
