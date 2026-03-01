@@ -138,7 +138,7 @@ jobs:
           echo "✅ Tests completed successfully"
 
       - name: 📊 Upload Coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         if: always()
         with:
           file: ./microservices/go-services/api-gateway/coverage.out
@@ -238,7 +238,7 @@ jobs:
           ./bin/gosec ./...
 
       - name: 📤 Upload Security Report
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: ./microservices/go-services/api-gateway/gosec-report.sarif

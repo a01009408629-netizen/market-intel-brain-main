@@ -15,6 +15,10 @@ ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
 FINNHUB_API_KEY=your_finnhub_key
 NEWS_API_KEY=your_news_api_key
 
+# AI/LLM Configuration
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_MODEL=qwen/qwen-2.5-72b-instruct
+
 # Security
 SECRETS_MASTER_KEY=your_encryption_key
 JWT_SECRET_KEY=your_jwt_secret
