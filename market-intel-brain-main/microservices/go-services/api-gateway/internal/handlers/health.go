@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/config"
 	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/services"
 	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/logger"
+	"github.com/gin-gonic/gin"
 )
 
 type HealthHandler struct {
@@ -75,7 +75,7 @@ func (h *HealthHandler) Health(c *gin.Context) {
 // Ping handles simple ping request
 func (h *HealthHandler) Ping(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"message": "pong",
+		"message":   "pong",
 		"timestamp": time.Now(),
 	})
 }
@@ -96,7 +96,7 @@ func (h *HealthHandler) PingCoreEngine(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Core Engine is responsive",
+		"message":   "Core Engine is responsive",
 		"timestamp": time.Now(),
 	})
 }

@@ -6,12 +6,12 @@ import (
 	"net/http/pprof"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/config"
 	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/handlers"
 	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/services"
 	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/logger"
 	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/otel"
+	"github.com/gin-gonic/gin"
 )
 
 type HTTPServer struct {
@@ -113,8 +113,8 @@ func (s *HTTPServer) SetupRoutes() *gin.Engine {
 
 func (s *HTTPServer) Start(addr string) error {
 	s.server = &http.Server{
-		Addr:    addr,
-		Handler:  s.SetupRoutes(),
+		Addr:         addr,
+		Handler:      s.SetupRoutes(),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

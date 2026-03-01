@@ -10,8 +10,8 @@ import (
 
 	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/config"
 	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/services"
-	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/logger"
 	pb "github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pb"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/logger"
 )
 
 // DataIngestionHandler handles data ingestion endpoints
@@ -28,7 +28,7 @@ func NewDataIngestionHandler(config *config.Config, coreEngineClient services.Co
 		coreEngineClient: coreEngineClient,
 		upgrader: &websocket.Upgrader{
 			ReadBufferSize:  1024,
-			WriteBufferSize:  1024,
+			WriteBufferSize: 1024,
 		},
 	}
 }
@@ -41,9 +41,9 @@ type FetchMarketDataRequest struct {
 
 // FetchMarketDataResponse represents a response for market data
 type FetchMarketDataResponse struct {
-	Success    bool                   `json:"success"`
-	Message    string                 `json:"message"`
-	MarketData []pb.MarketData        `json:"market_data,omitempty"`
+	Success    bool            `json:"success"`
+	Message    string          `json:"message"`
+	MarketData []pb.MarketData `json:"market_data,omitempty"`
 }
 
 // FetchNewsDataRequest represents a request for fetching news data
@@ -54,9 +54,9 @@ type FetchNewsDataRequest struct {
 
 // FetchNewsDataResponse represents a response for news data
 type FetchNewsDataResponse struct {
-	Success  bool           `json:"success"`
-	Message  string         `json:"message"`
-	NewsData []pb.NewsData   `json:"news_data,omitempty"`
+	Success  bool          `json:"success"`
+	Message  string        `json:"message"`
+	NewsData []pb.NewsData `json:"news_data,omitempty"`
 }
 
 // HealthCheckResponse represents a response for health check
@@ -68,7 +68,7 @@ type HealthCheckResponse struct {
 // ConnectDataSourceRequest represents a request for connecting data source
 type ConnectDataSourceRequest struct {
 	SourceID string                 `json:"source_id"`
-	Config   map[string]interface{}   `json:"config"`
+	Config   map[string]interface{} `json:"config"`
 }
 
 // ConnectDataSourceResponse represents a response for connecting data source
@@ -84,9 +84,9 @@ type GetMarketDataBufferRequest struct {
 
 // GetMarketDataBufferResponse represents a response for market data buffer
 type GetMarketDataBufferResponse struct {
-	Success    bool                   `json:"success"`
-	Message    string                 `json:"message"`
-	MarketData []pb.MarketData        `json:"market_data,omitempty"`
+	Success    bool            `json:"success"`
+	Message    string          `json:"message"`
+	MarketData []pb.MarketData `json:"market_data,omitempty"`
 }
 
 // GetNewsBufferRequest represents a request for getting news buffer
@@ -96,9 +96,9 @@ type GetNewsBufferRequest struct {
 
 // GetNewsBufferResponse represents a response for news buffer
 type GetNewsBufferResponse struct {
-	Success  bool           `json:"success"`
-	Message  string         `json:"message"`
-	NewsData []pb.NewsData   `json:"news_data,omitempty"`
+	Success  bool          `json:"success"`
+	Message  string        `json:"message"`
+	NewsData []pb.NewsData `json:"news_data,omitempty"`
 }
 
 // GetIngestionStatsRequest represents a request for getting ingestion stats
@@ -412,7 +412,7 @@ func (h *DataIngestionHandler) HandleWebSocket(c *gin.Context) {
 
 		if messageType == websocket.TextMessage {
 			logger.Infof("Received WebSocket message: %s", string(p))
-			
+
 			// Echo back the message for now
 			if err := conn.WriteMessage(messageType, p); err != nil {
 				logger.Errorf("Failed to write WebSocket message: %v", err)
@@ -442,7 +442,7 @@ func (h *DataIngestionHandler) WebSocketMarketData(c *gin.Context) {
 
 		if messageType == websocket.TextMessage {
 			logger.Infof("Received market data WebSocket message: %s", string(p))
-			
+
 			// Echo back the message for now
 			if err := conn.WriteMessage(messageType, p); err != nil {
 				logger.Errorf("Failed to write WebSocket message: %v", err)

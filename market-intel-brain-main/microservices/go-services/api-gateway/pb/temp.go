@@ -11,11 +11,11 @@ type MarketData struct {
 }
 
 type NewsData struct {
-	ID          string  `json:"id"`
-	Title       string  `json:"title"`
-	Content     string  `json:"content"`
-	Source      string  `json:"source"`
-	Timestamp   int64   `json:"timestamp"`
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	Source    string `json:"source"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 type FetchMarketDataRequest struct {
@@ -24,8 +24,8 @@ type FetchMarketDataRequest struct {
 }
 
 type FetchMarketDataResponse struct {
-	Success    bool        `json:"success"`
-	Message    string      `json:"message"`
+	Success    bool         `json:"success"`
+	Message    string       `json:"message"`
 	MarketData []MarketData `json:"market_data,omitempty"`
 }
 
@@ -35,8 +35,8 @@ type FetchNewsDataRequest struct {
 }
 
 type FetchNewsDataResponse struct {
-	Success  bool      `json:"success"`
-	Message  string    `json:"message"`
+	Success  bool       `json:"success"`
+	Message  string     `json:"message"`
 	NewsData []NewsData `json:"news_data,omitempty"`
 }
 
@@ -58,7 +58,7 @@ type Empty struct {
 }
 
 type ConnectDataSourceRequest struct {
-	SourceID string `json:"source_id"`
+	SourceID string                 `json:"source_id"`
 	Config   map[string]interface{} `json:"config"`
 }
 
@@ -72,8 +72,8 @@ type GetMarketDataBufferRequest struct {
 }
 
 type GetMarketDataBufferResponse struct {
-	Success    bool        `json:"success"`
-	Message    string      `json:"message"`
+	Success    bool         `json:"success"`
+	Message    string       `json:"message"`
 	MarketData []MarketData `json:"market_data,omitempty"`
 }
 
@@ -82,8 +82,8 @@ type GetNewsBufferRequest struct {
 }
 
 type GetNewsBufferResponse struct {
-	Success  bool      `json:"success"`
-	Message  string    `json:"message"`
+	Success  bool       `json:"success"`
+	Message  string     `json:"message"`
 	NewsData []NewsData `json:"news_data,omitempty"`
 }
 
@@ -92,7 +92,7 @@ type GetIngestionStatsRequest struct {
 }
 
 type GetIngestionStatsResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
+	Success bool                   `json:"success"`
+	Message string                 `json:"message"`
 	Stats   map[string]interface{} `json:"stats"`
 }
