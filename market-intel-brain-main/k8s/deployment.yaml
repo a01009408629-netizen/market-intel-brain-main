@@ -27,7 +27,7 @@ spec:
       - name: api-server
         image: ghcr.io/a01009408629-netizen/market-intel-brain-main:latest
         ports:
-        - containerPort: 8000
+        - containerPort: 8080
         env:
         - name: REDIS_URL
           valueFrom:
@@ -51,13 +51,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: 8000
+          port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /ready
-            port: 8000
+          port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
 ---
@@ -74,7 +74,7 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 8000
+      targetPort: 8080
   type: ClusterIP
 ---
 apiVersion: networking.k8s.io/v1

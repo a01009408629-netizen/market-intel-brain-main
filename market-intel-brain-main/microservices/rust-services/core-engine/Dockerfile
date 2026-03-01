@@ -1,5 +1,5 @@
 # Multi-stage build for Rust Core Engine
-FROM rust:1.88-slim-bookworm as builder
+FROM rust:1.75-slim-bookworm as builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \

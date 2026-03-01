@@ -1,6 +1,6 @@
-module github.com/market-intel/api-gateway
+module github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway
 
-go 1.21
+go 1.22
 
 require (
 	github.com/gin-gonic/gin v1.9.1
