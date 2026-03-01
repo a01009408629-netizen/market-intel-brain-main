@@ -3,8 +3,8 @@ package server
 import (
 	"net"
 
-	"github.com/market-intel/api-gateway/internal/config"
-	"github.com/market-intel/api-gateway/pkg/logger"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/config"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/logger"
 )
 
 type GRPCServer struct {

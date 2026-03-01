@@ -8,10 +8,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/market-intel/api-gateway/internal/config"
-	"github.com/market-intel/api-gateway/internal/services"
-	"github.com/market-intel/api-gateway/pkg/logger"
-	pb "github.com/market-intel/api-gateway/pb"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/config"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/services"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/logger"
+	pb "github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pb"
 )
 
 // DataIngestionHandler handles data ingestion endpoints

@@ -11,11 +11,11 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/keepalive"
 
-	"github.com/market-intel/api-gateway/pkg/logger"
-	"github.com/market-intel/api-gateway/pkg/otel"
-	"github.com/market-intel/api-gateway/pkg/resilience"
-	"github.com/market-intel/api-gateway/pkg/tls"
-	pb "github.com/market-intel/api-gateway/pb"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/logger"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/otel"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/resilience"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/tls"
+	pb "github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pb"
 )
 
 // CoreEngineClient represents a client for Core Engine service

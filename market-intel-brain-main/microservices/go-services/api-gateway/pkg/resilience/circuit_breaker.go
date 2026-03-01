@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/market-intel/api-gateway/pkg/logger"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/logger"
 
 	"google.golang.org/grpc/codes"
 )

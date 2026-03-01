@@ -44,7 +44,7 @@ linters-settings:
     line-length: 120
 
   goimports:
-    local-prefixes: github.com/market-intel/api-gateway
+    local-prefixes: github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway
 
   gocritic:
     enabled-tags:
@@ -80,7 +80,7 @@ linters-settings:
   gomoddirectives:
     replace-local: true
     replace-local-list:
-      - github.com/market-intel/api-gateway
+      - github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway
     allow-unused: true
 
   godox:

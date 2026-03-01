@@ -412,3 +412,5 @@ mod tests {
         assert_eq!(parse_optional_env_var::<u32>("TEST_OPTIONAL").unwrap(), None);
     }
 }
+
+pub mod kafka;

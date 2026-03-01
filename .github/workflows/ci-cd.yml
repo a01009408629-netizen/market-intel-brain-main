@@ -65,6 +65,11 @@ jobs:
         cargo fetch
         cargo generate-lockfile || echo "Lockfile exists"
 
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y libsasl2-dev libssl-dev pkg-config build-essential
+
     - name: 📦 Install Go Dependencies
       run: |
         cd market-intel-brain-main/microservices/go-services/api-gateway
@@ -88,12 +93,12 @@ jobs:
         cd ../../go-services/api-gateway
         echo "=== Go Quality Checks ==="
         go fmt -mod=vendor ./... || echo "Go formatting issues found"
-        go vet -mod=vendor ./... || echo "Go vet issues found"
+        go vet ./... || echo "Go vet issues found"
         go test -race -buildvcs=false -mod=vendor ./... || echo "Go tests completed with issues"
         
         # Security scanning
-        go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
-        gosec -fmt json -out gosec-report.json -mod=vendor ./... || echo "Go security issues found"
+        curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b /usr/local/bin v2.21.4
+        gosec -fmt json -out gosec-report.json ./... || echo "Go security issues found"
         
         # Set output
         echo "passed=true" >> $GITHUB_OUTPUT

@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/market-intel/api-gateway/internal/config"
-	"github.com/market-intel/api-gateway/internal/server"
-	"github.com/market-intel/api-gateway/internal/services"
-	"github.com/market-intel/api-gateway/pkg/logger"
-	"github.com/market-intel/api-gateway/pkg/otel"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/config"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/server"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/services"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/logger"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/otel"
 )
 
 var (
@@ -53,7 +53,7 @@ func main() {
 		logger.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	logger.Info(fmt.Sprintf("Starting Market Intel Brain API Gateway - Version: %s, Environment: %s, HTTP Port: %d, gRPC Port: %d", 
+	logger.Info(fmt.Sprintf("Starting Market Intel Brain API Gateway - Version: %s, Environment: %s, HTTP Port: %d, gRPC Port: %d",
 		Version, cfg.Environment, cfg.Server.HTTPPort, cfg.Server.GRPCPort))
 
 	// Create core engine client

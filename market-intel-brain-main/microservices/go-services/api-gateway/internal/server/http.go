@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/market-intel/api-gateway/internal/config"
-	"github.com/market-intel/api-gateway/internal/handlers"
-	"github.com/market-intel/api-gateway/internal/services"
-	"github.com/market-intel/api-gateway/pkg/logger"
-	"github.com/market-intel/api-gateway/pkg/otel"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/config"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/handlers"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/internal/services"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/logger"
+	"github.com/a01009408629-netizen/market-intel-brain-main/microservices/go-services/api-gateway/pkg/otel"
 )
 
 type HTTPServer struct {
