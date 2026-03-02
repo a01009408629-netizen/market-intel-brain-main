@@ -56,7 +56,7 @@ jobs:
           echo "Go code auto-fixed"
 
       - name: Auto Fix Rust Code
-        working-directory: ./microservices/rust-services
+        working-directory: ./microservices/rust-services/core-engine
         run: |
           echo "Auto-fixing Rust code..."
           cargo fmt
@@ -202,6 +202,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: Install cargo-audit
+        working-directory: ./microservices/rust-services/core-engine
         run: cargo install cargo-audit --locked
 
       - name: Ensure audit directories exist
@@ -215,6 +216,7 @@ jobs:
       - name: Rust Security Audit
         working-directory: ./microservices/rust-services/core-engine
         run: |
+          mkdir -p target/audit
           cargo audit --json > target/audit/audit-report.json 2>/dev/null || echo "{}" > target/audit/audit-report.json
           cargo audit
 
@@ -234,7 +236,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@latest
-          gosec ./...
+          mkdir -p test-results
+          gosec -fmt sarif -out gosec-report.sarif ./...
 
       - name: Upload Security Report
         uses: github/codeql-action/upload-sarif@v4
