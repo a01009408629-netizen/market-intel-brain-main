@@ -24,7 +24,7 @@ COPY . .
 # Generate protobuf files
 RUN mkdir -p pb && \
     protoc --go_out=. --go-grpc_out=. --go_opt=paths=source_relative \
-    ../proto/*.proto ../proto/versions/v1/*.proto
+    ../../proto/*.proto ../../proto/versions/v1/*.proto
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o api-gateway ./cmd/api-gateway
