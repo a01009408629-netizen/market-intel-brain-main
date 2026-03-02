@@ -1,0 +1,8 @@
+﻿cargo : error: could not find `Cargo.toml` in `C:\Users\FUTURE 2025\Downloads\market-intel-brain-main` or any parent 
+directory
+At line:1 char:1
++ cargo generate-lockfile --verbose 2>&1 | Out-File -FilePath "cargo_ou ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error: could no...arent directory:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

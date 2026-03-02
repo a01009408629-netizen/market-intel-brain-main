@@ -268,6 +268,24 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: 🔎 Pre-flight Check
+        run: |
+          echo "=== Checking file structure ==="
+          find . -name "Dockerfile"
+          find . -name "Cargo.toml"
+          find . -name "go.sum"
+          echo "=== Rust version ==="
+          rustc --version
+          cargo --version
+          echo "=== Docker version ==="
+          docker --version
+          echo "=== Proto files ==="
+          find . -name "*.proto"
+          echo "=== Directory structure ==="
+          ls -la microservices/
+          ls -la microservices/rust-services/core-engine/
+          ls -la microservices/go-services/api-gateway/
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v4
 
