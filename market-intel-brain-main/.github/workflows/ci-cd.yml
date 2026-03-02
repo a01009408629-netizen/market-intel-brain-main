@@ -203,9 +203,19 @@ jobs:
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
 
+      - name: Ensure audit directories exist
+        run: |
+          mkdir -p microservices/rust-services/core-engine/target/audit
+          mkdir -p microservices/rust-services/core-engine/target/ctest
+          mkdir -p microservices/go-services/api-gateway/test-results
+          touch microservices/rust-services/core-engine/target/audit/.gitkeep
+          touch microservices/go-services/api-gateway/test-results/.gitkeep
+
       - name: Rust Security Audit
-        working-directory: ./microservices/rust-services
-        run: cargo audit
+        working-directory: ./microservices/rust-services/core-engine
+        run: |
+          cargo audit --json > target/audit/audit-report.json 2>/dev/null || echo "{}" > target/audit/audit-report.json
+          cargo audit
 
       - name: Setup Go
         uses: actions/setup-go@v4
@@ -230,6 +240,18 @@ jobs:
         if: always()
         with:
           sarif_file: ./microservices/go-services/api-gateway/gosec-report.sarif
+
+      - name: Upload Security and Test Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-test-reports
+          if-no-files-found: warn
+          path: |
+            microservices/rust-services/core-engine/target/audit/
+            microservices/go-services/api-gateway/gosec-report.json
+            microservices/rust-services/core-engine/target/ctest/
+            microservices/go-services/api-gateway/test-results/
 
   # ===== DEPLOY =====
   deploy:
