@@ -14,6 +14,7 @@ use core_engine::config::CoreEngineConfig;
 use core_engine::otel;
 use core_engine::tls::TlsConfig;
 use core_engine::analytics;
+use core_engine::vector_store;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
