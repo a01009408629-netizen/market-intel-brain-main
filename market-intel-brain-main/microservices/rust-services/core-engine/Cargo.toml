@@ -53,6 +53,9 @@ reqwest = { version = "0.11", features = ["json"] }
 # Error handling
 anyhow = "1.0"
 
+# Home directory handling (pinned to avoid edition2024 requirement)
+home = "=0.5.9"
+
 # Database
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
 redis = { version = "0.24", features = ["tokio-comp"] }

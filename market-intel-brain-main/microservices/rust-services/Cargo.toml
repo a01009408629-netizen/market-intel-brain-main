@@ -34,3 +34,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Utilities
 num_cpus = "1.16"
+
+# Home directory handling (pinned to avoid edition2024 requirement)
+home = "=0.5.9"
