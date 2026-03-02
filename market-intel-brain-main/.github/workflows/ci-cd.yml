@@ -8,7 +8,7 @@ on:
 
 env:
   GO_VERSION: "1.21"
-  RUST_VERSION: "1.89.0"
+  RUST_VERSION: "1.88.0"
 
 jobs:
   # ===== AUTO FIX =====
@@ -115,6 +115,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: generated-proto
+          if-no-files-found: warn
           path: microservices/go-services/api-gateway/pb/
           retention-days: 1
 
@@ -249,7 +250,7 @@ jobs:
           if-no-files-found: warn
           path: |
             microservices/rust-services/core-engine/target/audit/
-            microservices/go-services/api-gateway/gosec-report.json
+            microservices/go-services/api-gateway/gosec-report.sarif
             microservices/rust-services/core-engine/target/ctest/
             microservices/go-services/api-gateway/test-results/
 
@@ -288,7 +289,7 @@ jobs:
       - name: Build and Push Rust Services
         uses: docker/build-push-action@v5
         with:
-          context: ./microservices/rust-services
+          context: ./microservices/rust-services/core-engine
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/rust-services:latest
