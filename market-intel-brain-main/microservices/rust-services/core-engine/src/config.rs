@@ -14,6 +14,9 @@ use tracing::{info, warn, error};
 pub mod database;
 
 pub mod kafka;
+
+// Re-export main configuration
+pub use crate::CoreEngineConfig;
 pub mod tls;
 pub mod tracing;
 pub mod metrics;
@@ -414,3 +417,6 @@ mod tests {
 }
 
 pub mod kafka;
+
+// Re-export main configuration
+pub use crate::CoreEngineConfig;
