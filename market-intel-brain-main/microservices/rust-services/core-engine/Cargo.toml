@@ -18,9 +18,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # gRPC
-tonic = { version = "0.14", features = ["tls", "tls-roots"] }
-prost = "0.13"
-prost-types = "0.13"
+tonic = "0.14"
+prost = "0.12"
+prost-types = "0.12"
 tower = "0.4"
 
 # Async utilities
