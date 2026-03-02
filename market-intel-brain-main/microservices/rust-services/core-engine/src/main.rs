@@ -64,10 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Create server with TLS
     let server = Server::builder()
-        .add_service(core_engine_service)
-        .add_optional_service(
-            Some(tonic_health::server::HealthServer::new()),
-        );
+        .add_service(core_engine_service);
     
     // Start server with or without TLS based on configuration
     let server_handle = if let Some(tls_config) = server_tls_config {
