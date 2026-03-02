@@ -4,21 +4,16 @@
 //! It initializes the gRPC server with TLS/mTLS support and starts the LMAX Disruptor engine.
 
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tonic::transport::{Server, ServerTlsConfig};
 use tonic::transport::Identity;
 use tonic::transport::Certificate;
 use tracing::{info, error, warn};
-use tracing_subscriber;
-use tokio::signal;
-use tower::ServiceBuilder;
 
-use core_engine::core_engine_service::CoreEngineServiceImpl;
+use core_engine::core_engine_service::{CoreEngineServiceImpl, CoreEngineServiceServer};
 use core_engine::config::CoreEngineConfig;
 use core_engine::otel;
 use core_engine::tls::TlsConfig;
 use core_engine::analytics;
-use core_engine::vector_store;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -55,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Create gRPC service
     let core_engine_service = CoreEngineServiceImpl::new(config.clone());
-    let core_engine_service = core_engine::proto::core_engine::core_engine_service_server::CoreEngineServiceServer::new(core_engine_service);
+    let core_engine_service = CoreEngineServiceServer::new(core_engine_service);
 
     // Create server address
     let addr = SocketAddr::from(([0, 0, 0, 0], config.grpc_port));

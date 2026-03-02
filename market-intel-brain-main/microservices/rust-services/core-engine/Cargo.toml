@@ -21,6 +21,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tonic = "0.14"
 prost = "0.13"
 prost-types = "0.13"
+tower = "0.4"
 
 # Async utilities
 async-trait = "0.1"
