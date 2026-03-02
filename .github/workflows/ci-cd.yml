@@ -68,7 +68,13 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update -qq
-        sudo apt-get install -y libsasl2-dev libssl-dev pkg-config build-essential
+        sudo apt-get install -y --no-install-recommends \
+          libcurl4-openssl-dev \
+          libssl-dev \
+          pkg-config \
+          libsasl2-dev \
+          cmake \
+          build-essential
 
     - name: 📦 Install Go Dependencies
       run: |
@@ -86,7 +92,7 @@ jobs:
         echo "=== Rust Quality Checks ==="
         cargo fmt --all -- --check || echo "Rust formatting issues found"
         cargo clippy --all-targets --all-features -- -D warnings || echo "Rust clippy issues found"
-        cargo install cargo-audit || echo "Cargo audit install failed"
+        cargo install cargo-audit --locked || echo "Cargo audit install failed"
         cargo audit || echo "Rust security audit completed"
         
         # Go quality checks
