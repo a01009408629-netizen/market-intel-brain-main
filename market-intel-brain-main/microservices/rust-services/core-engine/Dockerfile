@@ -1,51 +1,46 @@
-﻿# Multi-stage build for Rust Core Engine
+# Multi-stage build for Rust Core Engine
 FROM rust:1.82-slim-bookworm AS builder
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     libsasl2-dev \
     pkg-config \
-    libssl-dev \
+    libpq-dev \
     protobuf-compiler \
     libclang-dev \
     clang \
     cmake \
     build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy Cargo files
 COPY Cargo.toml Cargo.lock ./
 
-# Create dummy main.rs to cache dependencies
-RUN mkdir src && echo 'fn main() {}' > src/main.rs
+RUN mkdir -p src && \
+    echo 'fn main() {}' > src/main.rs && \
+    mkdir -p src/lib && \
+    echo 'pub fn placeholder() {}' > src/lib.rs
 
-# Build dependencies
 RUN cargo build --release && rm -rf src
 
-# Copy source code
 COPY src ./src
 
-# Build the application
 RUN touch src/main.rs && cargo build --release
 
-# Runtime stage
 FROM debian:bookworm-slim
 
-# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     libsasl2-2 \
+    libssl3 \
+    libpq5 \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy binary from builder
-COPY --from=builder /app/target/release/market-intel-core-engine /usr/local/bin/
+COPY --from=builder /app/target/release/core-engine /usr/local/bin/
 
-# Expose port
 EXPOSE 50052
 
-# Run the application
-CMD ["market-intel-core-engine"]
+CMD ["core-engine"]

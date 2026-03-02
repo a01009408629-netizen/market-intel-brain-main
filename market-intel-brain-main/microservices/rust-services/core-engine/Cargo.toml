@@ -63,7 +63,7 @@ rdkafka = { version = "0.36", features = ["cmake-build", "ssl", "sasl", "zstd"] 
 # Analytics dependencies
 
 # Vector database dependencies
-qdrant-client = "1.7"
+qdrant-client = "1.6"
 lru = "0.12"
 
 # Metrics
