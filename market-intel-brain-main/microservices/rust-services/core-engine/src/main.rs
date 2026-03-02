@@ -66,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let server = Server::builder()
         .add_service(core_engine_service)
         .add_optional_service(
-            Some(tonic_health::server::health_server::HealthServer::default()),
+            Some(tonic_health::server::HealthServer::default()),
         );
     
     // Start server with or without TLS based on configuration
@@ -74,6 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("Starting gRPC server with mTLS enabled");
         server
             .tls_config(tls_config)
+            .expect("Failed to configure TLS")
             .serve_with_shutdown(addr, shutdown_signal())
     } else {
         warn!("Starting gRPC server without TLS - NOT RECOMMENDED FOR PRODUCTION");
