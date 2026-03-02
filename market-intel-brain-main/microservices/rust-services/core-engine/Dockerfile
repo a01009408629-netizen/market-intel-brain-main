@@ -1,5 +1,5 @@
-# Multi-stage build for Rust Core Engine
-FROM rust:1.75-slim-bookworm as builder
+﻿# Multi-stage build for Rust Core Engine
+FROM rust:1.75-slim-bookworm AS builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -15,7 +15,7 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 
 # Create dummy main.rs to cache dependencies
-RUN mkdir src && echo "fn main() {}" > src/main.rs
+RUN mkdir src && echo 'fn main() {}' > src/main.rs
 
 # Build dependencies
 RUN cargo build --release && rm -rf src
