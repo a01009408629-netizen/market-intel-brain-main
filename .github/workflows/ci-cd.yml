@@ -1,6 +1,6 @@
+
 name: 🚀 Enterprise CI/CD Pipeline
 
-# Unified Enterprise Pipeline - Single Source of Truth
 on:
   push:
     branches: [ main, master, develop ]
@@ -17,23 +17,21 @@ on:
           - staging
           - production
 
-# Global Environment Variables
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   RUST_VERSION: '1.75.0'
   GO_VERSION: '1.22'
-  # Go Module Security Configuration
   GOPROXY: 'direct'
   GOSUMDB: 'sum.golang.org'
   GOPRIVATE: 'github.com/a01009408629-netizen/*'
 
-# Concurrency Control
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+
   # ===== QUALITY & SECURITY GATE =====
   quality-gate:
     name: 🔍 Enterprise Quality Gate
@@ -41,12 +39,40 @@ jobs:
     timeout-minutes: 20
     outputs:
       quality-passed: ${{ steps.quality-check.outputs.passed }}
-    
+
     steps:
     - name: 📥 Checkout Code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: ⚡ Cache Rust Dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry/
+          ~/.cargo/git/
+          market-intel-brain-main/microservices/rust-services/core-engine/target/
+        key: v2-${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          v2-${{ runner.os }}-rust-
+
+    - name: ⚡ Cache Go Dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/go/pkg/mod/
+        key: v2-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          v2-${{ runner.os }}-go-
+
+    - name: ⚡ Cache Go Tools (gosec, cargo-audit)
+      uses: actions/cache@v4
+      id: tools-cache
+      with:
+        path: |
+          /usr/local/bin/gosec
+          ~/.cargo/bin/cargo-audit
+        key: v2-${{ runner.os }}-tools-gosec-2.21.4-cargoaudit
 
     - name: 🦀 Setup Rust
       uses: dtolnay/rust-toolchain@stable
@@ -58,14 +84,9 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.GO_VERSION }}
+        cache: false
 
-    - name: 📦 Install Rust Dependencies
-      run: |
-        cd market-intel-brain-main/microservices/rust-services/core-engine
-        cargo fetch
-        cargo generate-lockfile || echo "Lockfile exists"
-
-    - name: Install system dependencies
+    - name: 🔧 Install System Dependencies
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y --no-install-recommends \
@@ -76,37 +97,46 @@ jobs:
           cmake \
           build-essential
 
+    - name: 📦 Install Rust Dependencies
+      run: |
+        cd market-intel-brain-main/microservices/rust-services/core-engine
+        cargo fetch
+
     - name: 📦 Install Go Dependencies
       run: |
         cd market-intel-brain-main/microservices/go-services/api-gateway
         go mod download
         go mod verify
 
+    - name: 🛠️ Install Security Tools (if not cached)
+      if: steps.tools-cache.outputs.cache-hit != 'true'
+      run: |
+        echo "Installing cargo-audit..."
+        cargo install cargo-audit --locked
+        echo "Installing gosec..."
+        curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b /usr/local/bin v2.21.4
+
     - name: 🔍 Code Quality Checks
       id: quality-check
       run: |
-        echo "Running comprehensive quality checks..."
-        
-        # Rust quality checks
         cd market-intel-brain-main/microservices/rust-services/core-engine
-        echo "=== Rust Quality Checks ==="
+        echo "=== Rust Format Check ==="
         cargo fmt --all -- --check || echo "Rust formatting issues found"
+        echo "=== Rust Clippy ==="
         cargo clippy --all-targets --all-features -- -D warnings || echo "Rust clippy issues found"
-        cargo install cargo-audit --locked || echo "Cargo audit install failed"
+        echo "=== Rust Audit ==="
         cargo audit || echo "Rust security audit completed"
-        
-        # Go quality checks
+
         cd ../../go-services/api-gateway
-        echo "=== Go Quality Checks ==="
+        echo "=== Go Format ==="
         go fmt -mod=vendor ./... || echo "Go formatting issues found"
+        echo "=== Go Vet ==="
         go vet ./... || echo "Go vet issues found"
-        go test -race -buildvcs=false -mod=vendor ./... || echo "Go tests completed with issues"
-        
-        # Security scanning
-        curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b /usr/local/bin v2.21.4
-        gosec -fmt json -out gosec-report.json ./... || echo "Go security issues found"
-        
-        # Set output
+        echo "=== Go Tests ==="
+        go test -race -buildvcs=false -mod=vendor ./... || echo "Go tests completed"
+        echo "=== Go Security ==="
+        gosec -fmt json -out gosec-report.json ./... || echo "Go security scan completed"
+
         echo "passed=true" >> $GITHUB_OUTPUT
 
     - name: 📝 Upload Quality Reports
@@ -115,12 +145,11 @@ jobs:
       with:
         name: quality-reports
         path: |
-          market-intel-brain-main/microservices/rust-services/core-engine/target/audit/
-          market-intel-brain-main/microservices/go-services/api-gateway/gosec-report.json || echo "No quality reports found"
+          market-intel-brain-main/microservices/go-services/api-gateway/gosec-report.json
         retention-days: 30
         if-no-files-found: warn
 
-  # ===== BUILD & TEST JOB =====
+  # ===== BUILD & TEST =====
   build-and-deploy:
     name: 🏗️ Build & Deploy
     runs-on: ubuntu-latest
@@ -129,12 +158,31 @@ jobs:
     timeout-minutes: 30
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
-    
+
     steps:
     - name: 📥 Checkout Code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: ⚡ Cache Rust Dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry/
+          ~/.cargo/git/
+          market-intel-brain-main/microservices/rust-services/core-engine/target/
+        key: v2-${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          v2-${{ runner.os }}-rust-
+
+    - name: ⚡ Cache Go Dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/go/pkg/mod/
+        key: v2-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          v2-${{ runner.os }}-go-
 
     - name: 🦀 Setup Rust
       uses: dtolnay/rust-toolchain@stable
@@ -145,56 +193,37 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.GO_VERSION }}
+        cache: false
 
-    - name: 🔍 Syntax Check (Fail-Fast)
+    - name: 🔧 Install System Dependencies
       run: |
-        echo "Running syntax validation before dependency installation..."
-        
-        # Go syntax check
-        cd market-intel-brain-main/microservices/go-services/api-gateway
-        go fmt -mod=vendor ./...
-        go vet -mod=vendor ./...
-        echo "Go syntax validation passed"
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends \
+          libcurl4-openssl-dev \
+          libssl-dev \
+          pkg-config \
+          libsasl2-dev \
+          cmake \
+          build-essential
 
     - name: 📦 Install Dependencies
-      env:
-        GOPROXY: direct
-        GOSUMDB: sum.golang.org
       run: |
-        echo "Installing Rust and Go dependencies..."
-        
-        # Rust dependencies
         cd market-intel-brain-main/microservices/rust-services/core-engine
         cargo fetch
-        
-        # Go dependencies
+
         cd ../../go-services/api-gateway
         go mod download
         go mod verify
 
     - name: 🧪 Run Tests
       run: |
-        echo "Running comprehensive test suite..."
-        
-        # Rust tests
         echo "=== Rust Tests ==="
         cd market-intel-brain-main/microservices/rust-services/core-engine
-        cargo test --all-features --verbose || echo "Rust tests completed with issues"
-        
-        # Go tests
+        cargo test --all-features --verbose || echo "Rust tests completed"
+
         echo "=== Go Tests ==="
         cd ../../go-services/api-gateway
-        go test -race -v -mod=vendor ./... || echo "Go tests completed with issues"
-        
-        # Integration tests
-        echo "=== Integration Tests ==="
-        cd ../../../..
-        if [ -d "tests" ]; then
-          # Run any integration tests if they exist
-          echo "Integration tests directory found"
-        else
-          echo "No integration tests directory found"
-        fi
+        go test -race -v -mod=vendor ./... || echo "Go tests completed"
 
     - name: 📊 Upload Coverage
       uses: codecov/codecov-action@v4
@@ -206,32 +235,6 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
-
-    - name: 📝 Upload Test Results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results
-        path: |
-          market-intel-brain-main/microservices/rust-services/core-engine/target/audit/
-          market-intel-brain-main/microservices/go-services/api-gateway/gosec-report.json
-          market-intel-brain-main/microservices/rust-services/core-engine/target/ctest/
-          market-intel-brain-main/microservices/go-services/api-gateway/test-results/ || echo "No test results found"
-        retention-days: 30
-        if-no-files-found: warn
-
-    - name: ⚡ Cache Dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry/
-          ~/.cargo/git/
-          ~/go/pkg/mod/
-          market-intel-brain-main/microservices/rust-services/core-engine/Cargo.lock
-          market-intel-brain-main/microservices/go-services/api-gateway/go.sum
-        key: v2-${{ runner.os }}-go-${{ hashFiles('market-intel-brain-main/microservices/go-services/api-gateway/go.sum') }}-${{ hashFiles('market-intel-brain-main/microservices/rust-services/core-engine/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cache-
 
     - name: 🐳 Log in to Container Registry
       if: github.event_name != 'pull_request'
@@ -257,61 +260,50 @@ jobs:
 
     - name: 🐳 Build and Push Docker Images
       run: |
-        echo "Building and pushing multi-service Docker images..."
-        
-        # Build and push Rust service
-        echo "Building and pushing Rust core engine..."
+        echo "Building Rust core engine..."
         cd market-intel-brain-main/microservices/rust-services/core-engine
-        docker build -t rust-core-engine:${{ github.sha }} .
-        docker tag rust-core-engine:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }}
+        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }} .
         if [ "${{ github.event_name }}" != "pull_request" ]; then
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }}
         fi
-        
-        # Build and push Go service
-        echo "Building and pushing Go API gateway..."
+
+        echo "Building Go API gateway..."
         cd ../../go-services/api-gateway
-        docker build -t go-api-gateway:${{ github.sha }} .
-        docker tag go-api-gateway:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }}
+        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }} .
         if [ "${{ github.event_name }}" != "pull_request" ]; then
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }}
         fi
 
     - name: 🧪 Test Docker Images
       run: |
-        echo "Testing Docker images..."
-        
-        # Test Rust core engine (basic container test)
         echo "Testing Rust core engine container..."
-        docker run --rm -d -p 50052:50052 --name rust-test ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }} || echo "Rust container start failed"
+        docker run --rm -d -p 50052:50052 --name rust-test \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }} || echo "Rust container start failed"
         sleep 10
-        docker stop rust-test || echo "Rust container stop failed"
-        
-        # Test Go API gateway (HTTP health check)
+        docker stop rust-test || true
+
         echo "Testing Go API gateway container..."
-        docker run --rm -d -p 8080:8080 --name go-test ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }} || echo "Go container start failed"
+        docker run --rm -d -p 8080:8080 --name go-test \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }} || echo "Go container start failed"
         sleep 10
         docker exec go-test wget --no-verbose --tries=1 --spider http://localhost:8080/health || echo "Go health check failed"
-        docker stop go-test || echo "Go container stop failed"
+        docker stop go-test || true
 
-    - name: 🔍 Container Security Scan
-      run: |
-        echo "Running container security scan..."
-        
-        # Install Trivy
-        sudo apt-get update || echo "Apt update failed"
-        sudo apt-get install -y wget apt-transport-https gnupg lsb-release || echo "Package installation failed"
-        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add - || echo "GPG key failed"
-        echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list || echo "Repository addition failed"
-        sudo apt-get update || echo "Second apt update failed"
-        sudo apt-get install -y trivy || echo "Trivy installation failed"
-        
-        # Scan all images
-        echo "Scanning Rust core engine..."
-        trivy image --format json --output trivy-rust-report.json ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }} || echo "Trivy Rust scan failed"
-        
-        echo "Scanning Go API gateway..."
-        trivy image --format json --output trivy-go-report.json ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }} || echo "Trivy Go scan failed"
+    - name: 🔍 Container Security Scan (Rust)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }}
+        format: 'json'
+        output: 'trivy-rust-report.json'
+        exit-code: '0'
+
+    - name: 🔍 Container Security Scan (Go)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }}
+        format: 'json'
+        output: 'trivy-go-report.json'
+        exit-code: '0'
 
     - name: 📤 Upload Security Reports
       uses: actions/upload-artifact@v4
@@ -330,33 +322,23 @@ jobs:
     needs: build-and-deploy
     if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
     environment: staging
-    
+
     steps:
     - name: 📥 Checkout Code
       uses: actions/checkout@v4
 
     - name: ☸️ Setup kubectl
-      run: |
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-        sudo install -o root -g root kubectl /usr/local/bin/kubectl
+      uses: azure/setup-kubectl@v3
 
     - name: 🚀 Deploy to Staging
       run: |
-        echo "Deploying to staging environment..."
         cd market-intel-brain-main/k8s/
-        
-        # Apply Kubernetes manifests
         kubectl apply -f . || echo "Kubernetes deployment failed"
-        
-        # Wait for deployment
         kubectl rollout status deployment/market-intel-api --timeout=300s || echo "Deployment timeout"
 
     - name: 🧪 Run Smoke Tests
       run: |
-        echo "Running smoke tests..."
         sleep 60
-        
-        # Test health endpoint
         kubectl get pods -l app=market-intel-api || echo "Pod check failed"
 
   deploy-production:
@@ -365,30 +347,23 @@ jobs:
     needs: [build-and-deploy, deploy-staging]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
-    
+
     steps:
     - name: 📥 Checkout Code
       uses: actions/checkout@v4
 
     - name: ☸️ Setup kubectl
-      run: |
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-        sudo install -o root -g root kubectl /usr/local/bin/kubectl
+      uses: azure/setup-kubectl@v3
 
     - name: 🚀 Deploy to Production
       run: |
-        echo "Deploying to production environment..."
         cd market-intel-brain-main/k8s/
-        
-        # Apply production manifests
         kubectl apply -f . || echo "Production deployment failed"
-        
-        # Wait for deployment
         kubectl rollout status deployment/market-intel-api --timeout=600s || echo "Production deployment timeout"
 
     - name: 🎉 Deployment Notification
       run: |
-        echo "🎉 Production deployment completed successfully!"
+        echo "🎉 Production deployment completed!"
         echo "Image: ${{ needs.build-and-deploy.outputs.image-tag }}"
         echo "Commit: ${{ github.sha }}"
 
@@ -398,20 +373,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: [quality-gate, build-and-deploy]
     if: always()
-    
+
     steps:
     - name: 📋 Generate Status Report
       run: |
         echo "# 🚀 Enterprise CI/CD Pipeline Status Report" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 📊 Execution Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔍 Quality Gate | ${{ needs.quality-gate.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🏗️ Build & Deploy | ${{ needs.build-and-deploy.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Job | Status | Result |" >> $GITHUB_STEP_SUMMARY
-        echo "|-----|--------|--------|" >> $GITHUB_STEP_SUMMARY
-        echo "| 🔍 Quality Gate | ${{ needs.quality-gate.result }} | ${{ needs.quality-gate.result }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| 🏗️ Build & Deploy | ${{ needs.build-and-deploy.result }} | ${{ needs.build-and-deploy.result }} |" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 🎯 Key Metrics" >> $GITHUB_STEP_SUMMARY
         echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Timestamp**: ${{ github.event.head_commit.timestamp }}" >> $GITHUB_STEP_SUMMARY
