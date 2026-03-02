@@ -13,12 +13,12 @@ use tracing_subscriber;
 use tokio::signal;
 use tower::ServiceBuilder;
 
-use market_intel_core_engine::core_engine_service::CoreEngineServiceImpl;
-use market_intel_core_engine::config::CoreEngineConfig;
-use market_intel_core_engine::otel;
-use market_intel_core_engine::tls::TlsConfig;
-use market_intel_core_engine::analytics;
-use market_intel_core_engine::vector_store;
+use core_engine::core_engine_service::CoreEngineServiceImpl;
+use core_engine::config::CoreEngineConfig;
+use core_engine::otel;
+use core_engine::tls::TlsConfig;
+use core_engine::analytics;
+use core_engine::vector_store;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -55,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Create gRPC service
     let core_engine_service = CoreEngineServiceImpl::new(config.clone());
-    let core_engine_service = market_intel_core_engine::proto::core_engine::core_engine_service_server::CoreEngineServiceServer::new(core_engine_service);
+    let core_engine_service = core_engine::proto::core_engine::core_engine_service_server::CoreEngineServiceServer::new(core_engine_service);
 
     // Create server address
     let addr = SocketAddr::from(([0, 0, 0, 0], config.grpc_port));
