@@ -293,9 +293,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./microservices/rust-services/core-engine
+          file: ./microservices/rust-services/core-engine/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/rust-services:latest
-            ghcr.io/${{ github.repository }}/rust-services:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/core-engine:latest
+            ghcr.io/${{ github.repository }}/core-engine:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
