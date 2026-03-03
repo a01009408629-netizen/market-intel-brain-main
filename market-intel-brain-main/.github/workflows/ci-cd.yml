@@ -318,7 +318,7 @@ jobs:
           file: ./microservices/rust-services/core-engine/Dockerfile
           push: true
           tags: |
-            ghcr.io/a01009408629/market-intel-core-engine:latest
-            ghcr.io/a01009408629/market-intel-core-engine:${{ github.sha }}
+            ghcr.io/a01009408629/core-engine-service:latest
+            ghcr.io/a01009408629/core-engine-service:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
