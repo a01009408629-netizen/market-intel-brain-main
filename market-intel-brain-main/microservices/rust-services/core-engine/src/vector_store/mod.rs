@@ -717,7 +717,7 @@ impl VectorStore for QdrantVectorStore {
         Ok(())
     }
     
-    async fn optimize_collection(&self) -> Ok((), VectorStoreError) {
+    async fn optimize_collection(&self) -> Result<(), VectorStoreError> {
         info!("Optimizing collection: {}", self.config.collection_name);
         
         let optimize_request = qdrant_client::qdrant::OptimizeRequest {
