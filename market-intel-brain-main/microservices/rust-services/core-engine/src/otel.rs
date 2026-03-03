@@ -4,13 +4,15 @@ use opentelemetry_sdk::trace::{RandomIdGenerator, Sampler};
 use opentelemetry_sdk::{trace as sdktrace, Resource};
 use opentelemetry::KeyValue;
 use tracing::info;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, fmt};
+use tracing_opentelemetry;
+use opentelemetry_jaeger;
 
 pub fn init_telemetry(service_name: &str, service_version: &str) -> anyhow::Result<()> {
     let jaeger_endpoint = std::env::var("JAEGER_ENDPOINT")
         .unwrap_or_else(|_| "http://localhost:14268/api/traces".to_string());
 
-    let tracer = opentelemetry_jaeger::new_agent_pipeline()
+    let tracer = opentelemetry_jaeger::new_collector_pipeline()
         .with_endpoint(jaeger_endpoint)
         .with_service_name(service_name)
         .with_trace_config(
@@ -21,7 +23,8 @@ pub fn init_telemetry(service_name: &str, service_version: &str) -> anyhow::Resu
                     KeyValue::new("service.name", service_name.to_string()),
                     KeyValue::new("service.version", service_version.to_string()),
                     KeyValue::new("environment",
-                        std::env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string())),
+                        std::env::var("ENVIRONMENT")
+                            .unwrap_or_else(|_| "development".to_string())),
                 ]))
         )
         .install_batch(opentelemetry_sdk::runtime::Tokio)?;

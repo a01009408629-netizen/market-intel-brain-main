@@ -16,7 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = CoreEngineConfig::from_env()
         .map_err(|e| format!("Failed to load config: {}", e))?;
     let svc = CoreEngineServiceImpl::new(config.clone()).await?;
-    let addr = SocketAddr::from(([0, 0, 0, 0], config.grpc_port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], config.server.grpc_port));
     info!("gRPC listening on {}", addr);
     warn!("TLS disabled - NOT FOR PRODUCTION");
     Server::builder()
