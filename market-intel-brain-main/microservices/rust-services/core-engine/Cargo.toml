@@ -22,6 +22,8 @@ tonic = "0.14"
 prost = "0.12"
 prost-types = "0.12"
 tower = "0.4"
+rustls-pemfile = "1.0"
+tokio-rustls = "0.24"
 
 # Async utilities
 async-trait = "0.1"
@@ -46,6 +48,8 @@ notify = "6.1"
 
 # Utilities
 num_cpus = "1.16"
+hex = "0.4"
+openssl = "0.10"
 
 # HTTP client for data ingestion
 reqwest = { version = "0.11", features = ["json"] }

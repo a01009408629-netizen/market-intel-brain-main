@@ -8,7 +8,7 @@ use std::path::Path;
 use tonic::transport::{Certificate, Identity, ServerTlsConfig};
 use tonic::transport::tls::ServerTlsConfigBuilder;
 use tokio_rustls::rustls::{Certificate as RustlsCertificate, PrivateKey, ServerConfig};
-use tokio_rustls::rustls::internal::pemfile::{certs, pkcs8_private_keys};
+use rustls_pemfile::{certs, pkcs8_private_keys};
 use tracing::{info, warn, error};
 
 /// TLS configuration for the gRPC server

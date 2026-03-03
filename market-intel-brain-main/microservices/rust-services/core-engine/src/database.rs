@@ -18,6 +18,20 @@ pub struct DatabaseConfig {
     pub connection_timeout: u64,
 }
 
+impl Default for DatabaseConfig {
+    fn default() -> Self {
+        Self {
+            host: "localhost".to_string(),
+            port: 5432,
+            database: "market_intel".to_string(),
+            username: "postgres".to_string(),
+            password: "".to_string(),
+            max_connections: 10,
+            connection_timeout: 30,
+        }
+    }
+}
+
 impl DatabaseConfig {
     /// Load database configuration from environment variables
     pub fn from_env() -> Result<Self, Box<dyn std::error::Error>> {
