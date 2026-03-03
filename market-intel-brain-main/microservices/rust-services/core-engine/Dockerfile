@@ -28,7 +28,7 @@ RUN cargo build --release && rm -rf src
 
 COPY src ./src
 
-RUN touch src/main.rs && cargo build --release
+RUN cargo build --release
 
 FROM debian:bookworm-slim
 
