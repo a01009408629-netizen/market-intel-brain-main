@@ -306,8 +306,8 @@ jobs:
           context: ./microservices/go-services/api-gateway
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/api-gateway:latest
-            ghcr.io/${{ github.repository }}/api-gateway:${{ github.sha }}
+            ghcr.io/a01009408629/api-gateway:latest
+            ghcr.io/a01009408629/api-gateway:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
