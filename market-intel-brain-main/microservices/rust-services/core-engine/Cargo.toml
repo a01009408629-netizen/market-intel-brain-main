@@ -78,7 +78,7 @@ prometheus = "0.13"
 tracing-opentelemetry = "0.21"
 opentelemetry = { version = "0.20", features = ["rt-tokio", "trace"] }
 opentelemetry_sdk = { version = "0.20", features = ["rt-tokio"] }
-opentelemetry-jaeger = { version = "0.20", features = ["rt-tokio"] }
+opentelemetry-jaeger = { version = "0.20", features = ["rt-tokio", "collector_client", "reqwest_collector_client"] }
 opentelemetry-prometheus = "0.13"
 opentelemetry-semantic-conventions = "0.12"
 
