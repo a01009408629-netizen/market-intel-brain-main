@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     vector_store::init();
     info!("Starting Core Engine v{}", env!("CARGO_PKG_VERSION"));
     let config = CoreEngineConfig::from_env()
-        .map_err(|e| format!("Failed to load config: {}", e))?;
+        .map_err(|e| -> Box<dyn std::error::Error> { format!("Failed to load config: {}", e).into() })?;
     let svc = CoreEngineServiceImpl::new(config.clone()).await?;
     let addr = SocketAddr::from(([0, 0, 0, 0], config.server.grpc_port));
     info!("gRPC listening on {}", addr);

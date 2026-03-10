@@ -1,5 +1,5 @@
 # Multi-stage build for Rust Core Engine
-FROM rust:1.85-slim-bookworm AS builder
+FROM rust:latest-slim AS builder
 
 RUN apt-get update && apt-get install -y \
     libsasl2-dev \
