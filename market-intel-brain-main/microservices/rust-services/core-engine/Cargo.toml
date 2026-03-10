@@ -65,11 +65,7 @@ sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chron
 redis = { version = "0.24", features = ["tokio-comp"] }
 
 # Message queue (Redpanda/Kafka)
-# dynamic-linking = يستخدم librdkafka-dev المثبت في النظام بدل compile من source
-rdkafka = { version = "0.36", features = ["dynamic-linking", "ssl", "sasl", "zstd"] }
-
-# zstd compression (مطلوب لـ rdkafka zstd feature)
-zstd = "0.13"
+rdkafka = { version = "0.36", features = ["cmake-build", "ssl", "sasl", "zstd"] }
 
 # Vector database dependencies
 qdrant-client = "=1.6"
