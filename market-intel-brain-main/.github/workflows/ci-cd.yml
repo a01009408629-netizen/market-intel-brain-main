@@ -19,6 +19,8 @@ jobs:
   auto-fix:
     name: Auto Fix Code Issues
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout Code
@@ -39,6 +41,22 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
           components: rustfmt, clippy
 
+      # FIX 1: الـ Rust build يحتاج librdkafka-dev و libsasl2-dev
+      - name: Install System Dependencies for Rust
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            libsasl2-dev \
+            pkg-config \
+            libssl-dev \
+            libpq-dev \
+            protobuf-compiler \
+            libclang-dev \
+            clang \
+            cmake \
+            build-essential \
+            librdkafka-dev \
+            libzstd-dev
+
       - name: Install Go Tools
         run: |
           go install golang.org/x/tools/cmd/goimports@latest
@@ -49,14 +67,9 @@ jobs:
         working-directory: ./microservices/go-services/api-gateway
         run: |
           echo "Auto-fixing Go code..."
-          
-          # Format code
           go fmt ./...
           goimports -w .
-          
-          # Run golangci-lint with auto-fix
           golangci-lint run --fix --timeout=10m ./...
-          
           echo "Go code auto-fixed"
 
       - name: Auto Fix Rust Code
@@ -88,6 +101,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # FIX 2: أضفنا go setup قبل استخدام go install
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
       - name: Install System Dependencies
         run: |
           sudo apt-get update
@@ -102,17 +121,12 @@ jobs:
       - name: Generate Protocol Buffers
         run: |
           echo "Generating protocol buffers..."
-          
-          # Generate from microservices/proto
           mkdir -p microservices/go-services/api-gateway/pb
           protoc --go_out=. --go-grpc_out=. --go_opt=paths=source_relative \
             microservices/proto/*.proto \
             microservices/proto/versions/v1/*.proto
-          
-          # Move generated files to pb directory if needed
           find . -name "*.pb.go" -not -path "./pb/*" -exec mv {} ./pb/ \;
           find . -name "*_grpc.pb.go" -not -path "./pb/*" -exec mv {} ./pb/ \;
-          
           echo "Protocol buffers generated"
 
       - name: Upload Generated Proto Files
@@ -146,6 +160,28 @@ jobs:
           cache: true
           cache-dependency-path: ./microservices/go-services/api-gateway/go.mod
 
+      # FIX 1: نفس الـ dependencies محتاجينها هنا كمان
+      - name: Install System Dependencies for Rust
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            libsasl2-dev \
+            pkg-config \
+            libssl-dev \
+            libpq-dev \
+            protobuf-compiler \
+            libclang-dev \
+            clang \
+            cmake \
+            build-essential \
+            librdkafka-dev \
+            libzstd-dev
+
+      - name: Install Go Tools
+        run: |
+          go install golang.org/x/tools/cmd/goimports@latest
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
       - name: Download Generated Proto Files
         uses: actions/download-artifact@v4
         with:
@@ -157,8 +193,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Validating linting (no fixes allowed)..."
-          export PATH="$(go env GOPATH)/bin:$PATH"
           golangci-lint run --timeout=10m ./...
           echo "Linting validation passed"
 
@@ -167,7 +201,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Building service..."
           go build -o bin/api-gateway ./cmd/api-gateway/main.go
           echo "Build completed successfully"
 
@@ -176,7 +209,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Running tests..."
           go test -v -race -coverprofile=coverage.out ./...
           echo "Tests completed successfully"
 
@@ -204,6 +236,22 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
           components: rustfmt, clippy
+
+      # FIX 1: محتاج dependencies عشان cargo audit يشتغل
+      - name: Install System Dependencies for Rust
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+            libsasl2-dev \
+            pkg-config \
+            libssl-dev \
+            libpq-dev \
+            protobuf-compiler \
+            libclang-dev \
+            clang \
+            cmake \
+            build-essential \
+            librdkafka-dev \
+            libzstd-dev
 
       - name: Install cargo-audit
         working-directory: ./microservices/rust-services/core-engine
@@ -243,8 +291,9 @@ jobs:
           mkdir -p test-results
           gosec -fmt sarif -out gosec-report.sarif ./...
 
+      # FIX 3: الـ action الصح هو codeql-action/upload-sarif@v3 مش v4
       - name: Upload Security Report
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: ./microservices/go-services/api-gateway/gosec-report.sarif
@@ -266,21 +315,18 @@ jobs:
     name: Deploy Services
     runs-on: ubuntu-latest
     needs: [build-test, security-scan]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.build-test.result == 'success'
     
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🔎 Pre-flight Check
+      - name: Pre-flight Check
         run: |
           echo "=== Checking file structure ==="
           find . -name "Dockerfile"
           find . -name "Cargo.toml"
           find . -name "go.sum"
-          echo "=== Rust version ==="
-          rustc --version
-          cargo --version
           echo "=== Docker version ==="
           docker --version
           echo "=== Proto files ==="
