@@ -44,6 +44,7 @@ jobs:
       # FIX 1: الـ Rust build يحتاج librdkafka-dev و libsasl2-dev
       - name: Install System Dependencies for Rust
         run: |
+          sudo printf '#!/bin/sh\nexit 0' | sudo tee /usr/sbin/policy-rc.d > /dev/null
           sudo apt-get update && sudo apt-get install -y \
             libsasl2-dev \
             pkg-config \
@@ -109,6 +110,7 @@ jobs:
 
       - name: Install System Dependencies
         run: |
+          sudo printf '#!/bin/sh\nexit 0' | sudo tee /usr/sbin/policy-rc.d > /dev/null
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler libsasl2-dev
 
@@ -163,6 +165,7 @@ jobs:
       # FIX 1: نفس الـ dependencies محتاجينها هنا كمان
       - name: Install System Dependencies for Rust
         run: |
+          sudo printf '#!/bin/sh\nexit 0' | sudo tee /usr/sbin/policy-rc.d > /dev/null
           sudo apt-get update && sudo apt-get install -y \
             libsasl2-dev \
             pkg-config \
@@ -240,6 +243,7 @@ jobs:
       # FIX 1: محتاج dependencies عشان cargo audit يشتغل
       - name: Install System Dependencies for Rust
         run: |
+          sudo printf '#!/bin/sh\nexit 0' | sudo tee /usr/sbin/policy-rc.d > /dev/null
           sudo apt-get update && sudo apt-get install -y \
             libsasl2-dev \
             pkg-config \
