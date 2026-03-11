@@ -1,4 +1,3 @@
-
 name: 🚀 Enterprise CI/CD Pipeline
 
 on:
@@ -20,7 +19,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  RUST_VERSION: '1.75.0'
+  RUST_VERSION: 'nightly'
   GO_VERSION: '1.22'
   GOPROXY: 'direct'
   GOSUMDB: 'sum.golang.org'
