@@ -1,5 +1,5 @@
 # Multi-stage build for Rust Core Engine
-FROM rustlang/rust:nightly-2025-03-01-bookworm AS builder
+FROM rustlang/rust:nightly-bookworm AS builder
 
 RUN apt-get update && apt-get install -y \
     pkg-config \
