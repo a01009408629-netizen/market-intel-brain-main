@@ -4,6 +4,10 @@ FROM rustlang/rust:nightly-bookworm AS builder
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
+    libsasl2-dev \
+    libzstd-dev \
+    libcurl4-openssl-dev \
+    cmake \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,6 +27,13 @@ RUN touch src/main.rs src/lib.rs && \
     cargo build --release
 
 FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    libsasl2-2 \
+    libzstd1 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
