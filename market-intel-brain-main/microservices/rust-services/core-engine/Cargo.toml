@@ -49,6 +49,7 @@ notify = "6.1"
 # Utilities
 num_cpus = "1.16"
 hex = "0.4"
+getrandom = "=0.2.11"
 openssl = { version = "0.10", features = ["v102", "v110"] }
 
 # HTTP client for data ingestion
