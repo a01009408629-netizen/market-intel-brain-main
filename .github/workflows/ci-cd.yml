@@ -95,13 +95,13 @@ jobs:
 
     - name: 📦 Install Rust Dependencies
       run: |
-        cd market-intel-brain-main/microservices/rust-services/core-engine
+        cd microservices/rust-services/core-engine
         cargo fetch
         cargo generate-lockfile || true
 
     - name: 📦 Install Go Dependencies
       run: |
-        cd market-intel-brain-main/microservices/go-services/api-gateway
+        cd microservices/go-services/api-gateway
         go mod download
         go mod verify
 
@@ -116,7 +116,7 @@ jobs:
     - name: 🔍 Code Quality Checks
       id: quality-check
       run: |
-        cd market-intel-brain-main/microservices/rust-services/core-engine
+        cd microservices/rust-services/core-engine
         echo "=== Rust Format Check ==="
         cargo fmt --all -- --check || echo "Rust formatting issues found"
         echo "=== Rust Clippy ==="
@@ -124,7 +124,7 @@ jobs:
         echo "=== Rust Audit ==="
         cargo audit || echo "Rust security audit completed"
 
-        cd market-intel-brain-main/microservices/go-services/api-gateway
+        cd microservices/go-services/api-gateway
         echo "=== Go Format ==="
         go fmt -mod=vendor ./... || echo "Go formatting issues found"
         echo "=== Go Vet ==="
@@ -202,22 +202,22 @@ jobs:
 
     - name: 📦 Install Dependencies
       run: |
-        cd market-intel-brain-main/microservices/rust-services/core-engine
+        cd microservices/rust-services/core-engine
         cargo fetch
         cargo generate-lockfile || true
 
-        cd market-intel-brain-main/microservices/go-services/api-gateway
+        cd microservices/go-services/api-gateway
         go mod download
         go mod verify
 
     - name: 🧪 Run Tests
       run: |
         echo "=== Rust Tests ==="
-        cd market-intel-brain-main/microservices/rust-services/core-engine
+        cd microservices/rust-services/core-engine
         cargo test --verbose || echo "Rust tests completed"
 
         echo "=== Go Tests ==="
-        cd market-intel-brain-main/microservices/go-services/api-gateway
+        cd microservices/go-services/api-gateway
         go test -race -v -mod=vendor ./... || echo "Go tests completed"
 
     - name: 📊 Upload Coverage
@@ -225,8 +225,8 @@ jobs:
       if: always()
       with:
         files: |
-          ./market-intel-brain-main/microservices/rust-services/core-engine/target/codecov.xml || true
-          ./market-intel-brain-main/microservices/go-services/api-gateway/coverage.out || true
+          ./microservices/rust-services/core-engine/target/codecov.xml || true
+          ./microservices/go-services/api-gateway/coverage.out || true
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
@@ -256,14 +256,14 @@ jobs:
     - name: 🐳 Build and Push Docker Images
       run: |
         echo "Building Rust core engine..."
-        cd market-intel-brain-main/microservices/rust-services/core-engine
+        cd microservices/rust-services/core-engine
         docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }} .
         if [ "${{ github.event_name }}" != "pull_request" ]; then
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }}
         fi
 
         echo "Building Go API gateway..."
-        cd market-intel-brain-main/microservices/go-services/api-gateway
+        cd microservices/go-services/api-gateway
         docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }} .
         if [ "${{ github.event_name }}" != "pull_request" ]; then
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }}
