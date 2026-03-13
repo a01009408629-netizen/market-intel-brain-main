@@ -1,14 +1,20 @@
 # Multi-stage build for Rust Core Engine
-FROM rustlang/rust:nightly-bookworm AS builder
+FROM rust:1.80-bookworm AS builder
 
 RUN apt-get update && apt-get install -y \
+    libsasl2-dev \
     pkg-config \
     libssl-dev \
-    libsasl2-dev \
-    libzstd-dev \
-    libcurl4-openssl-dev \
+    libpq-dev \
+    protobuf-compiler \
+    libclang-dev \
+    clang \
     cmake \
     build-essential \
+    curl \
+    libcurl4-openssl-dev \
+    librdkafka-dev \
+    libzstd-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -29,8 +35,10 @@ RUN touch src/main.rs src/lib.rs && \
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y \
-    libssl3 \
     libsasl2-2 \
+    libssl3 \
+    libpq5 \
+    librdkafka1 \
     libzstd1 \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*

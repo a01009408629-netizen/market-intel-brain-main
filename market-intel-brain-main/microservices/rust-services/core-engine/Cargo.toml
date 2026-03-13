@@ -18,9 +18,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # gRPC
-tonic = { version = "0.10", features = ["tls"] }
-prost = "0.12"
-prost-types = "0.12"
+tonic = { version = "0.9", features = ["tls"] }
+prost = "0.11"
+prost-types = "0.11"
 tower = "0.4"
 rustls-pemfile = "1.0"
 tokio-rustls = "0.24"
@@ -49,7 +49,6 @@ notify = "6.1"
 # Utilities
 num_cpus = "1.16"
 hex = "0.4"
-getrandom = "=0.2.11"
 openssl = { version = "0.10", features = ["v102", "v110"] }
 
 # HTTP client for data ingestion
@@ -84,7 +83,7 @@ opentelemetry-prometheus = "0.13"
 opentelemetry-semantic-conventions = "0.12"
 
 [build-dependencies]
-tonic-build = "0.10"
+tonic-build = "0.9"
 
 [dev-dependencies]
 tokio-test = "0.4"
