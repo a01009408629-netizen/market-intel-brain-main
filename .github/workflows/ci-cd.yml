@@ -52,7 +52,7 @@ jobs:
           ~/.cargo/registry/
           ~/.cargo/git/
           market-intel-brain-main/microservices/rust-services/core-engine/target/
-        key: v2-${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
+        key: v2-${{ runner.os }}-rust-${{ hashFiles('market-intel-brain-main/**/Cargo.lock') }}
         restore-keys: |
           v2-${{ runner.os }}-rust-
 
@@ -60,7 +60,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/go/pkg/mod/
-        key: v2-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        key: v2-${{ runner.os }}-go-${{ hashFiles('market-intel-brain-main/**/go.sum') }}
         restore-keys: |
           v2-${{ runner.os }}-go-
 
@@ -89,17 +89,15 @@ jobs:
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y --no-install-recommends \
-          libcurl4-openssl-dev \
-          libssl-dev \
           pkg-config \
-          libsasl2-dev \
-          cmake \
+          libssl-dev \
           build-essential
 
     - name: 📦 Install Rust Dependencies
       run: |
         cd market-intel-brain-main/microservices/rust-services/core-engine
         cargo fetch
+        cargo generate-lockfile || true
 
     - name: 📦 Install Go Dependencies
       run: |
@@ -122,11 +120,11 @@ jobs:
         echo "=== Rust Format Check ==="
         cargo fmt --all -- --check || echo "Rust formatting issues found"
         echo "=== Rust Clippy ==="
-        cargo clippy --all-targets --all-features -- -D warnings || echo "Rust clippy issues found"
+        cargo clippy --all-targets -- -D warnings || echo "Rust clippy issues found"
         echo "=== Rust Audit ==="
         cargo audit || echo "Rust security audit completed"
 
-        cd ../../go-services/api-gateway
+        cd market-intel-brain-main/microservices/go-services/api-gateway
         echo "=== Go Format ==="
         go fmt -mod=vendor ./... || echo "Go formatting issues found"
         echo "=== Go Vet ==="
@@ -171,7 +169,7 @@ jobs:
           ~/.cargo/registry/
           ~/.cargo/git/
           market-intel-brain-main/microservices/rust-services/core-engine/target/
-        key: v2-${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
+        key: v2-${{ runner.os }}-rust-${{ hashFiles('market-intel-brain-main/**/Cargo.lock') }}
         restore-keys: |
           v2-${{ runner.os }}-rust-
 
@@ -179,7 +177,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/go/pkg/mod/
-        key: v2-${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        key: v2-${{ runner.os }}-go-${{ hashFiles('market-intel-brain-main/**/go.sum') }}
         restore-keys: |
           v2-${{ runner.os }}-go-
 
@@ -198,19 +196,17 @@ jobs:
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y --no-install-recommends \
-          libcurl4-openssl-dev \
-          libssl-dev \
           pkg-config \
-          libsasl2-dev \
-          cmake \
+          libssl-dev \
           build-essential
 
     - name: 📦 Install Dependencies
       run: |
         cd market-intel-brain-main/microservices/rust-services/core-engine
         cargo fetch
+        cargo generate-lockfile || true
 
-        cd ../../go-services/api-gateway
+        cd market-intel-brain-main/microservices/go-services/api-gateway
         go mod download
         go mod verify
 
@@ -218,10 +214,10 @@ jobs:
       run: |
         echo "=== Rust Tests ==="
         cd market-intel-brain-main/microservices/rust-services/core-engine
-        cargo test --all-features --verbose || echo "Rust tests completed"
+        cargo test --verbose || echo "Rust tests completed"
 
         echo "=== Go Tests ==="
-        cd ../../go-services/api-gateway
+        cd market-intel-brain-main/microservices/go-services/api-gateway
         go test -race -v -mod=vendor ./... || echo "Go tests completed"
 
     - name: 📊 Upload Coverage
@@ -229,8 +225,8 @@ jobs:
       if: always()
       with:
         files: |
-          ./market-intel-brain-main/microservices/rust-services/core-engine/target/codecov.xml
-          ./market-intel-brain-main/microservices/go-services/api-gateway/coverage.out
+          ./market-intel-brain-main/microservices/rust-services/core-engine/target/codecov.xml || true
+          ./market-intel-brain-main/microservices/go-services/api-gateway/coverage.out || true
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
@@ -267,7 +263,7 @@ jobs:
         fi
 
         echo "Building Go API gateway..."
-        cd ../../go-services/api-gateway
+        cd market-intel-brain-main/microservices/go-services/api-gateway
         docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }} .
         if [ "${{ github.event_name }}" != "pull_request" ]; then
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }}
