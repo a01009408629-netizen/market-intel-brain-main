@@ -13,8 +13,6 @@ import "google/protobuf/any.proto";
 import "versions/v1/common.proto";
 
 option go_package = "github.com/a01009408629-netizen/market-intel-brain/microservices/proto/core_engine/v1;corev1";
-option rust_package = "market_intel.core_engine.v1";
-
 // Core engine service definition
 service CoreEngineService {
   // Health check
