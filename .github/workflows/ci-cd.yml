@@ -19,11 +19,13 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  RUST_VERSION: 'nightly'
+  RUST_VERSION: '1.85.0'
   GO_VERSION: '1.22'
   GOPROXY: 'direct'
   GOSUMDB: 'sum.golang.org'
   GOPRIVATE: 'github.com/a01009408629-netizen/*'
+  RUST_DIR: ${{ github.workspace }}/market-intel-brain-main/microservices/rust-services/core-engine
+  GO_DIR: ${{ github.workspace }}/market-intel-brain-main/microservices/go-services/api-gateway
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -91,17 +93,23 @@ jobs:
         sudo apt-get install -y --no-install-recommends \
           pkg-config \
           libssl-dev \
+          libpq-dev \
+          libsasl2-dev \
+          librdkafka-dev \
+          protobuf-compiler \
+          libclang-dev \
+          clang \
           build-essential
 
     - name: 📦 Install Rust Dependencies
       run: |
-        cd microservices/rust-services/core-engine
+        cd ${{ env.RUST_DIR }}
         cargo fetch
         cargo generate-lockfile || true
 
     - name: 📦 Install Go Dependencies
       run: |
-        cd microservices/go-services/api-gateway
+        cd ${{ env.GO_DIR }}
         go mod download
         go mod verify
 
@@ -113,10 +121,9 @@ jobs:
         echo "Installing gosec..."
         curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b /usr/local/bin v2.21.4
 
-    - name: 🔍 Code Quality Checks
-      id: quality-check
+    - name: 🔍 Rust Quality Checks
       run: |
-        cd microservices/rust-services/core-engine
+        cd ${{ env.RUST_DIR }}
         echo "=== Rust Format Check ==="
         cargo fmt --all -- --check || echo "Rust formatting issues found"
         echo "=== Rust Clippy ==="
@@ -124,16 +131,18 @@ jobs:
         echo "=== Rust Audit ==="
         cargo audit || echo "Rust security audit completed"
 
-        cd microservices/go-services/api-gateway
+    - name: 🔍 Go Quality Checks
+      id: quality-check
+      run: |
+        cd ${{ env.GO_DIR }}
         echo "=== Go Format ==="
-        go fmt -mod=vendor ./... || echo "Go formatting issues found"
+        go fmt ./... || echo "Go formatting issues found"
         echo "=== Go Vet ==="
         go vet ./... || echo "Go vet issues found"
         echo "=== Go Tests ==="
-        go test -race -buildvcs=false -mod=vendor ./... || echo "Go tests completed"
+        go test -race -buildvcs=false ./... || echo "Go tests completed"
         echo "=== Go Security ==="
         gosec -fmt json -out gosec-report.json ./... || echo "Go security scan completed"
-
         echo "passed=true" >> $GITHUB_OUTPUT
 
     - name: 📝 Upload Quality Reports
@@ -198,35 +207,43 @@ jobs:
         sudo apt-get install -y --no-install-recommends \
           pkg-config \
           libssl-dev \
+          libpq-dev \
+          libsasl2-dev \
+          librdkafka-dev \
+          protobuf-compiler \
+          libclang-dev \
+          clang \
           build-essential
 
-    - name: 📦 Install Dependencies
+    - name: 📦 Install Rust Dependencies
       run: |
-        cd microservices/rust-services/core-engine
+        cd ${{ env.RUST_DIR }}
         cargo fetch
         cargo generate-lockfile || true
 
-        cd microservices/go-services/api-gateway
+    - name: 📦 Install Go Dependencies
+      run: |
+        cd ${{ env.GO_DIR }}
         go mod download
         go mod verify
 
-    - name: 🧪 Run Tests
+    - name: 🧪 Run Rust Tests
       run: |
-        echo "=== Rust Tests ==="
-        cd microservices/rust-services/core-engine
+        cd ${{ env.RUST_DIR }}
         cargo test --verbose || echo "Rust tests completed"
 
-        echo "=== Go Tests ==="
-        cd microservices/go-services/api-gateway
-        go test -race -v -mod=vendor ./... || echo "Go tests completed"
+    - name: 🧪 Run Go Tests
+      run: |
+        cd ${{ env.GO_DIR }}
+        go test -race -v ./... || echo "Go tests completed"
 
     - name: 📊 Upload Coverage
       uses: codecov/codecov-action@v4
       if: always()
       with:
         files: |
-          ./microservices/rust-services/core-engine/target/codecov.xml || true
-          ./microservices/go-services/api-gateway/coverage.out || true
+          market-intel-brain-main/microservices/rust-services/core-engine/target/codecov.xml
+          market-intel-brain-main/microservices/go-services/api-gateway/coverage.out
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
@@ -253,17 +270,17 @@ jobs:
           type=sha,prefix={{branch}}-
           type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: 🐳 Build and Push Docker Images
+    - name: 🐳 Build Rust Docker Image
       run: |
-        echo "Building Rust core engine..."
-        cd microservices/rust-services/core-engine
+        cd ${{ env.RUST_DIR }}
         docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }} .
         if [ "${{ github.event_name }}" != "pull_request" ]; then
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:rust-core-${{ github.sha }}
         fi
 
-        echo "Building Go API gateway..."
-        cd microservices/go-services/api-gateway
+    - name: 🐳 Build Go Docker Image
+      run: |
+        cd ${{ env.GO_DIR }}
         docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }} .
         if [ "${{ github.event_name }}" != "pull_request" ]; then
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:go-gateway-${{ github.sha }}
