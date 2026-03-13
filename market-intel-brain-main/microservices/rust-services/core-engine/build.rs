@@ -1,29 +1,33 @@
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // CARGO_MANIFEST_DIR = /app/microservices/rust-services/core-engine (inside Docker)
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
 
-    // Go up 3 levels to reach the build context root (/app inside Docker)
+    // CARGO_MANIFEST_DIR = /app/microservices/rust-services/core-engine
+    // Go up 3 levels → /app (Docker build context root)
     let root = manifest_dir
         .parent().unwrap()  // rust-services
         .parent().unwrap()  // microservices
-        .parent().unwrap(); // /app (build context root)
+        .parent().unwrap(); // /app
 
-    let proto_dir = root.join("microservices/proto/versions/v1");
+    // ✅ include path = microservices/proto/
+    //    so "versions/v1/common.proto" resolves correctly
+    let proto_include = root.join("microservices/proto");
+    let proto_dir    = root.join("microservices/proto/versions/v1");
 
     tonic_build::configure()
         .build_server(true)
         .build_client(true)
-        // Do NOT set out_dir — let tonic use the standard OUT_DIR
-        // so that tonic::include_proto! can find the generated files
+        // ❌ NO custom out_dir — use cargo's OUT_DIR so include_proto! works
         .compile(
             &[
-                proto_dir.join("common.proto").to_str().unwrap(),
+                proto_dir.join("common.proto")     .to_str().unwrap(),
                 proto_dir.join("core_engine.proto").to_str().unwrap(),
-                proto_dir.join("analytics.proto").to_str().unwrap(),
             ],
-            &[proto_dir.to_str().unwrap()],
+            &[
+                proto_include.to_str().unwrap(), // "versions/v1/common.proto"
+                "/usr/include",                  // "google/protobuf/..."
+            ],
         )?;
 
     Ok(())
