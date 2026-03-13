@@ -1,4 +1,5 @@
 # Multi-stage build for Rust Core Engine
+# Build context must be: market-intel-brain-main/ (inner directory)
 FROM rust:1.85-bookworm AS builder
 
 RUN apt-get update && apt-get install -y \
@@ -19,19 +20,34 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY Cargo.toml Cargo.lock ./
+# Copy workspace Cargo files
+COPY microservices/rust-services/Cargo.toml ./microservices/rust-services/Cargo.toml
 
-RUN mkdir -p src && \
-    echo 'fn main() {}' > src/main.rs && \
-    echo 'pub fn placeholder() {}' > src/lib.rs
+# Copy core-engine Cargo files
+COPY microservices/rust-services/core-engine/Cargo.toml ./microservices/rust-services/core-engine/Cargo.toml
+COPY microservices/rust-services/core-engine/Cargo.lock ./microservices/rust-services/core-engine/Cargo.lock
 
-RUN cargo build --release && rm -rf src
+# Copy proto files (required by build.rs at compile time)
+COPY microservices/proto ./microservices/proto
 
-COPY src ./src
+# Dummy build to cache dependencies
+RUN mkdir -p microservices/rust-services/core-engine/src microservices/rust-services/core-engine/src/proto && \
+    echo 'fn main() {}' > microservices/rust-services/core-engine/src/main.rs && \
+    echo 'pub fn placeholder() {}' > microservices/rust-services/core-engine/src/lib.rs && \
+    echo 'fn main() -> Result<(), Box<dyn std::error::Error>> { Ok(()) }' > microservices/rust-services/core-engine/build.rs && \
+    cd microservices/rust-services && cargo build --release && \
+    rm -rf core-engine/src core-engine/build.rs
 
-RUN touch src/main.rs src/lib.rs && \
+# Copy real source code and build.rs
+COPY microservices/rust-services/core-engine/src ./microservices/rust-services/core-engine/src
+COPY microservices/rust-services/core-engine/build.rs ./microservices/rust-services/core-engine/build.rs
+
+# Build the real binary
+RUN cd microservices/rust-services && \
+    touch core-engine/src/main.rs core-engine/src/lib.rs && \
     cargo build --release
 
+# ---- Runtime Stage ----
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y \
@@ -45,7 +61,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/core-engine /usr/local/bin/
+COPY --from=builder /app/microservices/rust-services/target/release/core-engine /usr/local/bin/
 
 EXPOSE 50052
 
