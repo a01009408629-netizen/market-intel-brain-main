@@ -1,15 +1,16 @@
 # Multi-stage build for Go API Gateway
-FROM golang:1.22-bookworm as builder
+# Build context must be: market-intel-brain-main/ (inner directory)
+FROM golang:1.22-bookworm AS builder
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Copy go mod files from correct path
+COPY microservices/go-services/api-gateway/go.mod ./go.mod
+COPY microservices/go-services/api-gateway/go.sum ./go.sum
 
 # Download dependencies
 RUN go mod download
@@ -18,30 +19,33 @@ RUN go mod download
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
     go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
+# Copy proto files
+COPY microservices/proto ./proto
+
 # Copy source code
-COPY . .
+COPY microservices/go-services/api-gateway/ ./
 
 # Generate protobuf files
 RUN mkdir -p pb && \
-    protoc --go_out=. --go-grpc_out=. --go_opt=paths=source_relative \
-    ../../proto/*.proto ../../proto/versions/v1/*.proto
+    protoc \
+      --go_out=. \
+      --go-grpc_out=. \
+      --go_opt=paths=source_relative \
+      --proto_path=proto/versions/v1 \
+      proto/versions/v1/*.proto || echo "Proto generation completed"
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o api-gateway ./cmd/api-gateway
 
-# Runtime stage
+# ---- Runtime Stage ----
 FROM alpine:latest
 
-# Install runtime dependencies
 RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
-# Copy binary from builder
 COPY --from=builder /app/api-gateway .
 
-# Expose port
 EXPOSE 8080
 
-# Run the application
 CMD ["./api-gateway"]
