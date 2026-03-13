@@ -120,7 +120,7 @@ jobs:
           echo "Installing cargo-audit..."
           cargo install cargo-audit --locked
           echo "Installing gosec..."
-          curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b /usr/local/bin latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
 
       - name: 🔍 Rust Quality Checks
         working-directory: ${{ env.RUST_DIR }}
