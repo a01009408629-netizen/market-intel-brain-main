@@ -43,7 +43,7 @@ COPY microservices/rust-services/core-engine/src \
 
 # ── 6. Build real binary (proto already generated, deps cached) ───────────────
 RUN cd microservices/rust-services && \
-    touch core-engine/src/main.rs core-engine/src/lib.rs && \
+    touch core-engine/build.rs core-engine/src/main.rs core-engine/src/lib.rs && \
     cargo build --release
 
 # ── Runtime Stage ────────────────────────────────────────────────────────────
